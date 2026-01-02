@@ -1,24 +1,56 @@
-Welcome to the NextJS base template bootstrapped using the `create-next-app`. This template supports TypeScript, but you can use normal JavaScript as well.
+# Receiptify 🧾
 
-## Getting Started
+**The Professional Receipt Generator for Small Businesses.**
 
-Hit the run button to start the development server.
+Receiptify is a modern, mobile-first web application built with **Next.js** and **TypeScript**. It helps small business owners, logistics companies, and freelancers generate authentic, professional payment receipts (styled like OPay/Bank transfer receipts) instantly.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+![Project Banner](public/og-image.png)
+*(Note: Replace this with a screenshot of your landing page or generator)*
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on `/api/hello`. This endpoint can be edited in `pages/api/hello.ts`.
+## 🚀 Features
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+### Core Functionality
+- **Instant Generation:** Create receipts in real-time with a live preview.
+- **OPay-Style Design:** Authentic "Ticket" layout with zig-zag bottom edges and crisp typography.
+- **Customization:**
+  - Toggle Business Logo.
+  - Switch between "Simple" and "Detailed" views.
+  - Choose from 8+ professional brand colors.
+- **Smart Export:**
+  - **Download:** High-resolution PNG export.
+  - **WhatsApp Share:** Native integration to share receipts directly to customers.
 
-## Learn More
+### User Experience (UX)
+- **Mobile-First Architecture:** Designed to feel like a native app on phones (`100dvh` support).
+- **Guest vs. Pro Modes:** - Guests can generate previews but must sign up to download/share.
+  - "Anti-Screenshot" watermarks protect premium features in guest mode.
+- **Confirmation Flow:** Safety modal before downloading to ensure details are correct.
+- **Interactive Landing Page:** Virtual phone demo showing the generation process.
 
-To learn more about Next.js, take a look at the following resources:
+### Dashboard & Management
+- **History Tracking:** Searchable list of past transactions with status filters (Paid/Pending).
+- **Business Profile:** Save default business details (Name, Phone, Logo, Footer Message).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Tech Stack
 
-## Productionizing your Next App
+- **Framework:** [Next.js 15](https://nextjs.org/) (React)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Animations:** [Framer Motion](https://www.framer.com/motion/)
+- **Image Generation:** [html2canvas](https://html2canvas.hertzen.com/)
 
-To make your next App run smoothly in production make sure to deploy your project with [Repl Deployments](https://docs.replit.com/hosting/deployments/about-deployments)!
+## 📦 Getting Started
 
-You can also produce a production build by running `npm run build` and [changing the run command](https://docs.replit.com/programming-ide/configuring-repl#run) to `npm run start`.
+Follow these steps to run the project locally.
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/yourusername/receiptify.git](https://github.com/yourusername/receiptify.git)
+   cd receiptify
