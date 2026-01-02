@@ -18,9 +18,7 @@ export default function Login() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `https://mifimnpay.vercel.app/dashboard`,
-      },
+      options: { redirectTo: `https://mifimnpay.vercel.app/dashboard` },
     });
     if (error) setError(error.message);
   };
@@ -32,11 +30,7 @@ export default function Login() {
 
     try {
       if (authMode === 'signup') {
-        const { error } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: { emailRedirectTo: `https://mifimnpay.vercel.app/onboarding` }
-        });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         alert('Check your email for the confirmation link!');
         setAuthMode('signin');
@@ -50,6 +44,7 @@ export default function Login() {
           .eq('id', data.user.id)
           .single();
 
+        // Redirect based on whether they have finished setup
         if (!profile?.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
@@ -68,8 +63,8 @@ export default function Login() {
       <Head><title>{authMode === 'signin' ? 'Login' : 'Sign Up'} | MifimnPay</title></Head>
       <div className="hidden md:flex flex-col justify-between bg-zinc-950 p-12 text-white relative overflow-hidden">
         <div className="z-10">
-          <Link href="/" className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center font-bold border border-white/10 mb-6 text-white decoration-transparent uppercase">M</Link>
-          <h2 className="text-4xl font-bold max-w-md leading-tight">Professional Receipts, Generated Instantly.</h2>
+          <div className="w-10 h-10 bg-white text-zinc-950 rounded-xl flex items-center justify-center font-bold mb-6">M</div>
+          <h2 className="text-4xl font-bold max-w-md leading-tight text-white decoration-transparent">Professional Receipts, Generated Instantly.</h2>
         </div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-zinc-800/30 rounded-full blur-3xl" />
       </div>
@@ -78,7 +73,6 @@ export default function Login() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-8">
           <div className="text-center md:text-left">
             <h1 className="text-2xl font-bold text-zinc-950">{authMode === 'signin' ? 'Welcome back' : 'Create an account'}</h1>
-            <p className="text-zinc-500 mt-2">{authMode === 'signin' ? 'Enter your details to access your dashboard.' : 'Start generating professional receipts today.'}</p>
           </div>
 
           {error && (
@@ -92,25 +86,16 @@ export default function Login() {
           </button>
 
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-950">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vendor@example.com" required className="w-full h-11 px-4 bg-white border border-zinc-200 rounded-xl outline-none focus:border-zinc-950 transition-all" />
-            </div>
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-950">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required className="w-full h-11 px-4 bg-white border border-zinc-200 rounded-xl outline-none focus:border-zinc-950 transition-all" />
-            </div>
-            <button disabled={isLoading} className="w-full h-12 bg-zinc-950 text-white rounded-xl font-medium hover:bg-zinc-800 transition-all flex items-center justify-center gap-2">
-              {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <>{authMode === 'signin' ? 'Sign In' : 'Create Account'} <ArrowRight size={16}/></>}
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required className="w-full h-11 px-4 border border-zinc-200 rounded-xl outline-none" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className="w-full h-11 px-4 border border-zinc-200 rounded-xl outline-none" />
+            <button disabled={isLoading} className="w-full h-12 bg-zinc-950 text-white rounded-xl font-medium">
+              {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
             </button>
           </form>
 
-          <div className="text-center text-sm text-zinc-500">
-            {authMode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')} className="text-zinc-950 font-bold hover:underline">
-              {authMode === 'signin' ? 'Sign up' : 'Sign in'}
-            </button>
-          </div>
+          <button onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')} className="w-full text-center text-sm font-bold text-zinc-950 underline decoration-transparent">
+            {authMode === 'signin' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+          </button>
         </motion.div>
       </div>
     </div>
