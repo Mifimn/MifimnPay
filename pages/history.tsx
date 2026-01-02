@@ -2,8 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { 
-  Search, Filter, Download, Trash2, Plus, 
-  Calendar, CheckCircle2, Clock, XCircle, Loader2, Eye, X 
+  Search, 
+  Filter, 
+  Download, 
+  Trash2, 
+  Plus,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Loader2,
+  Eye,
+  X
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext';
@@ -18,7 +28,7 @@ export default function History() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   
-  // Modal State for Viewing/Downloading
+  // Modal State
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const downloadRef = useRef<HTMLDivElement>(null);
@@ -65,28 +75,33 @@ export default function History() {
     }
   };
 
+  // FILTERING LOGIC
   const filteredReceipts = receipts.filter(receipt => {
     const matchesSearch = 
       (receipt.customer_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
       (receipt.receipt_number?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    
     const matchesStatus = statusFilter === 'All' || receipt.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans">
-      <Head><title>History | MifimnPay</title></Head>
+      <Head>
+        <title>History | MifimnPay</title>
+      </Head>
+
       <DashboardNavbar />
       
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
         
-        {/* PAGE HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Receipt History</h1>
-            <p className="text-zinc-500 text-sm mt-1">View and re-download your past transactions.</p>
+            <p className="text-zinc-500 text-sm mt-1">Manage and track all your past transactions.</p>
           </div>
-          <Link href="/generate" className="bg-zinc-900 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2">
+          <Link href="/generate" className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
             <Plus size={18} /> New Receipt
           </Link>
         </div>
@@ -100,7 +115,7 @@ export default function History() {
               placeholder="Search by customer or receipt ID..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-zinc-900 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
             />
           </div>
 
@@ -109,7 +124,7 @@ export default function History() {
              <select 
                value={statusFilter}
                onChange={(e) => setStatusFilter(e.target.value)}
-               className="bg-zinc-50 border border-zinc-200 text-zinc-700 text-sm rounded-lg p-2.5 outline-none w-full md:w-40 cursor-pointer"
+               className="bg-zinc-50 border border-zinc-200 text-zinc-700 text-sm rounded-lg p-2.5 focus:border-zinc-900 outline-none w-full md:w-40 cursor-pointer"
              >
                <option value="All">All Status</option>
                <option value="Paid">Paid</option>
@@ -134,7 +149,7 @@ export default function History() {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {loading ? (
-                    <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
+                  <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
                 ) : filteredReceipts.length > 0 ? (
                   filteredReceipts.map((receipt) => (
                     <tr key={receipt.id} className="hover:bg-zinc-50/50 transition-colors group">
@@ -148,11 +163,15 @@ export default function History() {
                       <td className="px-6 py-4">
                         <p className="text-sm font-bold text-zinc-900">{receipt.customer_name}</p>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-zinc-900">{receipt.amount}</td>
-                      <td className="px-6 py-4"><StatusBadge status={receipt.status} /></td>
+                      <td className="px-6 py-4 text-sm font-bold text-zinc-900">
+                        ₦{Number(receipt.total_amount || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={receipt.status} />
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => setSelectedReceipt(receipt)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-full transition-all" title="View & Download">
+                           <button onClick={() => setSelectedReceipt(receipt)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-full transition-all" title="View">
                              <Eye size={16} />
                            </button>
                            <button onClick={() => handleDelete(receipt.id)} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Delete">
@@ -163,7 +182,7 @@ export default function History() {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan={6} className="px-6 py-20 text-center text-zinc-400 italic">No receipts found matching your criteria.</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-zinc-400 italic">No receipts found.</td></tr>
                 )}
               </tbody>
             </table>
@@ -171,13 +190,13 @@ export default function History() {
         </div>
       </main>
 
-      {/* VIEW & DOWNLOAD MODAL */}
+      {/* VIEW MODAL */}
       {selectedReceipt && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
                     <h3 className="font-bold text-zinc-900">Receipt Details</h3>
-                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-zinc-200 rounded-full"><X size={20}/></button>
+                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-zinc-200 rounded-full transition-colors"><X size={20}/></button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex flex-col items-center">
@@ -187,7 +206,9 @@ export default function History() {
                                 ...selectedReceipt,
                                 customerName: selectedReceipt.customer_name,
                                 receiptNumber: selectedReceipt.receipt_number,
-                                currency: selectedReceipt.amount.charAt(0), // Extract currency symbol
+                                currency: '₦',
+                                businessName: selectedReceipt.business_name || 'My Business',
+                                businessPhone: selectedReceipt.business_phone || '',
                                 items: selectedReceipt.items || []
                             }} 
                             settings={{ color: '#09090b', showLogo: true, template: 'detailed' }} 
@@ -197,11 +218,11 @@ export default function History() {
                 </div>
 
                 <div className="p-4 bg-white border-t border-zinc-100 flex gap-3">
-                    <button onClick={() => setSelectedReceipt(null)} className="flex-1 py-3 bg-zinc-100 text-zinc-600 font-bold rounded-xl">Close</button>
+                    <button onClick={() => setSelectedReceipt(null)} className="flex-1 py-3 bg-zinc-100 text-zinc-600 font-bold rounded-xl hover:bg-zinc-200 transition-colors">Close</button>
                     <button 
                         onClick={handleDownloadAgain} 
                         disabled={isDownloading}
-                        className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                        className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all"
                     >
                         {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />}
                         Download Image
@@ -220,11 +241,13 @@ function StatusBadge({ status }: { status: string }) {
     Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
     Unpaid: "bg-red-100 text-red-700 border-red-200"
   };
+
   const icons = {
     Paid: <CheckCircle2 size={12} />,
     Pending: <Clock size={12} />,
     Unpaid: <XCircle size={12} />
   };
+
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status as keyof typeof styles] || styles.Paid}`}>
       {icons[status as keyof typeof icons] || icons.Paid}
