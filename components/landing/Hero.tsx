@@ -1,3 +1,4 @@
+import Link from 'next/link'; // Added Link import
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import ComparisonDemo from './ComparisonDemo';
@@ -57,10 +58,15 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-4"
           >
-            <button className="flex items-center justify-center gap-2 bg-brand-black text-white px-8 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all hover:scale-105 shadow-xl shadow-black/10">
+            {/* UPDATED BUTTON: Now a Link to /generate */}
+            <Link 
+              href="/generate"
+              className="flex items-center justify-center gap-2 bg-brand-black text-white px-8 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-all hover:scale-105 shadow-xl shadow-black/10"
+            >
               Create Free Receipt
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </Link>
+
             <button className="flex items-center justify-center gap-2 bg-white text-brand-black border border-brand-border px-8 py-4 rounded-xl font-semibold hover:bg-brand-bg transition-all">
               View Demo
             </button>
