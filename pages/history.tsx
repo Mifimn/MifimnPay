@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { Download, Share2, Plus, Loader2, Eye, X, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Download, Share2, Plus, Loader2, Eye, X, Search, Clock, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext';
 import DashboardNavbar from '../components/dashboard/DashboardNavbar';
@@ -14,17 +15,12 @@ export default function History() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const downloadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (user) {
-        fetchReceipts();
-        fetchProfile();
-    }
+    if (user) { fetchReceipts(); fetchProfile(); }
   }, [user]);
 
   const fetchProfile = async () => {
@@ -39,128 +35,96 @@ export default function History() {
     setLoading(false);
   };
 
-  const generateImage = async () => {
-    if (!downloadRef.current) return null;
+  const handleAction = async (type: 'download' | 'share') => {
+    if (!downloadRef.current) return;
     setIsGenerating(true);
     try {
-      const dataUrl = await toPng(downloadRef.current, { 
-        cacheBust: true, 
-        pixelRatio: 3, 
-        quality: 1,
-        backgroundColor: '#ffffff'
-      });
-      return dataUrl;
-    } catch (err) { 
-        console.error(err);
-        return null; 
-    } finally { 
-        setIsGenerating(false); 
-    }
+      const dataUrl = await toPng(downloadRef.current, { pixelRatio: 3, backgroundColor: '#ffffff' });
+      if (type === 'download') {
+        const link = document.createElement('a'); link.href = dataUrl; link.download = `receipt.png`; link.click();
+      } else {
+        const res = await fetch(dataUrl); const blob = await res.blob();
+        const file = new File([blob], 'receipt.png', { type: 'image/png' });
+        if (navigator.share) await navigator.share({ files: [file], title: 'Receipt' });
+      }
+    } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
-  const handleDownload = async () => {
-    const image = await generateImage();
-    if (!image) return;
-    const link = document.createElement('a');
-    link.href = image;
-    link.download = `receipt-${selectedReceipt.receipt_number}.png`;
-    link.click();
-  };
-
-  const handleShare = async () => {
-    const image = await generateImage();
-    if (!image) return;
-    try {
-        const res = await fetch(image);
-        const blob = await res.blob();
-        const file = new File([blob], `receipt-${selectedReceipt.receipt_number}.png`, { type: 'image/png' });
-
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: 'Receipt',
-                text: `Receipt from ${profile?.business_name || 'MifimnPay'}`,
-            });
-        } else {
-            handleDownload();
-        }
-    } catch (err) { console.error(err); }
-  };
-
-  const filteredReceipts = receipts.filter(r => 
-    (r.customer_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-    (r.receipt_number?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  ).filter(r => statusFilter === 'All' || r.status === statusFilter);
+  const filtered = receipts.filter(r => r.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || r.receipt_number?.includes(searchTerm));
 
   return (
     <div className="min-h-screen bg-zinc-50">
       <Head><title>History | MifimnPay</title></Head>
       <DashboardNavbar />
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <h1 className="text-2xl font-black leading-none">Receipt History</h1>
-          <Link href="/generate" className="bg-zinc-900 text-white px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95">
-            <Plus size={18} /> New Receipt
+      
+      <main className="max-w-5xl mx-auto px-6 py-12">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-6">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Activity</h1>
+            <p className="text-zinc-400 font-medium">Track and manage your generated receipts.</p>
+          </div>
+          <Link href="/generate" className="bg-zinc-900 text-white px-8 py-4 rounded-[20px] font-black flex items-center gap-3 shadow-2xl shadow-zinc-200 active:scale-95 transition-all">
+            <Plus size={22} /> New Receipt
           </Link>
+        </header>
+
+        <div className="relative mb-10 group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" size={22} />
+            <input 
+                type="text" 
+                placeholder="Search by customer or receipt ID..." 
+                className="w-full h-16 pl-16 pr-8 bg-white border border-zinc-100 rounded-[24px] outline-none shadow-sm focus:shadow-xl transition-all font-bold"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                <input 
-                    type="text" 
-                    placeholder="Search name or ID..." 
-                    className="w-full h-12 pl-12 pr-4 bg-white border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-            <select className="h-12 px-4 bg-white border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900 font-bold text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="All">All Status</option>
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-            </select>
-        </div>
-
-        <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm overflow-x-auto">
-            <table className="w-full text-left min-w-[700px]">
-                <thead className="bg-zinc-50 border-b border-zinc-100 text-[10px] uppercase text-zinc-400 font-black tracking-widest">
-                <tr>
-                    <th className="px-6 py-4">Receipt ID</th>
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Total Amount</th>
-                    <th className="px-6 py-4 text-right">View</th>
-                </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                {loading ? (
-                    <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
-                ) : filteredReceipts.map((r) => (
-                    <tr key={r.id} className="hover:bg-zinc-50/50 group transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-zinc-500">#{r.receipt_number}</td>
-                    <td className="px-6 py-4 text-sm font-medium">{new Date(r.created_at).toLocaleDateString('en-GB')}</td>
-                    <td className="px-6 py-4 font-bold">{r.customer_name}</td>
-                    <td className="px-6 py-4 text-sm font-black">₦{Number(r.total_amount).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-right">
-                        <button onClick={() => setSelectedReceipt(r)} className="p-3 bg-zinc-100 text-zinc-900 rounded-2xl hover:bg-zinc-900 hover:text-white transition-all"><Eye size={18}/></button>
-                    </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+        <div className="space-y-4">
+            {loading ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4 text-zinc-300">
+                    <Loader2 className="animate-spin" size={32} />
+                    <span className="font-black text-sm uppercase tracking-widest">Fetching data</span>
+                </div>
+            ) : filtered.map((r, idx) => (
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                    key={r.id} 
+                    onClick={() => setSelectedReceipt(r)}
+                    className="bg-white p-6 rounded-[28px] border border-zinc-100 shadow-sm hover:shadow-xl transition-all cursor-pointer flex items-center justify-between group"
+                >
+                    <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                            <Clock size={24} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black text-zinc-300 uppercase tracking-widest mb-0.5">#{r.receipt_number}</span>
+                            <span className="text-lg font-black text-zinc-900 leading-none">{r.customer_name}</span>
+                            <span className="text-[11px] text-zinc-400 font-bold mt-1.5">{new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <span className="text-xl font-black text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</span>
+                        <ChevronRight className="text-zinc-200 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </motion.div>
+            ))}
         </div>
       </main>
 
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-[40px] shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 overflow-hidden">
-                <div className="p-6 border-b flex justify-between items-center bg-white shrink-0">
-                    <h3 className="font-black text-zinc-900 text-lg">Receipt Details</h3>
-                    <button onClick={() => setSelectedReceipt(null)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors"><X size={24}/></button>
+      <AnimatePresence>
+        {selectedReceipt && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-white rounded-[40px] shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden">
+                <div className="p-8 border-b flex justify-between items-center bg-white shrink-0">
+                    <div className="flex flex-col">
+                        <h3 className="text-2xl font-black text-zinc-900 leading-none">Receipt Preview</h3>
+                        <span className="text-xs font-black text-zinc-300 uppercase tracking-widest mt-2">Verified Digital Signature</span>
+                    </div>
+                    <button onClick={() => setSelectedReceipt(null)} className="p-3 hover:bg-zinc-100 rounded-full transition-colors"><X size={28}/></button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-8 bg-zinc-50 flex flex-col items-center">
-                    <div className="origin-top bg-white p-1 rounded shadow-xl shrink-0" ref={downloadRef}>
+
+                <div className="flex-1 overflow-y-auto p-10 bg-zinc-50 flex flex-col items-center">
+                    <div className="scale-100 bg-white p-1 rounded-sm shadow-2xl shrink-0 overflow-hidden" ref={downloadRef}>
                         <ReceiptPreview 
                             data={{
                                 ...selectedReceipt,
@@ -169,9 +133,7 @@ export default function History() {
                                 businessName: profile?.business_name,
                                 businessPhone: profile?.business_phone,
                                 logoUrl: profile?.logo_url,
-                                currency: profile?.currency || '₦',
-                                shipping: Number(selectedReceipt.shipping_fee || 0),
-                                discount: Number(selectedReceipt.discount_amount || 0),
+                                currency: '₦',
                                 items: selectedReceipt.items || [],
                                 date: new Date(selectedReceipt.created_at).toLocaleDateString('en-GB')
                             }} 
@@ -179,17 +141,19 @@ export default function History() {
                         />
                     </div>
                 </div>
-                <div className="p-8 bg-white border-t flex flex-col gap-4 shrink-0">
-                    <button onClick={handleShare} disabled={isGenerating} className="w-full py-5 bg-zinc-100 text-zinc-900 font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                        {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <><Share2 size={20} /> Share Receipt</>}
+
+                <div className="p-10 bg-white border-t flex flex-col gap-4 shrink-0">
+                    <button onClick={() => handleAction('share')} disabled={isGenerating} className="w-full py-5 bg-zinc-100 text-zinc-900 font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg">
+                        {isGenerating ? <Loader2 className="animate-spin w-6 h-6" /> : <><Share2 size={24} /> Share Instant</>}
                     </button>
-                    <button onClick={handleDownload} disabled={isGenerating} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl">
-                        {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <><Download size={20} /> Download PNG</>}
+                    <button onClick={() => handleAction('download')} disabled={isGenerating} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl text-lg">
+                        {isGenerating ? <Loader2 className="animate-spin w-6 h-6" /> : <><Download size={24} /> Save to Gallery</>}
                     </button>
                 </div>
-            </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
