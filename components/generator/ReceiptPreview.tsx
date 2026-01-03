@@ -7,6 +7,7 @@ interface Props {
 }
 
 export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
+  // Use Number() to ensure calculations are correct even if inputs are strings
   const subtotal = data.items.reduce((acc, item) => acc + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0);
   const total = subtotal + (Number(data.shipping) || 0) - (Number(data.discount) || 0);
   const logoLetter = (data.businessName?.charAt(0) || 'R').toUpperCase();
@@ -16,13 +17,13 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
       <div 
         ref={receiptRef}
         id="receipt-node"
-        className="relative text-zinc-900 leading-tight shadow-2xl"
+        className="relative text-zinc-900 leading-normal shadow-2xl"
         style={{ width: '320px', backgroundColor: 'white' }}
       >
-        {/* Top Color Bar */}
+        {/* Top Branding Bar */}
         <div className="h-2 w-full relative z-20" style={{ backgroundColor: settings.color }}></div>
 
-        <div className="bg-white w-full px-5 pt-5 pb-2 relative z-10">
+        <div className="bg-white w-full px-5 pt-5 pb-4 relative z-10">
             {/* Background Watermark Letter */}
             {settings.showLogo && !data.logoUrl && (
             <div className="absolute inset-0 flex items-center justify-center overflow-hidden z-0 opacity-[0.03] pointer-events-none">
@@ -32,6 +33,7 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
             </div>
             )}
 
+            {/* Header Section */}
             <div className="text-center mb-6 relative z-10 border-b border-dashed border-zinc-200 pb-4">
                 {settings.showLogo && (
                     <div 
@@ -45,95 +47,104 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                       )}
                     </div>
                 )}
-                <h2 className="font-extrabold text-base uppercase tracking-tight mb-1">{data.businessName || 'Business Name'}</h2>
-                <p className="text-[10px] text-zinc-500 font-medium">{data.businessPhone}</p>
+                <h2 className="font-black text-base uppercase tracking-tight mb-0.5">{data.businessName || 'Business Name'}</h2>
+                <p className="text-[10px] text-zinc-500 font-bold">{data.businessPhone}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-5 relative z-10">
+            {/* Billing Info Section */}
+            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
                 <div className="flex flex-col text-left">
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 block">Billed To</span>
-                    <span className="text-xs font-bold break-words block leading-tight">{data.customerName || 'Guest'}</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1 block">Billed To</span>
+                    <span className="text-xs font-black break-words block leading-tight">{data.customerName || 'Walk-in Customer'}</span>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 block">Receipt No.</span>
-                    <span className="text-xs font-bold block">{data.receiptNumber}</span>
-                    <span className="text-[9px] text-zinc-400 block mt-1">{data.date}</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1 block">Receipt No.</span>
+                    <span className="text-xs font-black block leading-none">{data.receiptNumber}</span>
+                    <span className="text-[9px] text-zinc-400 font-bold block mt-1.5">{data.date}</span>
                 </div>
             </div>
 
-            <div className="mb-5 relative z-10 text-left">
+            {/* Items Table Section */}
+            <div className="mb-6 relative z-10 text-left">
                 <div className="grid grid-cols-[1fr_auto] gap-2 mb-2 pb-1 border-b border-zinc-100">
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Item Description</span>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider text-right">Amount</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Item Description</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest text-right">Amount</span>
                 </div>
 
-                <div className="space-y-3"> 
+                <div className="space-y-4 pt-1"> 
                     {data.items.length === 0 ? (
-                        <p className="text-[10px] text-center text-zinc-300 py-2 italic">No items added</p>
+                        <p className="text-[10px] text-center text-zinc-300 py-2 italic font-medium">No items listed</p>
                     ) : (
                         data.items.map((item) => (
-                        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 items-start">
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold text-zinc-800 break-words leading-tight">{item.name || 'Item Name'}</span>
+                        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-3 items-start min-h-[24px]">
+                            <div className="flex flex-col min-w-0 pr-2">
+                                <span className="text-[11px] font-black text-zinc-800 break-words leading-tight mb-0.5">
+                                    {item.name || 'Item Name'}
+                                </span>
                                 {settings.template === 'detailed' && (
-                                    <span className="text-[9px] text-zinc-500 font-medium mt-1">
-                                    {item.qty} x {data.currency}{Number(item.price || 0).toLocaleString()}
+                                    <span className="text-[9px] text-zinc-400 font-bold tracking-tight">
+                                        {item.qty} x {data.currency}{Number(item.price || 0).toLocaleString()}
                                     </span>
                                 )}
                             </div>
-                            <span className="text-xs font-mono font-bold text-zinc-900 text-right pt-0.5">
-                                {data.currency}{((Number(item.qty) || 0) * (Number(item.price) || 0)).toLocaleString()}
-                            </span>
+                            <div className="text-right self-start">
+                                <span className="text-[11px] font-black text-zinc-900 whitespace-nowrap">
+                                    {data.currency}{((Number(item.qty) || 0) * (Number(item.price) || 0)).toLocaleString()}
+                                </span>
+                            </div>
                         </div>
                         ))
                     )}
                 </div>
             </div>
 
-            <div className="pt-2 border-t-2 border-dashed border-zinc-100 relative z-10">
+            {/* Summary Section */}
+            <div className="pt-3 border-t-2 border-dashed border-zinc-100 relative z-10">
                 <div className="space-y-2 mb-4 text-left">
-                    <div className="flex justify-between text-[10px] font-medium text-zinc-500">
+                    <div className="flex justify-between text-[10px] font-bold text-zinc-400">
                         <span>Subtotal</span>
                         <span>{data.currency}{subtotal.toLocaleString()}</span>
                     </div>
                     {(Number(data.shipping) > 0) && (
-                        <div className="flex justify-between text-[10px] font-medium text-zinc-500">
-                        <span>Shipping</span>
-                        <span>{data.currency}{Number(data.shipping).toLocaleString()}</span>
-                    </div>
+                        <div className="flex justify-between text-[10px] font-bold text-zinc-400">
+                            <span>Shipping</span>
+                            <span>{data.currency}{Number(data.shipping).toLocaleString()}</span>
+                        </div>
                     )}
                     {(Number(data.discount) > 0) && (
-                        <div className="flex justify-between text-[10px] font-bold text-green-600">
-                        <span>Discount</span>
-                        <span>-{data.currency}{Number(data.discount).toLocaleString()}</span>
-                    </div>
+                        <div className="flex justify-between text-[10px] font-black text-green-600">
+                            <span>Discount</span>
+                            <span>-{data.currency}{Number(data.discount).toLocaleString()}</span>
+                        </div>
                     )}
                 </div>
 
-                <div className="flex justify-between items-center pt-3 border-t border-zinc-100 -mx-5 px-5 py-2 bg-zinc-50/50">
-                    <span className="font-black text-sm uppercase tracking-tight text-zinc-700">TOTAL PAID</span>
-                    <span className="font-black text-xl font-mono tracking-tight leading-none" style={{ color: settings.color }}>
+                {/* Total Section */}
+                <div className="flex justify-between items-center pt-3 border-t border-zinc-100 -mx-5 px-5 py-2.5 bg-zinc-50/50">
+                    <span className="font-black text-[11px] uppercase tracking-widest text-zinc-600">Total Paid</span>
+                    <span className="font-black text-lg tracking-tight leading-none" style={{ color: settings.color }}>
                         {data.currency}{total.toLocaleString()}
                     </span>
                 </div>
             </div>
 
-            <div className="text-center mt-4 pb-2 relative z-10">
-                <p className="text-[8px] text-zinc-400 font-medium">Thank you for your patronage!</p>
-                <div className="flex justify-center items-center gap-1 mt-1.5 opacity-40">
+            {/* Footer Section */}
+            <div className="text-center mt-5 pb-1 relative z-10">
+                <p className="text-[8px] text-zinc-400 font-bold mb-1.5 uppercase tracking-tighter italic">Thank you for your patronage</p>
+                <div className="flex justify-center items-center gap-1.5 opacity-30">
                      <div className="w-1 h-1 rounded-full bg-zinc-400"></div>
-                     <p className="text-[7px] text-zinc-400 uppercase tracking-[0.15em] font-bold">Generated by MifimnPay</p>
+                     <p className="text-[7px] text-zinc-500 uppercase tracking-[0.2em] font-black">Generated by MifimnPay</p>
                      <div className="w-1 h-1 rounded-full bg-zinc-400"></div>
                 </div>
             </div>
         </div>
 
-        {/* Real SVG Zigzag for perfect download capture */}
-        <div className="w-full overflow-hidden leading-[0] line-height-[0]">
-          <svg width="320" height="10" viewBox="0 0 320 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Real SVG Zigzag Edge */}
+        <div className="w-full overflow-hidden block" style={{ height: '10px' }}>
+          <svg width="320" height="10" viewBox="0 0 320 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" className="block">
             <defs>
-              <pattern id="zigzag" x="0" y="0" width="20" height="10" patternUnits="userSpaceOnUse">
-                <polygon points="0,0 10,10 20,0 20,10 0,10" fill="white" />
+              <pattern id="zigzag" x="0" y="0" width="16" height="10" patternUnits="userSpaceOnUse">
+                <polygon points="0,0 8,8 16,0 16,10 0,10" fill="white" />
               </pattern>
             </defs>
             <rect width="320" height="10" fill="url(#zigzag)" />
