@@ -1,28 +1,30 @@
-export type ReceiptItem = {
+export interface ReceiptItem {
   id: string;
   name: string;
   qty: number;
   price: number;
-};
+}
 
-// New: Settings for the visual appearance
-export type ReceiptSettings = {
-  color: string;
-  showLogo: boolean;
-  template: 'simple' | 'detailed';
-};
-
-export type ReceiptData = {
+export interface ReceiptData {
   receiptNumber: string;
   date: string;
   customerName: string;
-  currency: '₦' | '$' | '€' | '£';
+  currency: string;
   items: ReceiptItem[];
-  paymentMethod: 'Cash' | 'Transfer' | 'POS' | 'Card';
-  status: 'Paid' | 'Pending' | 'Unpaid';
+  paymentMethod: 'Transfer' | 'Cash' | 'POS';
+  status: 'Paid' | 'Pending';
   discount: number;
   shipping: number;
   businessName: string;
   businessPhone: string;
-  note: string;
-};
+  tagline?: string;      // Added
+  footerMessage?: string; // Added
+  logoUrl?: string | null;
+  note?: string;
+}
+
+export interface ReceiptSettings {
+  color: string;
+  showLogo: boolean;
+  template: 'simple' | 'detailed';
+}

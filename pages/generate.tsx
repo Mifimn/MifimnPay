@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Settings, Lock, AlertTriangle, Palette, CreditCard 
+  Palette, Settings, Lock, AlertTriangle 
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
@@ -16,6 +16,7 @@ export default function Generator() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth(); 
   const receiptRef = useRef<HTMLDivElement>(null);
+  
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -34,6 +35,8 @@ export default function Generator() {
     shipping: '' as any,
     businessName: 'My Business',
     businessPhone: '',
+    tagline: '',
+    footerMessage: '',
     note: ''
   });
 
@@ -50,16 +53,27 @@ export default function Generator() {
       if (user) {
         try {
           const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
-          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          setData(prev => ({
-            ...prev,
-            receiptNumber: nextNum || '001',
-            date: today,
-            businessName: profile?.business_name || 'My Business',
-            businessPhone: profile?.business_phone || '',
-            currency: profile?.currency || '₦',
-            logoUrl: profile?.logo_url
-          }));
+          
+          // Updated selection to include tagline and footer_message
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('business_name, business_phone, currency, logo_url, tagline, footer_message')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            setData(prev => ({
+              ...prev,
+              receiptNumber: nextNum || '001',
+              date: today,
+              businessName: profile.business_name || 'My Business',
+              businessPhone: profile.business_phone || '',
+              currency: profile.currency || '₦',
+              logoUrl: profile.logo_url,
+              tagline: profile.tagline || '', // Map tagline
+              footerMessage: profile.footer_message || '' // Map footer message
+            }));
+          }
         } catch (err) { console.error(err); }
       } else {
         setData(prev => ({ ...prev, date: today }));
@@ -86,6 +100,43 @@ export default function Generator() {
       created_at: new Date().toISOString()
     }]);
     if (error) throw error;
+  };
+
+  const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
+    const finalValue = (field === 'price' || field === 'qty') && value === '' ? '' : value;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === id ? { ...item, [field]: finalValue } : item)
+    }));
+  };
+
+  const addItem = () => {
+    setData(prev => ({
+      ...prev,
+      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
+    }));
+  };
+
+  const removeItem = (id: string) => {
+    if (data.items.length === 1) return;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== id)
+    }));
+  };
+
+  const initiateAction = (action: () => void) => {
+    if (!user) {
+      if (confirm("Sign up for a free account to Download or Share?")) router.push('/login');
+      return;
+    }
+    setPendingAction(() => action);
+    setShowConfirm(true);
+  };
+
+  const confirmAndExecute = () => {
+    setShowConfirm(false);
+    if (pendingAction) pendingAction();
   };
 
   const generateImage = async () => {
@@ -138,45 +189,7 @@ export default function Generator() {
     } catch (err: any) { console.error(err); }
   };
 
-  const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
-    const finalValue = (field === 'price' || field === 'qty') && value === '' ? '' : value;
-    setData(prev => ({
-      ...prev,
-      items: prev.items.map(item => item.id === id ? { ...item, [field]: finalValue } : item)
-    }));
-  };
-
-  const addItem = () => {
-    setData(prev => ({
-      ...prev,
-      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
-    }));
-  };
-
-  const removeItem = (id: string) => {
-    if (data.items.length === 1) return;
-    setData(prev => ({
-      ...prev,
-      items: prev.items.filter(item => item.id !== id)
-    }));
-  };
-
-  const initiateAction = (action: () => void) => {
-    if (!user) {
-      if (confirm("Sign up for a free account to Download or Share?")) router.push('/login');
-      return;
-    }
-    setPendingAction(() => action);
-    setShowConfirm(true);
-  };
-
-  const confirmAndExecute = () => {
-    setShowConfirm(false);
-    if (pendingAction) pendingAction();
-  };
-
   const colors = ['#09090b', '#166534', '#1e40af', '#b45309', '#7e22ce', '#be123c', '#0891b2', '#854d0e'];
-
   if (!isClient || authLoading) return null;
 
   return (
@@ -215,7 +228,6 @@ export default function Generator() {
       <div className="flex-1 relative overflow-hidden flex flex-col md:flex-row">
         <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
-            {/* Customer Details */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2"><Settings size={16} className="text-zinc-400" /> Details</h3>
               <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white transition-all text-base" placeholder="Customer Name" />
@@ -225,13 +237,12 @@ export default function Generator() {
                   <input value={data.receiptNumber} disabled className="w-full h-12 px-4 bg-zinc-100 rounded-xl text-zinc-900 font-bold" />
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1">DATE</label>
+                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1 uppercase">Date</label>
                   <input value={data.date} onChange={(e) => setData({...data, date: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
                 </div>
               </div>
             </section>
 
-            {/* Items Purchased - Mobile Fixed */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
                 <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Items</h3>
@@ -262,7 +273,6 @@ export default function Generator() {
               </div>
             </section>
 
-            {/* Pricing/Fees Section */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
                <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Fees & Method</h3>
                <div className="grid grid-cols-2 gap-4">
@@ -285,7 +295,6 @@ export default function Generator() {
           </div>
         </div>
 
-        {/* Preview Side */}
         <div className={`flex-1 h-full bg-zinc-200/50 flex flex-col relative ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
           <div className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-3 flex justify-between items-center z-10 shadow-sm shrink-0">
              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -294,7 +303,7 @@ export default function Generator() {
                ))}
              </div>
              <div className="flex gap-2">
-               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
+               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
                <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white shadow-sm border border-zinc-100 text-zinc-700">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
              </div>
           </div>
@@ -305,8 +314,7 @@ export default function Generator() {
           </div>
         </div>
 
-        {/* Mobile Tabs */}
-        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
           <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'edit' ? 'text-zinc-900 bg-zinc-50' : 'text-zinc-400'}`}>Edit Details</button>
           <div className="w-[1px] bg-zinc-200 h-6 self-center"></div>
           <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'preview' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Live Preview</button>

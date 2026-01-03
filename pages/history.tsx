@@ -48,7 +48,11 @@ export default function History() {
       link.href = dataUrl;
       link.download = `receipt-${selectedReceipt.receipt_number}.png`;
       link.click();
-    } catch (err) { console.error(err); } finally { setIsDownloading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setIsDownloading(false); 
+    }
   };
 
   const filteredReceipts = receipts.filter(r => 
@@ -67,28 +71,44 @@ export default function History() {
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-zinc-200 mb-6">
-          <input type="text" placeholder="Search customer or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-96 px-4 py-2 bg-zinc-50 border rounded-lg text-sm outline-none focus:border-zinc-900" />
+          <input 
+            type="text" 
+            placeholder="Search customer or ID..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            className="w-full md:w-96 px-4 py-2 bg-zinc-50 border rounded-lg text-sm outline-none focus:border-zinc-900" 
+          />
         </div>
 
         <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
           <table className="w-full text-left min-w-[700px]">
             <thead className="bg-zinc-50 border-b text-xs uppercase text-zinc-500 font-bold">
-              <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Date</th><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Amount</th><th className="px-6 py-4 text-right">Actions</th></tr>
+              <tr>
+                <th className="px-6 py-4">ID</th>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
                 <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
-              ) : filteredReceipts.map((r) => (
-                <tr key={r.id} className="hover:bg-zinc-50/50 group transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs font-bold text-zinc-500">{r.receipt_number}</td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-bold text-zinc-900">{r.customer_name}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => setSelectedReceipt(r)} className="p-2 text-zinc-400 hover:text-zinc-900 transition-all"><Eye size={16}/></button>
-                  </td>
-                </tr>
-              ))}
+              ) : filteredReceipts.length > 0 ? (
+                filteredReceipts.map((r) => (
+                  <tr key={r.id} className="hover:bg-zinc-50/50 group transition-colors">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-zinc-500">{r.receipt_number}</td>
+                    <td className="px-6 py-4 text-sm text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 font-bold text-zinc-900">{r.customer_name}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => setSelectedReceipt(r)} className="p-2 text-zinc-400 hover:text-zinc-900 transition-all"><Eye size={16}/></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={5} className="py-20 text-center text-zinc-400 italic">No history found.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -112,6 +132,8 @@ export default function History() {
                                 businessName: profile?.business_name || 'Business Name',
                                 businessPhone: profile?.business_phone || '',
                                 logoUrl: profile?.logo_url,
+                                tagline: profile?.tagline || '',
+                                footerMessage: profile?.footer_message || '',
                                 shipping: Number(selectedReceipt.shipping_fee || 0),
                                 discount: Number(selectedReceipt.discount_amount || 0),
                                 items: selectedReceipt.items || [],
@@ -122,9 +144,13 @@ export default function History() {
                         />
                     </div>
                 </div>
-                <div className="p-4 border-t flex gap-3">
+                <div className="p-4 border-t flex gap-3 bg-white">
                     <button onClick={() => setSelectedReceipt(null)} className="flex-1 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200">Close</button>
-                    <button onClick={handleDownloadAgain} disabled={isDownloading} className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all">
+                    <button 
+                        onClick={handleDownloadAgain} 
+                        disabled={isDownloading} 
+                        className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all"
+                    >
                         {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />} Download Image
                     </button>
                 </div>
