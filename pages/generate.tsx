@@ -54,7 +54,7 @@ export default function Generator() {
 
       if (user) {
         try {
-          // Get Sequential Number
+          // Fetch Sequential Number via RPC
           const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { 
             target_user_id: user.id 
           });
@@ -76,7 +76,7 @@ export default function Generator() {
             logoUrl: profile?.logo_url
           }));
         } catch (err) {
-          console.error("Init Error:", err);
+          console.error("Initialization error:", err);
         }
       } else {
         setData(prev => ({ ...prev, date: today }));
@@ -86,7 +86,7 @@ export default function Generator() {
     if (!authLoading) initializeData();
   }, [user, authLoading]);
 
-  // SAVE TO DATABASE - Matches your exact SQL Schema
+  // AUTO-SAVE TO SUPABASE
   const saveToHistory = async () => {
     if (!user) return; 
 
@@ -97,11 +97,12 @@ export default function Generator() {
       user_id: user.id,
       receipt_number: data.receiptNumber,
       customer_name: data.customerName || 'Walk-in Customer',
-      total_amount: numericTotal, // numeric type in schema
+      total_amount: numericTotal,
+      shipping_fee: Number(data.shipping) || 0,
+      discount_amount: Number(data.discount) || 0,
       status: data.status,
       payment_method: data.paymentMethod,
-      items: data.items, // jsonb type in schema
-      items_summary: data.items.map(i => i.name).join(', '), // helper for list view
+      items: data.items,
       created_at: new Date().toISOString()
     }]);
 
@@ -173,14 +174,14 @@ export default function Generator() {
     try {
       const image = await generateImage();
       if (!image) return;
-      await saveToHistory(); // Save to DB
+      await saveToHistory(); 
       const link = document.createElement('a');
       link.href = image;
       link.download = `receipt-${data.receiptNumber}.png`;
       link.click();
       router.push('/history');
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert("Error saving receipt: " + err.message);
     }
   };
 
@@ -188,12 +189,12 @@ export default function Generator() {
     try {
       const image = await generateImage();
       if (!image) return;
-      await saveToHistory(); // Save to DB
+      await saveToHistory(); 
       const text = `Hello ${data.customerName}, attached is your receipt #${data.receiptNumber}.`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       router.push('/history');
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert("Error saving receipt: " + err.message);
     }
   };
 
@@ -210,10 +211,10 @@ export default function Generator() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
             <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} /></div>
             <h3 className="text-lg font-bold text-zinc-900 mb-2">Check details carefully</h3>
-            <p className="text-sm text-zinc-500 mb-6">Once downloaded, this receipt is saved to history and cannot be edited. Proceed?</p>
+            <p className="text-sm text-zinc-500 mb-6">Are you sure the details are correct? This will be saved to your history.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowConfirm(false)} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-100 text-zinc-600">Cancel</button>
-              <button onClick={confirmAndExecute} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-900 text-white">Save & Proceed</button>
+              <button onClick={confirmAndExecute} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-900 text-white">Save & Download</button>
             </div>
           </div>
         </div>
@@ -240,7 +241,7 @@ export default function Generator() {
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2">
-                <Settings size={16} className="text-zinc-400" /> Customer Details
+                <Settings size={16} className="text-zinc-400" /> Details
               </h3>
               <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white" placeholder="Customer Name" />
               <div className="grid grid-cols-2 gap-4">
@@ -270,18 +271,15 @@ export default function Generator() {
             </section>
 
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
-               <h3 className="font-bold text-xs text-zinc-500 uppercase">Pricing & Method</h3>
+               <h3 className="font-bold text-xs text-zinc-500 uppercase">Method & Pricing</h3>
                <div className="grid grid-cols-2 gap-4">
                   <input type="number" placeholder="Discount" value={data.discount} onChange={(e) => setData({...data, discount: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none" />
                   <input type="number" placeholder="Shipping" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none" />
                   <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none">
-                     <option>Transfer</option>
-                     <option>Cash</option>
-                     <option>POS</option>
+                     <option>Transfer</option><option>Cash</option><option>POS</option>
                   </select>
                   <select value={data.status} onChange={(e) => setData({...data, status: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none">
-                     <option>Paid</option>
-                     <option>Pending</option>
+                     <option>Paid</option><option>Pending</option>
                   </select>
                </div>
             </section>
@@ -297,7 +295,7 @@ export default function Generator() {
                ))}
              </div>
              <div className="flex gap-2">
-               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold ${settings.showLogo ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400'}`}>Logo</button>
+               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold ${settings.showLogo ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
                <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-zinc-100 border border-zinc-100 text-zinc-700">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
              </div>
           </div>
