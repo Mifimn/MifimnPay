@@ -45,13 +45,14 @@ export default function History() {
   const generateImage = async () => {
     if (!downloadRef.current) return null;
     setIsGenerating(true);
-    // Increased timeout to ensure clean rendering before capture
-    await new Promise(r => setTimeout(r, 600));
+    // Added delay to ensure all fonts and SVG render before capture
+    await new Promise(r => setTimeout(r, 800));
     try {
       const canvas = await html2canvas(downloadRef.current, { 
-        scale: 4, // Increased scale for better text quality
+        scale: 4, 
         useCORS: true,
-        backgroundColor: null
+        backgroundColor: null,
+        logging: false,
       });
       return canvas.toDataURL("image/png", 1.0);
     } catch (err) { 
@@ -86,7 +87,7 @@ export default function History() {
             });
         } else {
             handleDownload();
-            alert("Sharing not supported on this browser. Image has been downloaded.");
+            alert("Sharing not supported on this browser. Image downloaded.");
         }
     } catch (err) { console.error(err); }
   };
@@ -134,8 +135,8 @@ export default function History() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
                 <div className="p-4 border-b flex justify-between items-center bg-zinc-50">
-                    <h3 className="font-bold text-zinc-800">View Receipt Details</h3>
-                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-zinc-200 rounded-full"><X size={20}/></button>
+                    <h3 className="font-bold text-zinc-800 tracking-tight">Receipt Preview</h3>
+                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-zinc-200 rounded-full transition-colors"><X size={20}/></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex flex-col items-center">
                     <div className="scale-90 origin-top">
@@ -150,7 +151,9 @@ export default function History() {
                                 currency: profile?.currency || '₦',
                                 shipping: Number(selectedReceipt.shipping_fee || 0),
                                 discount: Number(selectedReceipt.discount_amount || 0),
-                                items: selectedReceipt.items || []
+                                items: selectedReceipt.items || [],
+                                // FIXED: Passing the formatted date from database
+                                date: new Date(selectedReceipt.created_at).toLocaleDateString('en-GB')
                             }} 
                             settings={{ color: profile?.theme_color || '#09090b', showLogo: true, template: 'detailed' }} 
                             receiptRef={downloadRef} 
