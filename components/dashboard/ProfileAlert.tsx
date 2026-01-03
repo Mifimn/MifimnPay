@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { AlertCircle, X, Clock } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ProfileAlert() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    if (user) {
+    // Prevent display if already on settings page
+    if (user && router.pathname !== '/settings') {
       const checkProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('business_phone, logo_url, tagline, footer_message, address')
+          .select('business_phone, logo_url, tagline, address')
           .eq('id', user.id)
           .single();
 
@@ -27,19 +30,23 @@ export default function ProfileAlert() {
         if (missing.length > 0) {
           setMissingInfo(missing);
           setIsVisible(true);
+          setCountdown(10); // Reset countdown when shown
         }
       };
       checkProfile();
+    } else {
+      setIsVisible(false);
     }
-  }, [user]);
+  }, [user, router.pathname]);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (isVisible && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     } else if (countdown === 0) {
       setIsVisible(false);
     }
+    return () => clearTimeout(timer);
   }, [isVisible, countdown]);
 
   if (!isVisible || missingInfo.length === 0) return null;
@@ -71,7 +78,7 @@ export default function ProfileAlert() {
           </div>
 
           <button 
-            onClick={() => window.location.href = '/settings'}
+            onClick={() => router.push('/settings')}
             className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95"
           >
             Go to Settings
