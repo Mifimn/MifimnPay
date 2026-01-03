@@ -34,15 +34,17 @@ export default function Navbar() {
             }
           `}
         >
-          {/* Logo Section */}
+          {/* Logo Section - Replaced placeholder with favicon.png */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
-              M
-            </div>
+            <img 
+              src="/favicon.png" 
+              alt="MifimnPay" 
+              className="w-8 h-8 rounded-lg shadow-md object-cover" 
+            />
             <span className="font-bold text-zinc-900 text-lg tracking-tight">MifimnPay</span>
           </Link>
 
-          {/* Desktop Links - Updated for global navigation */}
+          {/* Desktop Links - Updated for Global Navigation */}
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-600">
             <Link href="/" className="hover:text-zinc-900 transition-colors">Home</Link>
             <Link href="/#how-it-works" className="hover:text-zinc-900 transition-colors">How it Works</Link>

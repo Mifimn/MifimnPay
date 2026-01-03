@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import Navbar from '../components/landing/Navbar'; // Import Navbar
+import Navbar from '../components/landing/Navbar';
 
 export default function Login() {
   const router = useRouter();
@@ -44,21 +44,17 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white">
       <Head><title>{authMode === 'signin' ? 'Login' : 'Sign Up'} | MifimnPay</title></Head>
-      
-      {/* Integrated Landing Navbar */}
       <Navbar />
 
       <main className="flex items-center justify-center pt-36 px-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          className="w-full max-w-md space-y-10"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-10">
           <div className="text-center">
+            {/* Logo from public/favicon.png */}
+            <img src="/favicon.png" alt="MifimnPay Logo" className="w-16 h-16 mx-auto mb-6 rounded-2xl shadow-sm" />
             <h1 className="text-4xl font-black text-zinc-950 tracking-tight">
               {authMode === 'signin' ? 'Welcome Back' : 'Join MifimnPay'}
             </h1>
-            <p className="text-zinc-500 mt-3 text-lg">Manage your receipts effortlessly</p>
+            <p className="text-zinc-500 mt-3 text-lg">Manage your business receipts effortlessly</p>
           </div>
 
           {error && (

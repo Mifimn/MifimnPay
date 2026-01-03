@@ -34,9 +34,14 @@ export default function DashboardNavbar() {
       <div className="max-w-6xl mx-auto flex justify-between items-center">
         
         <div className="flex items-center gap-8">
+          {/* Logo Section - Replaced placeholder with favicon.png */}
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-bold">M</div>
-            <span className="font-bold text-zinc-900 text-lg hidden md:block">MifimnPay</span>
+            <img 
+              src="/favicon.png" 
+              alt="MifimnPay" 
+              className="w-8 h-8 rounded-lg shadow-sm object-cover" 
+            />
+            <span className="font-bold text-zinc-900 text-lg hidden md:block tracking-tight">MifimnPay</span>
           </Link>
 
           {/* Desktop Nav */}
