@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Save, ArrowLeft, Loader2, Settings, AlertTriangle, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { 
+  Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
+  Palette, Settings, Lock, AlertTriangle 
+} from 'lucide-react';
+// Changed import to html-to-image
+import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
 import ReceiptPreview from '../components/generator/ReceiptPreview';
 import Link from 'next/link';
@@ -12,116 +16,330 @@ import { useAuth } from '../lib/AuthContext';
 export default function Generator() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth(); 
+  const receiptRef = useRef<HTMLDivElement>(null);
+  
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
-  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const [data, setData] = useState<ReceiptData>({
-    receiptNumber: '001', date: '...', customerName: '', currency: '₦',
+    receiptNumber: '001',
+    date: '...',
+    customerName: '',
+    currency: '₦',
     items: [{ id: '1', name: '', qty: 1, price: '' as any }], 
-    businessName: 'My Business', businessPhone: '', paymentMethod: 'Transfer',
-    status: 'Paid', discount: 0 as any, shipping: 0 as any,
+    paymentMethod: 'Transfer',
+    status: 'Paid',
+    discount: '' as any,
+    shipping: '' as any,
+    businessName: 'My Business',
+    businessPhone: '',
+    note: ''
   });
 
-  const [settings, setSettings] = useState<ReceiptSettings>({ color: '#09090b', showLogo: true, template: 'detailed' });
+  const [settings, setSettings] = useState<ReceiptSettings>({
+    color: '#09090b', 
+    showLogo: true,
+    template: 'detailed'
+  });
 
   useEffect(() => {
-    const init = async () => {
-      const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    setIsClient(true);
+    const initializeData = async () => {
+      const today = new Date().toLocaleDateString('en-GB', { 
+        day: '2-digit', month: '2-digit', year: 'numeric' 
+      });
+
       if (user) {
-        const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setData(p => ({ ...p, receiptNumber: nextNum || '001', date: today, businessName: profile?.business_name, businessPhone: profile?.business_phone, logoUrl: profile?.logo_url }));
-      } else { setData(p => ({ ...p, date: today })); }
+        try {
+          const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+
+          setData(prev => ({
+            ...prev,
+            receiptNumber: nextNum || '001',
+            date: today,
+            businessName: profile?.business_name || 'My Business',
+            businessPhone: profile?.business_phone || '',
+            currency: profile?.currency || '₦',
+            logoUrl: profile?.logo_url
+          }));
+        } catch (err) { console.error(err); }
+      } else {
+        setData(prev => ({ ...prev, date: today }));
+      }
     };
-    if (!authLoading) init();
+    if (!authLoading) initializeData();
   }, [user, authLoading]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-        const total = data.items.reduce((acc, i) => acc + (Number(i.price)*Number(i.qty)), 0);
-        await supabase.from('receipts').insert([{ user_id: user?.id, receipt_number: data.receiptNumber, customer_name: data.customerName || 'Walk-in Customer', total_amount: total, items: data.items }]);
-        setShowConfirm(false); setShowSuccess(true);
-    } catch (e) { console.error(e); } finally { setIsSaving(false); }
+  const saveToHistory = async () => {
+    if (!user) return; 
+    const subtotal = data.items.reduce((acc, i) => acc + ((Number(i.price)||0) * (Number(i.qty)||0)), 0);
+    const numericTotal = subtotal + (Number(data.shipping) || 0) - (Number(data.discount) || 0);
+
+    const { error } = await supabase.from('receipts').insert([{
+      user_id: user.id,
+      receipt_number: data.receiptNumber,
+      customer_name: data.customerName || 'Walk-in Customer',
+      total_amount: numericTotal,
+      shipping_fee: Number(data.shipping) || 0,
+      discount_amount: Number(data.discount) || 0,
+      status: data.status,
+      payment_method: data.paymentMethod,
+      items: data.items,
+      created_at: new Date().toISOString()
+    }]);
+    if (error) throw error;
   };
 
+  const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
+    const finalValue = (field === 'price' || field === 'qty') && value === '' ? '' : value;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === id ? { ...item, [field]: finalValue } : item)
+    }));
+  };
+
+  const addItem = () => {
+    setData(prev => ({
+      ...prev,
+      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
+    }));
+  };
+
+  const removeItem = (id: string) => {
+    if (data.items.length === 1) return;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== id)
+    }));
+  };
+
+  const initiateAction = (action: () => void) => {
+    if (!user) {
+      if (confirm("Sign up for a free account to Download or Share?")) router.push('/login');
+      return;
+    }
+    setPendingAction(() => action);
+    setShowConfirm(true);
+  };
+
+  const confirmAndExecute = () => {
+    setShowConfirm(false);
+    if (pendingAction) pendingAction();
+  };
+
+  const generateImage = async () => {
+    if (!receiptRef.current) return null;
+    setIsGenerating(true);
+    setActiveTab('preview');
+    // Short delay to ensure browser completes layout/rendering
+    await new Promise(r => setTimeout(r, 400)); 
+    try {
+      // Changed to toPng with pixelRatio for higher resolution
+      return await toPng(receiptRef.current, { 
+        pixelRatio: 3, 
+        cacheBust: true,
+        // Using toPng excludes watermark via style hidden rather than clone document manipulation
+      });
+    } catch (err) { 
+      console.error(err);
+      return null; 
+    } finally { 
+      setIsGenerating(false); 
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      const image = await generateImage();
+      if (!image) return;
+      await saveToHistory(); 
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `receipt-${data.receiptNumber}.png`;
+      link.click();
+      router.push('/history');
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const handleShare = async () => {
+    try {
+      const image = await generateImage();
+      if (!image) return;
+
+      await saveToHistory();
+
+      const res = await fetch(image);
+      const blob = await res.blob();
+      const file = new File([blob], `receipt-${data.receiptNumber}.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Receipt #${data.receiptNumber}`,
+          text: `Hello ${data.customerName || 'Customer'}, attached is your receipt #${data.receiptNumber}.`,
+        });
+        router.push('/history');
+      } else {
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `receipt-${data.receiptNumber}.png`;
+        link.click();
+        alert("Sharing not supported on this browser. Image has been downloaded.");
+        router.push('/history');
+      }
+    } catch (err: any) { console.error(err); }
+  };
+
+  const colors = ['#09090b', '#166534', '#1e40af', '#b45309', '#7e22ce', '#be123c', '#0891b2', '#854d0e'];
+
+  if (!isClient || authLoading) return null;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-screen bg-zinc-50 flex flex-col overflow-hidden">
-      <Head><title>New Receipt | MifimnPay</title></Head>
+    <div className="h-[100dvh] bg-zinc-100 flex flex-col overflow-hidden">
+      <Head><title>Create Receipt | MifimnPay</title></Head>
 
-      <AnimatePresence>
-        {showConfirm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[32px] p-8 max-w-sm w-full text-center shadow-2xl">
-              <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} /></div>
-              <h3 className="text-xl font-black mb-2">Check Details</h3>
-              <p className="text-zinc-500 mb-8 font-medium">Ready to save this receipt to history?</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setShowConfirm(false)} className="py-4 bg-zinc-100 rounded-2xl font-bold">Edit</button>
-                <button onClick={handleSave} className="py-4 bg-zinc-900 text-white rounded-2xl font-bold flex items-center justify-center">
-                  {isSaving ? <Loader2 className="animate-spin" /> : "Save"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} /></div>
+            <h3 className="text-lg font-bold text-zinc-900 mb-2">Check details carefully</h3>
+            <p className="text-sm text-zinc-500 mb-6">Are you sure the details are correct? This will be saved to your history.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowConfirm(false)} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-100 text-zinc-600">Cancel</button>
+              <button onClick={confirmAndExecute} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-900 text-white">Save & Proceed</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {showSuccess && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
-            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl">
-              <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={40} /></div>
-              <h3 className="text-2xl font-black mb-4">Saved Successfully!</h3>
-              <p className="text-zinc-500 mb-10 font-medium">Go to History to share or download the receipt.</p>
-              <button onClick={() => router.push('/history')} className="w-full py-5 bg-zinc-900 text-white rounded-[24px] font-black text-lg active:scale-95 transition-all">Go to History</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <header className="bg-white border-b px-6 py-4 flex justify-between items-center shrink-0">
-        <Link href="/dashboard" className="p-2 hover:bg-zinc-100 rounded-full transition-colors"><ArrowLeft size={24} /></Link>
-        <button onClick={() => setShowConfirm(true)} className="bg-zinc-900 text-white px-8 py-3 rounded-full font-black text-sm flex items-center gap-2">
-            <Save size={18} /> Save Receipt
-        </button>
+      <header className="bg-white border-b border-zinc-200 px-4 py-3 flex justify-between items-center z-30 shrink-0">
+        <div className="flex items-center gap-2">
+            <Link href={user ? "/dashboard" : "/"} className="text-zinc-500 p-2 hover:bg-zinc-100 rounded-full transition-colors"><ArrowLeft size={22} /></Link>
+            <h1 className="font-bold text-lg text-zinc-900">New Receipt</h1>
+        </div>
+        <div className="flex items-center gap-2">
+            <button onClick={() => initiateAction(handleShare)} disabled={isGenerating} className="bg-zinc-100 text-zinc-900 p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
+                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <Share2 size={18} />}
+            </button>
+            <button onClick={() => initiateAction(handleDownload)} disabled={isGenerating} className="bg-zinc-900 text-white p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
+                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />}
+            </button>
+        </div>
       </header>
 
-      <div className="flex-1 overflow-hidden flex flex-col md:flex-row bg-zinc-50">
-        <div className="flex-1 overflow-y-auto p-6 md:p-12">
-          <div className="max-w-xl mx-auto space-y-8 pb-10">
-            <motion.section initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="bg-white p-8 rounded-[32px] shadow-sm border border-zinc-100 space-y-6">
-              <div className="flex items-center gap-3 text-zinc-400 font-black text-[11px] uppercase tracking-widest border-b pb-4"><Settings size={18} /> Basic Info</div>
-              <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-14 px-6 border-2 border-zinc-50 rounded-[20px] focus:border-zinc-900 outline-none font-bold bg-zinc-50 transition-all" placeholder="Customer Name" />
-            </motion.section>
+      <div className="flex-1 relative overflow-hidden flex flex-col md:flex-row">
+        <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
+          <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
+            <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
+              <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2">
+                <Settings size={16} className="text-zinc-400" /> Customer Details
+              </h3>
+              <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white transition-all text-base" placeholder="Customer Name" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1">RECEIPT NO.</label>
+                  <input value={data.receiptNumber} disabled className="w-full h-12 px-4 bg-zinc-100 rounded-xl text-zinc-900 font-bold" />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1 uppercase">Date</label>
+                  <input value={data.date} onChange={(e) => setData({...data, date: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
+                </div>
+              </div>
+            </section>
 
-            <motion.section initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-white p-8 rounded-[32px] shadow-sm border border-zinc-100 space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="font-black text-[11px] text-zinc-400 uppercase tracking-widest">Inventory</h3>
-                <button onClick={() => setData(p => ({...p, items: [...p.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]}))} className="bg-zinc-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"><Plus size={22} /></button>
+            <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
+              <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
+                <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Items Purchased</h3>
+                <button onClick={addItem} className="text-xs font-bold text-zinc-900 hover:bg-zinc-100 px-3 py-1 rounded-full transition-all">+ Add Item</button>
               </div>
               <div className="space-y-4">
                 {data.items.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-3 p-4 bg-zinc-50 rounded-[24px]">
-                    <div className="flex gap-2">
-                        <input placeholder="Product Name" value={item.name} onChange={(e) => setData(p => ({...p, items: p.items.map(i => i.id === item.id ? {...i, name: e.target.value} : i)}))} className="flex-1 h-12 px-5 rounded-[16px] outline-none font-bold bg-white shadow-sm" />
-                        <button onClick={() => setData(p => ({...p, items: p.items.filter(i => i.id !== item.id)}))} className="w-12 h-12 bg-red-50 text-red-500 rounded-[16px] flex items-center justify-center"><Trash2 size={18} /></button>
-                    </div>
-                    <div className="flex gap-3">
-                      <input type="number" placeholder="Qty" value={item.qty} onChange={(e) => setData(p => ({...p, items: p.items.map(i => i.id === item.id ? {...i, qty: Number(e.target.value)} : i)}))} className="w-24 h-12 px-4 rounded-[16px] outline-none font-bold bg-white text-center shadow-sm" />
-                      <input type="number" placeholder="Price" value={item.price} onChange={(e) => setData(p => ({...p, items: p.items.map(i => i.id === item.id ? {...i, price: e.target.value as any} : i)}))} className="flex-1 h-12 px-5 rounded-[16px] outline-none font-bold bg-white shadow-sm" />
+                  <div key={item.id} className="p-4 bg-zinc-50 rounded-xl border border-zinc-100 md:bg-transparent md:p-0 md:border-0">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Item Description</label>
+                        <input placeholder="e.g. Graphic Design" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-white md:bg-zinc-50" />
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <div className="w-20 md:w-24">
+                          <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Qty</label>
+                          <input type="number" placeholder="1" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none text-center font-bold bg-white md:bg-zinc-50" />
+                        </div>
+                        <div className="flex-1 md:w-32">
+                          <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Price</label>
+                          <input type="number" placeholder="0" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-bold bg-white md:bg-zinc-50" />
+                        </div>
+                        <button onClick={() => removeItem(item.id)} className="p-3 text-zinc-300 hover:text-red-500 transition-colors self-end md:self-center">
+                          <Trash2 size={20}/>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </motion.section>
+            </section>
+
+            <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
+               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Pricing & Method</h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase">Discount</label>
+                    <input type="number" placeholder="0" value={data.discount} onChange={(e) => setData({...data, discount: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase">Shipping</label>
+                    <input type="number" placeholder="0" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
+                  </div>
+                  <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                     <option>Transfer</option><option>Cash</option><option>POS</option>
+                  </select>
+                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                     <option>Paid</option><option>Pending</option>
+                  </select>
+               </div>
+            </section>
           </div>
         </div>
 
-        <div className="hidden md:flex flex-1 items-center justify-center p-12 bg-zinc-100/30">
-             <ReceiptPreview data={data} settings={settings} />
+        <div className={`flex-1 h-full bg-zinc-200/50 flex flex-col relative ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
+          <div className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-3 flex justify-between items-center z-10 shadow-sm shrink-0">
+             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+               {colors.map(c => (
+                 <button key={c} onClick={() => setSettings({...settings, color: c})} className={`w-7 h-7 rounded-full border-2 transition-all ${settings.color === c ? 'border-zinc-900 scale-110' : 'border-white'}`} style={{ backgroundColor: c }} />
+               ))}
+             </div>
+             <div className="flex gap-2">
+               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
+               <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white shadow-sm border border-zinc-100 text-zinc-700">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
+             </div>
+          </div>
+
+          <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-zinc-100/50 relative">
+             {!user && (
+               <div id="preview-watermark" className="absolute inset-0 pointer-events-none z-50 flex flex-col items-center justify-center overflow-hidden opacity-10">
+                  <div className="grid grid-cols-2 gap-12 rotate-[-15deg] scale-150">
+                     {[...Array(12)].map((_, i) => (
+                        <span key={i} className="text-4xl font-black text-black whitespace-nowrap">PREVIEW ONLY</span>
+                     ))}
+                  </div>
+               </div>
+             )}
+             <div className="scale-[0.75] md:scale-100 origin-center transition-transform">
+               <ReceiptPreview data={data} settings={settings} receiptRef={receiptRef} />
+             </div>
+          </div>
+        </div>
+
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
+          <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'edit' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Edit Details</button>
+          <div className="w-[1px] bg-zinc-200 h-6 self-center"></div>
+          <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'preview' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Live Preview</button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
