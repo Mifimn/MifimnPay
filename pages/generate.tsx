@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Palette, Settings, CreditCard, Lock, AlertTriangle 
+  Palette, Settings, Lock, AlertTriangle 
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
@@ -159,15 +159,33 @@ export default function Generator() {
     } catch (err: any) { alert(err.message); }
   };
 
-  const handleWhatsApp = async () => {
+  const handleShare = async () => {
     try {
       const image = await generateImage();
       if (!image) return;
-      await saveToHistory(); 
-      const text = `Hello ${data.customerName}, attached is your receipt #${data.receiptNumber}.`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-      router.push('/history');
-    } catch (err: any) { alert(err.message); }
+
+      await saveToHistory();
+
+      const res = await fetch(image);
+      const blob = await res.blob();
+      const file = new File([blob], `receipt-${data.receiptNumber}.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Receipt #${data.receiptNumber}`,
+          text: `Hello ${data.customerName || 'Customer'}, attached is your receipt #${data.receiptNumber}.`,
+        });
+        router.push('/history');
+      } else {
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `receipt-${data.receiptNumber}.png`;
+        link.click();
+        alert("Sharing not supported on this browser. Image has been downloaded.");
+        router.push('/history');
+      }
+    } catch (err: any) { console.error(err); }
   };
 
   const colors = ['#09090b', '#166534', '#1e40af', '#b45309', '#7e22ce', '#be123c', '#0891b2', '#854d0e'];
@@ -186,7 +204,7 @@ export default function Generator() {
             <p className="text-sm text-zinc-500 mb-6">Are you sure the details are correct? This will be saved to your history.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowConfirm(false)} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-100 text-zinc-600">Cancel</button>
-              <button onClick={confirmAndExecute} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-900 text-white">Save & Download</button>
+              <button onClick={confirmAndExecute} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-900 text-white">Save & Proceed</button>
             </div>
           </div>
         </div>
@@ -195,23 +213,21 @@ export default function Generator() {
       <header className="bg-white border-b border-zinc-200 px-4 py-3 flex justify-between items-center z-30 shrink-0">
         <div className="flex items-center gap-2">
             <Link href={user ? "/dashboard" : "/"} className="text-zinc-500 p-2 hover:bg-zinc-100 rounded-full transition-colors"><ArrowLeft size={22} /></Link>
-            <h1 className="font-bold text-lg text-zinc-900 tracking-tight">New Receipt</h1>
+            <h1 className="font-bold text-lg text-zinc-900">New Receipt</h1>
         </div>
         <div className="flex items-center gap-2">
-            <button onClick={() => initiateAction(handleWhatsApp)} disabled={isGenerating} className="bg-[#25D366] text-white p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
-                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : !user ? <Lock size={16} /> : <Share2 size={18} />}
+            <button onClick={() => initiateAction(handleShare)} disabled={isGenerating} className="bg-zinc-100 text-zinc-900 p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
+                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <Share2 size={18} />}
             </button>
             <button onClick={() => initiateAction(handleDownload)} disabled={isGenerating} className="bg-zinc-900 text-white p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
-                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : !user ? <Lock size={16} /> : <Download size={18} />}
+                {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />}
             </button>
         </div>
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col md:flex-row">
-        {/* FORM SIDE */}
         <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
-            {/* Customer Details */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2">
                 <Settings size={16} className="text-zinc-400" /> Customer Details
@@ -229,7 +245,6 @@ export default function Generator() {
               </div>
             </section>
 
-            {/* Items Purchased Section - FIXED OVERLAP */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
                 <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Items Purchased</h3>
@@ -262,7 +277,6 @@ export default function Generator() {
               </div>
             </section>
 
-            {/* Pricing Section */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
                <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Pricing & Method</h3>
                <div className="grid grid-cols-2 gap-4">
@@ -274,10 +288,10 @@ export default function Generator() {
                     <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase">Shipping</label>
                     <input type="number" placeholder="0" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
                   </div>
-                  <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                  <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
                      <option>Transfer</option><option>Cash</option><option>POS</option>
                   </select>
-                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
                      <option>Paid</option><option>Pending</option>
                   </select>
                </div>
@@ -285,7 +299,6 @@ export default function Generator() {
           </div>
         </div>
 
-        {/* PREVIEW SIDE */}
         <div className={`flex-1 h-full bg-zinc-200/50 flex flex-col relative ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
           <div className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-3 flex justify-between items-center z-10 shadow-sm shrink-0">
              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -315,9 +328,8 @@ export default function Generator() {
           </div>
         </div>
 
-        {/* MOBILE BOTTOM TABS */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
-          <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'edit' ? 'text-zinc-900 bg-zinc-50' : 'text-zinc-400'}`}>Edit Details</button>
+          <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'edit' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Edit Details</button>
           <div className="w-[1px] bg-zinc-200 h-6 self-center"></div>
           <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'preview' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Live Preview</button>
         </div>
