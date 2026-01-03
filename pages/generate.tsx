@@ -5,7 +5,7 @@ import {
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
   Palette, Settings, Lock, AlertTriangle 
 } from 'lucide-react';
-// Corrected to use the new library
+// Changed import to html-to-image
 import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
 import ReceiptPreview from '../components/generator/ReceiptPreview';
@@ -131,20 +131,19 @@ export default function Generator() {
     if (pendingAction) pendingAction();
   };
 
-  // Fixed generating function using html-to-image
   const generateImage = async () => {
     if (!receiptRef.current) return null;
     setIsGenerating(true);
     setActiveTab('preview');
-    // Wait for layout to settle
-    await new Promise(r => setTimeout(r, 500)); 
+    // Short delay to ensure browser completes layout/rendering
+    await new Promise(r => setTimeout(r, 400)); 
     try {
-      const dataUrl = await toPng(receiptRef.current, { 
+      // Changed to toPng with pixelRatio for higher resolution
+      return await toPng(receiptRef.current, { 
         pixelRatio: 3, 
         cacheBust: true,
-        backgroundColor: '#ffffff'
+        // Using toPng excludes watermark via style hidden rather than clone document manipulation
       });
-      return dataUrl;
     } catch (err) { 
       console.error(err);
       return null; 
