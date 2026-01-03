@@ -44,15 +44,13 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white">
       <Head><title>{authMode === 'signin' ? 'Login' : 'Sign Up'} | MifimnPay</title></Head>
-      
-      {/* Integrated Landing Navbar */}
       <Navbar />
 
-      <main className="flex items-center justify-center pt-32 px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-8">
+      <main className="flex items-center justify-center pt-36 px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-10">
           <div className="text-center">
-            <h1 className="text-3xl font-black text-zinc-950">{authMode === 'signin' ? 'Welcome Back' : 'Join MifimnPay'}</h1>
-            <p className="text-zinc-500 mt-2">Manage your receipts effortlessly</p>
+            <h1 className="text-4xl font-black text-zinc-950 tracking-tight">{authMode === 'signin' ? 'Welcome Back' : 'Join MifimnPay'}</h1>
+            <p className="text-zinc-500 mt-3 text-lg">Manage your receipts effortlessly</p>
           </div>
 
           {error && (
@@ -63,9 +61,9 @@ export default function Login() {
 
           <button 
             onClick={handleGoogleLogin} 
-            className="w-full h-14 flex items-center justify-center gap-3 bg-white text-zinc-950 border border-zinc-200 rounded-2xl hover:bg-zinc-50 transition-all shadow-sm font-bold text-sm"
+            className="w-full h-16 flex items-center justify-center gap-4 bg-white text-zinc-950 border border-zinc-200 rounded-2xl hover:bg-zinc-50 transition-all shadow-sm font-bold text-base"
           >
-             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
              Continue with Google
           </button>
 
@@ -74,10 +72,10 @@ export default function Login() {
             <span className="bg-white px-4 text-xs text-zinc-400 font-bold uppercase tracking-widest absolute">or email</span>
           </div>
 
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" required className="w-full h-13 px-4 border border-zinc-200 rounded-xl outline-none focus:border-zinc-900 transition-colors" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className="w-full h-13 px-4 border border-zinc-200 rounded-xl outline-none focus:border-zinc-900 transition-colors" />
-            <button disabled={isLoading} className="w-full h-14 bg-zinc-950 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-zinc-200">
+          <form onSubmit={handleEmailAuth} className="space-y-5">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" required className="w-full h-15 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 transition-colors text-base" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className="w-full h-15 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 transition-colors text-base" />
+            <button disabled={isLoading} className="w-full h-16 bg-zinc-950 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-zinc-200 text-lg">
               {isLoading ? <Loader2 className="animate-spin mx-auto" /> : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
             </button>
           </form>

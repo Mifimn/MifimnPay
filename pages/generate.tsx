@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Palette, Settings, Lock, AlertTriangle 
+  Settings, Lock, AlertTriangle, Palette, CreditCard 
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
@@ -16,7 +16,6 @@ export default function Generator() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth(); 
   const receiptRef = useRef<HTMLDivElement>(null);
-  
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -89,43 +88,6 @@ export default function Generator() {
     if (error) throw error;
   };
 
-  const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
-    const finalValue = (field === 'price' || field === 'qty') && value === '' ? '' : value;
-    setData(prev => ({
-      ...prev,
-      items: prev.items.map(item => item.id === id ? { ...item, [field]: finalValue } : item)
-    }));
-  };
-
-  const addItem = () => {
-    setData(prev => ({
-      ...prev,
-      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
-    }));
-  };
-
-  const removeItem = (id: string) => {
-    if (data.items.length === 1) return;
-    setData(prev => ({
-      ...prev,
-      items: prev.items.filter(item => item.id !== id)
-    }));
-  };
-
-  const initiateAction = (action: () => void) => {
-    if (!user) {
-      if (confirm("Sign up for a free account to Download or Share?")) router.push('/login');
-      return;
-    }
-    setPendingAction(() => action);
-    setShowConfirm(true);
-  };
-
-  const confirmAndExecute = () => {
-    setShowConfirm(false);
-    if (pendingAction) pendingAction();
-  };
-
   const generateImage = async () => {
     if (!receiptRef.current) return null;
     setIsGenerating(true);
@@ -176,7 +138,45 @@ export default function Generator() {
     } catch (err: any) { console.error(err); }
   };
 
+  const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
+    const finalValue = (field === 'price' || field === 'qty') && value === '' ? '' : value;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === id ? { ...item, [field]: finalValue } : item)
+    }));
+  };
+
+  const addItem = () => {
+    setData(prev => ({
+      ...prev,
+      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
+    }));
+  };
+
+  const removeItem = (id: string) => {
+    if (data.items.length === 1) return;
+    setData(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== id)
+    }));
+  };
+
+  const initiateAction = (action: () => void) => {
+    if (!user) {
+      if (confirm("Sign up for a free account to Download or Share?")) router.push('/login');
+      return;
+    }
+    setPendingAction(() => action);
+    setShowConfirm(true);
+  };
+
+  const confirmAndExecute = () => {
+    setShowConfirm(false);
+    if (pendingAction) pendingAction();
+  };
+
   const colors = ['#09090b', '#166534', '#1e40af', '#b45309', '#7e22ce', '#be123c', '#0891b2', '#854d0e'];
+
   if (!isClient || authLoading) return null;
 
   return (
@@ -200,7 +200,7 @@ export default function Generator() {
       <header className="bg-white border-b border-zinc-200 px-4 py-3 flex justify-between items-center z-30 shrink-0">
         <div className="flex items-center gap-2">
             <Link href={user ? "/dashboard" : "/"} className="text-zinc-500 p-2 hover:bg-zinc-100 rounded-full transition-colors"><ArrowLeft size={22} /></Link>
-            <h1 className="font-bold text-lg text-zinc-900 tracking-tight">New Receipt</h1>
+            <h1 className="font-bold text-lg text-zinc-900 tracking-tight uppercase">New Receipt</h1>
         </div>
         <div className="flex items-center gap-2">
             <button onClick={() => initiateAction(handleShare)} disabled={isGenerating} className="bg-zinc-100 text-zinc-900 p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
@@ -213,39 +213,40 @@ export default function Generator() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col md:flex-row">
-        {/* Form Side with Overlap Fixes */}
         <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
+            {/* Customer Details */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
-              <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2"><Settings size={16} className="text-zinc-400" /> Customer Details</h3>
-              <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white text-base" placeholder="Customer Name" />
+              <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2"><Settings size={16} className="text-zinc-400" /> Details</h3>
+              <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white transition-all text-base" placeholder="Customer Name" />
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1">RECEIPT NO.</label>
                   <input value={data.receiptNumber} disabled className="w-full h-12 px-4 bg-zinc-100 rounded-xl text-zinc-900 font-bold" />
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1 uppercase">Date</label>
-                  <input value={data.date} onChange={(e) => setData({...data, date: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none font-medium bg-zinc-50 focus:bg-white text-base" />
+                  <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1">DATE</label>
+                  <input value={data.date} onChange={(e) => setData({...data, date: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
                 </div>
               </div>
             </section>
 
+            {/* Items Purchased - Mobile Fixed */}
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-zinc-50 pb-2">
-                <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Items Purchased</h3>
+                <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Items</h3>
                 <button onClick={addItem} className="text-xs font-bold text-zinc-900 hover:bg-zinc-100 px-3 py-1 rounded-full transition-all">+ Add Item</button>
               </div>
               <div className="space-y-4">
                 {data.items.map((item) => (
-                  <div key={item.id} className="p-4 bg-zinc-50 rounded-xl border border-zinc-100 md:bg-transparent md:p-0 md:border-0">
+                  <div key={item.id} className="p-4 bg-zinc-50 rounded-xl border border-zinc-100 md:bg-transparent md:p-0 md:border-0 relative">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-2">
                       <div className="flex-1">
-                        <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Item Description</label>
+                        <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Description</label>
                         <input placeholder="Item Name" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-white md:bg-zinc-50" />
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <div className="w-20 md:w-24">
+                      <div className="flex gap-2">
+                        <div className="w-20">
                           <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Qty</label>
                           <input type="number" placeholder="1" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none text-center font-bold bg-white md:bg-zinc-50" />
                         </div>
@@ -253,12 +254,33 @@ export default function Generator() {
                           <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Price</label>
                           <input type="number" placeholder="0" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-bold bg-white md:bg-zinc-50" />
                         </div>
-                        <button onClick={() => removeItem(item.id)} className="p-3 text-zinc-300 hover:text-red-500 self-end md:self-center"><Trash2 size={20}/></button>
+                        <button onClick={() => removeItem(item.id)} className="p-3 text-zinc-300 hover:text-red-500 self-end md:self-center transition-colors"><Trash2 size={20}/></button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* Pricing/Fees Section */}
+            <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
+               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider">Fees & Method</h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase">Discount (Amount)</label>
+                    <input type="number" placeholder="0" value={data.discount} onChange={(e) => setData({...data, discount: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase">Shipping (Amount)</label>
+                    <input type="number" placeholder="0" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl outline-none focus:border-zinc-900 bg-zinc-50 focus:bg-white text-base" />
+                  </div>
+                  <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                     <option>Transfer</option><option>Cash</option><option>POS</option>
+                  </select>
+                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                     <option>Paid</option><option>Pending</option>
+                  </select>
+               </div>
             </section>
           </div>
         </div>
@@ -272,19 +294,19 @@ export default function Generator() {
                ))}
              </div>
              <div className="flex gap-2">
-               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
+               <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-500'}`}>Logo</button>
                <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white shadow-sm border border-zinc-100 text-zinc-700">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
              </div>
           </div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-zinc-100/50 relative">
-             <div className="scale-[0.85] md:scale-100 transition-transform">
+             <div className="scale-[0.85] md:scale-100 origin-center transition-transform">
                <ReceiptPreview data={data} settings={settings} receiptRef={receiptRef} />
              </div>
           </div>
         </div>
 
         {/* Mobile Tabs */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
+        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex z-40 pb-safe shadow-lg">
           <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'edit' ? 'text-zinc-900 bg-zinc-50' : 'text-zinc-400'}`}>Edit Details</button>
           <div className="w-[1px] bg-zinc-200 h-6 self-center"></div>
           <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold ${activeTab === 'preview' ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'}`}>Live Preview</button>

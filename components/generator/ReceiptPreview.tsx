@@ -17,30 +17,35 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
 
   return (
     <div className="flex justify-center items-start font-sans antialiased p-4 relative">
-      {/* Background Watermark for Guest Users */}
+      {/* 1. Multiple Slanted Watermark for Guest Users */}
       {!user && (
-        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden opacity-[0.05] rotate-[-25deg]">
-          <span className="text-5xl font-black text-black whitespace-nowrap">PREVIEW ONLY • SIGN UP TO DOWNLOAD</span>
+        <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center overflow-hidden opacity-[0.06]">
+          {[...Array(15)].map((_, i) => (
+            <div key={i} className="whitespace-nowrap text-3xl font-black rotate-[-25deg] py-6 uppercase">
+              Preview Only • Sign up to Download • MifimnPay • Preview Only • Sign up to Download
+            </div>
+          ))}
         </div>
       )}
 
       <div 
         ref={receiptRef}
         id="receipt-node"
-        className="relative text-zinc-900 leading-tight drop-shadow-xl"
+        className="relative text-zinc-900 leading-tight drop-shadow-xl overflow-hidden"
         style={{ width: '320px', backgroundColor: '#ffffff' }}
       >
+        {/* 2. Repeated Slanted Background Logo Pattern */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none z-0 flex flex-wrap gap-14 p-6 rotate-[-15deg] scale-125">
+          {[...Array(24)].map((_, i) => (
+            <span key={i} className="text-3xl font-black" style={{ color: settings.color }}>
+              {logoLetter}
+            </span>
+          ))}
+        </div>
+
         <div className="h-2 w-full relative z-20 rounded-t-sm" style={{ backgroundColor: settings.color }}></div>
 
-        <div className="bg-white w-full px-5 pt-5 pb-2 relative z-10">
-            {settings.showLogo && !data.logoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden z-0 opacity-[0.03] pointer-events-none">
-                <span className="text-[140px] font-black -rotate-12" style={{ color: settings.color }}>
-                   {logoLetter}
-                </span>
-            </div>
-            )}
-
+        <div className="bg-transparent w-full px-5 pt-5 pb-2 relative z-10">
             <div className="text-center mb-6 relative z-10 border-b border-dashed border-zinc-200 pb-4">
                 {settings.showLogo && (
                     <div 
@@ -77,25 +82,21 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                 </div>
 
                 <div className="space-y-2"> 
-                    {data.items.length === 0 ? (
-                        <p className="text-[10px] text-center text-zinc-300 py-2 italic">No items</p>
-                    ) : (
-                        data.items.map((item) => (
-                        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 text-xs items-start leading-snug">
-                            <div className="flex flex-col">
-                                <span className="font-bold text-zinc-800 block break-words">{item.name || 'Item Name'}</span>
-                                {settings.template === 'detailed' && (
-                                    <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
-                                    {item.qty} x {data.currency}{(item.price || 0).toLocaleString()}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="font-mono font-bold text-zinc-900 whitespace-nowrap text-right block">
-                                {data.currency}{((item.qty || 0) * (item.price || 0)).toLocaleString()}
-                            </span>
+                    {data.items.map((item) => (
+                    <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 text-xs items-start leading-snug">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-zinc-800 block break-words">{item.name || 'Item Name'}</span>
+                            {settings.template === 'detailed' && (
+                                <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
+                                {item.qty} x {data.currency}{(item.price || 0).toLocaleString()}
+                                </span>
+                            )}
                         </div>
-                        ))
-                    )}
+                        <span className="font-mono font-bold text-zinc-900 whitespace-nowrap text-right block">
+                            {data.currency}{((item.qty || 0) * (item.price || 0)).toLocaleString()}
+                        </span>
+                    </div>
+                    ))}
                 </div>
             </div>
 
@@ -137,14 +138,13 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
             </div>
         </div>
 
-        {/* Zigzag bottom boundary */}
+        {/* 3. Zigzag Bottom Edge */}
         <div 
-           className="w-full h-3 relative z-20" 
+           className="w-full h-[6px] relative z-20" 
            style={{ 
              backgroundImage: `url("${zigzagImage}")`, 
              backgroundSize: '12px 6px', 
-             backgroundRepeat: 'repeat-x', 
-             height: '6px' 
+             backgroundRepeat: 'repeat-x' 
            }} 
         />
       </div>
