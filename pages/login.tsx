@@ -34,11 +34,27 @@ export default function Login() {
         alert('Check your email for the confirmation link!');
         setAuthMode('signin');
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push('/dashboard');
+        const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) throw authError;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('business_name')
+          .eq('id', data.user.id)
+          .single();
+
+        // Redirect based on profile completion status
+        if (!profile?.business_name || profile.business_name === 'My Business') {
+          router.push('/onboarding');
+        } else {
+          router.push('/dashboard');
+        }
       }
-    } catch (err: any) { setError(err.message); } finally { setIsLoading(false); }
+    } catch (err: any) { 
+        setError(err.message); 
+    } finally { 
+        setIsLoading(false); 
+    }
   };
 
   return (
@@ -46,26 +62,25 @@ export default function Login() {
       <Head><title>{authMode === 'signin' ? 'Login' : 'Sign Up'} | MifimnPay</title></Head>
       <Navbar />
 
-      <main className="flex items-center justify-center pt-36 px-6">
+      <main className="flex items-center justify-center pt-36 pb-20 px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-10">
           <div className="text-center">
-            {/* Logo from public/favicon.png */}
-            <img src="/favicon.png" alt="MifimnPay Logo" className="w-16 h-16 mx-auto mb-6 rounded-2xl shadow-sm" />
+            <img src="/favicon.png" alt="MifimnPay Logo" className="w-20 h-20 mx-auto mb-6 rounded-2xl shadow-xl shadow-zinc-100" />
             <h1 className="text-4xl font-black text-zinc-950 tracking-tight">
               {authMode === 'signin' ? 'Welcome Back' : 'Join MifimnPay'}
             </h1>
-            <p className="text-zinc-500 mt-3 text-lg">Manage your business receipts effortlessly</p>
+            <p className="text-zinc-500 mt-3 text-lg">Instant professional receipts for your brand.</p>
           </div>
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm">
               <AlertCircle size={18} /> <p>{error}</p>
             </div>
           )}
 
           <button 
             onClick={handleGoogleLogin} 
-            className="w-full h-16 flex items-center justify-center gap-4 bg-white text-zinc-950 border border-zinc-200 rounded-2xl hover:bg-zinc-50 transition-all shadow-sm font-bold text-base"
+            className="w-full h-16 flex items-center justify-center gap-4 bg-white text-zinc-950 border-2 border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all shadow-sm font-bold text-base"
           >
              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
              Continue with Google
@@ -73,22 +88,22 @@ export default function Login() {
 
           <div className="relative flex items-center justify-center">
             <div className="border-t w-full border-zinc-100"></div>
-            <span className="bg-white px-4 text-xs text-zinc-400 font-bold uppercase tracking-widest absolute">or email</span>
+            <span className="bg-white px-4 text-xs text-zinc-400 font-bold uppercase tracking-widest absolute">or secure email</span>
           </div>
 
           <form onSubmit={handleEmailAuth} className="space-y-5">
             <input 
               type="email" value={email} onChange={(e) => setEmail(e.target.value)} 
               placeholder="Email address" required 
-              className="w-full h-15 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 transition-colors text-base" 
+              className="w-full h-16 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 transition-all text-lg" 
             />
             <input 
               type="password" value={password} onChange={(e) => setPassword(e.target.value)} 
               placeholder="Password" required 
-              className="w-full h-15 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 transition-colors text-base" 
+              className="w-full h-16 px-6 border-2 border-zinc-100 rounded-2xl outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 transition-all text-lg" 
             />
-            <button disabled={isLoading} className="w-full h-16 bg-zinc-950 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-zinc-200 text-lg">
-              {isLoading ? <Loader2 className="animate-spin mx-auto" /> : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
+            <button disabled={isLoading} className="w-full h-16 bg-zinc-950 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-2xl shadow-zinc-200 text-lg flex items-center justify-center">
+              {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
             </button>
           </form>
 
