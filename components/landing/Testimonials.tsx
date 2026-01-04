@@ -4,7 +4,7 @@ const reviews = [
   {
     name: "Amina Yusuf",
     role: "Perfume Vendor, Ilorin",
-    text: "Before Receiptify, I was writing on paper. Now my customers take me more seriously because they see a branded receipt.",
+    text: "Before MifimnPay I was writing on paper. Now my customers take me more seriously because they see a branded receipt.",
     rating: 5
   },
   {
