@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Palette, Settings, Lock, AlertTriangle, User 
+  Palette, Settings, Lock, AlertTriangle 
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
@@ -16,18 +16,12 @@ export default function Generator() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth(); 
   const receiptRef = useRef<HTMLDivElement>(null);
-
+  
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-
-  // --- NEW: State for Customer Suggestions ---
-  const [pastCustomers, setPastCustomers] = useState<string[]>([]);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  // -------------------------------------------
 
   const [data, setData] = useState<ReceiptData>({
     receiptNumber: '001',
@@ -59,7 +53,8 @@ export default function Generator() {
       if (user) {
         try {
           const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
-
+          
+          // Updated selection to include tagline and footer_message
           const { data: profile } = await supabase
             .from('profiles')
             .select('business_name, business_phone, currency, logo_url, tagline, footer_message')
@@ -75,29 +70,10 @@ export default function Generator() {
               businessPhone: profile.business_phone || '',
               currency: profile.currency || '₦',
               logoUrl: profile.logo_url,
-              tagline: profile.tagline || '', 
-              footerMessage: profile.footer_message || '' 
+              tagline: profile.tagline || '', // Map tagline
+              footerMessage: profile.footer_message || '' // Map footer message
             }));
           }
-
-          // --- NEW: Fetch Past Customers ---
-          const { data: receipts } = await supabase
-            .from('receipts')
-            .select('customer_name')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-          if (receipts) {
-            // Filter unique names, remove blanks and "Walk-in"
-            const uniqueNames = Array.from(new Set(
-              receipts
-                .map(r => r.customer_name)
-                .filter(name => name && name.trim() !== '' && name !== 'Walk-in Customer')
-            ));
-            setPastCustomers(uniqueNames);
-          }
-          // ---------------------------------
-
         } catch (err) { console.error(err); }
       } else {
         setData(prev => ({ ...prev, date: today }));
@@ -105,28 +81,6 @@ export default function Generator() {
     };
     if (!authLoading) initializeData();
   }, [user, authLoading]);
-
-  // --- NEW: Suggestion Handlers ---
-  const handleCustomerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setData({ ...data, customerName: value });
-
-    if (value.length > 0) {
-      const matches = pastCustomers.filter(name => 
-        name.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredSuggestions(matches.slice(0, 5)); // Show max 5 suggestions
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
-  };
-
-  const selectCustomer = (name: string) => {
-    setData({ ...data, customerName: name });
-    setShowSuggestions(false);
-  };
-  // --------------------------------
 
   const saveToHistory = async () => {
     if (!user) return; 
@@ -276,39 +230,7 @@ export default function Generator() {
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2"><Settings size={16} className="text-zinc-400" /> Details</h3>
-
-              {/* --- MODIFIED: Customer Input with Suggestions --- */}
-              <div className="relative">
-                <input 
-                  value={data.customerName} 
-                  onChange={handleCustomerNameChange}
-                  onFocus={() => { if(data.customerName) setShowSuggestions(true) }}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white transition-all text-base" 
-                  placeholder="Customer Name"
-                  autoComplete="off" 
-                />
-
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                    <div className="px-3 py-2 bg-zinc-50 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">
-                      Previous Customers
-                    </div>
-                    {filteredSuggestions.map((name, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectCustomer(name)}
-                        className="w-full text-left px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 transition-colors flex items-center gap-2"
-                      >
-                        <User size={14} className="text-zinc-400" />
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* ----------------------------------------------- */}
-
+              <input value={data.customerName} onChange={(e) => setData({...data, customerName: e.target.value})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-zinc-50 focus:bg-white transition-all text-base" placeholder="Customer Name" />
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-zinc-400 ml-1 mb-1">RECEIPT NO.</label>
