@@ -7,9 +7,23 @@ interface Props {
   receiptRef?: React.RefObject<HTMLDivElement>;
 }
 
+// --- HELPER: Strip extra text like "(NGN) - Nigerian Naira" ---
+// This ensures ONLY the number is used for math and display
+const cleanDisplayPrice = (val: any): number => {
+  if (typeof val === 'number') return val;
+  // This removes everything except numbers and decimal points
+  const cleaned = String(val).replace(/[^0-9.]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
 export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
   const { user } = useAuth();
-  const subtotal = data.items.reduce((acc, item) => acc + ((item.price || 0) * (item.qty || 0)), 0);
+
+  // Clean calculations to ensure no "NaN" or string errors
+  const subtotal = data.items.reduce((acc, item) => 
+    acc + (cleanDisplayPrice(item.price) * (item.qty || 0)), 0);
+
   const total = subtotal + (Number(data.shipping) || 0) - (Number(data.discount) || 0);
   const logoLetter = (data.businessName?.charAt(0) || 'R').toUpperCase();
 
@@ -66,13 +80,13 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                     </div>
                 )}
                 <h2 className="font-extrabold text-base uppercase tracking-tight mb-0.5">{data.businessName || 'Business Name'}</h2>
-                
+
                 {data.tagline && (
                   <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mb-1 italic">
                     {data.tagline}
                   </p>
                 )}
-                
+
                 <p className="text-[10px] text-zinc-500 font-medium">{data.businessPhone}</p>
             </div>
 
@@ -95,21 +109,24 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                 </div>
 
                 <div className="space-y-2"> 
-                    {data.items.map((item) => (
-                    <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 text-xs items-start leading-snug">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-zinc-800 block break-words">{item.name || 'Item Name'}</span>
-                            {settings.template === 'detailed' && (
-                                <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
-                                {item.qty} x {data.currency}{(item.price || 0).toLocaleString()}
-                                </span>
-                            )}
+                    {data.items.map((item) => {
+                      const itemPrice = cleanDisplayPrice(item.price); // Clean the price here
+                      return (
+                        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 text-xs items-start leading-snug">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-zinc-800 block break-words">{item.name || 'Item Name'}</span>
+                                {settings.template === 'detailed' && (
+                                    <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
+                                      {item.qty} x {data.currency}{itemPrice.toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="font-mono font-bold text-zinc-900 whitespace-nowrap text-right block">
+                                {data.currency}{( (item.qty || 0) * itemPrice ).toLocaleString()}
+                            </span>
                         </div>
-                        <span className="font-mono font-bold text-zinc-900 whitespace-nowrap text-right block">
-                            {data.currency}{((item.qty || 0) * (item.price || 0)).toLocaleString()}
-                        </span>
-                    </div>
-                    ))}
+                      );
+                    })}
                 </div>
             </div>
 

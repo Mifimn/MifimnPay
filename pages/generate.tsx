@@ -13,12 +13,9 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext'; 
 
 // --- HELPER: Strict Math Safety ---
-// This ensures that only pure numbers are saved to the database.
+// Prevents "10" + "20" = "1020" errors
 const safeFloat = (value: any): number => {
-  if (typeof value === 'number') return value;
-  // Remove currency symbols, commas, and letters, then parse
-  const cleanValue = String(value).replace(/[^0-9.]/g, '');
-  const num = parseFloat(cleanValue);
+  const num = parseFloat(value);
   return isNaN(num) ? 0 : num;
 };
 
@@ -33,6 +30,7 @@ export default function Generator() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
+  // --- State for Customer Suggestions ---
   const [pastCustomers, setPastCustomers] = useState<string[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -42,11 +40,11 @@ export default function Generator() {
     date: '...',
     customerName: '',
     currency: '₦',
-    items: [{ id: '1', name: '', qty: 1, price: '' as any }], 
+    items: [{ id: '1', name: '', qty: 1, price: '' }], // Removed 'as any', handled by safeFloat
     paymentMethod: 'Transfer',
     status: 'Paid',
-    discount: '' as any,
-    shipping: '' as any,
+    discount: '',
+    shipping: '',
     businessName: 'My Business',
     businessPhone: '',
     tagline: '',
@@ -67,6 +65,7 @@ export default function Generator() {
       if (user) {
         try {
           const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('business_name, business_phone, currency, logo_url, tagline, footer_message')
@@ -87,6 +86,7 @@ export default function Generator() {
             }));
           }
 
+          // Fetch Past Customers
           const { data: receipts } = await supabase
             .from('receipts')
             .select('customer_name')
@@ -95,10 +95,13 @@ export default function Generator() {
 
           if (receipts) {
             const uniqueNames = Array.from(new Set(
-              receipts.map(r => r.customer_name).filter(name => name && name.trim() !== '' && name !== 'Walk-in Customer')
+              receipts
+                .map(r => r.customer_name)
+                .filter(name => name && name.trim() !== '' && name !== 'Walk-in Customer')
             ));
             setPastCustomers(uniqueNames);
           }
+
         } catch (err) { console.error(err); }
       } else {
         setData(prev => ({ ...prev, date: today }));
@@ -107,7 +110,8 @@ export default function Generator() {
     if (!authLoading) initializeData();
   }, [user, authLoading]);
 
-  // Debounced search for customers (500ms)
+  // --- PERFORMANCE: Debounced Search ---
+  // Waits 300ms after typing stops before filtering (Fixes lag on slow phones)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (data.customerName.length > 0) {
@@ -115,15 +119,17 @@ export default function Generator() {
           name.toLowerCase().includes(data.customerName.toLowerCase())
         );
         setFilteredSuggestions(matches.slice(0, 5));
-        setShowSuggestions(true);
+        if (matches.length > 0) setShowSuggestions(true);
       } else {
         setShowSuggestions(false);
       }
-    }, 500);
+    }, 300); // 300ms delay
+
     return () => clearTimeout(timer);
   }, [data.customerName, pastCustomers]);
 
   const handleCustomerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Just update state, let the useEffect handle the heavy filtering
     setData({ ...data, customerName: e.target.value });
   };
 
@@ -132,23 +138,17 @@ export default function Generator() {
     setShowSuggestions(false);
   };
 
-  // --- CRITICAL FIX: CLEANING DATA BEFORE SAVING ---
+  // --- SECURITY: Strict Calculation Logic ---
   const saveToHistory = async () => {
     if (!user) return; 
 
-    // Calculate totals using safe numbers to avoid string concatenation
+    // Use safeFloat to ensure these are numbers
     const subtotal = data.items.reduce((acc, i) => acc + (safeFloat(i.price) * safeFloat(i.qty)), 0);
     const shipping = safeFloat(data.shipping);
     const discount = safeFloat(data.discount);
-    const numericTotal = subtotal + shipping - discount;
 
-    // CLEAN ITEMS: Strip any "₦" or "NGN" text from the items list
-    const cleanItems = data.items.map(item => ({
-      id: item.id,
-      name: item.name,
-      qty: safeFloat(item.qty),
-      price: safeFloat(item.price) // This ensures ONLY the number is saved
-    }));
+    // Explicit math
+    const numericTotal = subtotal + shipping - discount;
 
     const { error } = await supabase.from('receipts').insert([{
       user_id: user.id,
@@ -159,14 +159,18 @@ export default function Generator() {
       discount_amount: discount,
       status: data.status,
       payment_method: data.paymentMethod,
-      items: cleanItems, // Save the cleaned version
+      items: data.items.map(i => ({
+        ...i,
+        qty: safeFloat(i.qty),
+        price: safeFloat(i.price)
+      })),
       created_at: new Date().toISOString()
     }]);
-
     if (error) throw error;
   };
 
   const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
+    // Allow empty string for UI editing, but don't cast to 'any' globally
     setData(prev => ({
       ...prev,
       items: prev.items.map(item => item.id === id ? { ...item, [field]: value } : item)
@@ -176,7 +180,7 @@ export default function Generator() {
   const addItem = () => {
     setData(prev => ({
       ...prev,
-      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' as any }]
+      items: [...prev.items, { id: Date.now().toString(), name: '', qty: 1, price: '' }]
     }));
   };
 
@@ -261,7 +265,7 @@ export default function Generator() {
 
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in zoom-in-95">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
             <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} /></div>
             <h3 className="text-lg font-bold text-zinc-900 mb-2">Check details carefully</h3>
             <p className="text-sm text-zinc-500 mb-6">Are you sure the details are correct? This will be saved to your history.</p>
