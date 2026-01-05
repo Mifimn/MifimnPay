@@ -2,8 +2,8 @@ import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import '../styles/globals.css';
 import { AuthProvider } from '../lib/AuthContext';
-import ProfileAlert from '../components/dashboard/ProfileAlert';
-import { GoogleAnalytics } from '@next/third-parties/google'; // Import the GA component
+import ProfileAlert from '../components/dashboard/ProfileAlert'; 
+import { GoogleAnalytics } from '@next/third-parties/google'; // Import GA4 component
 
 export default function App({ Component, pageProps }: AppProps) {
   const siteUrl = 'https://mifimnpay.vercel.app'; 
@@ -16,7 +16,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
         
         {/* Google Search Console Verification Tag */}
-        <meta name="google-site-verification" content="YOUR_GSC_VERIFICATION_CODE_HERE" />
+        <meta name="google-site-verification" content="3LLBnYF_neMyal_kjtQyVOSE25JcDQBwnw40fWe_yEE" />
         
         <link rel="icon" href="/favicon.png" />
         <meta property="og:type" content="website" />
