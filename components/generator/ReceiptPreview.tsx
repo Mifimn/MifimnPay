@@ -7,11 +7,17 @@ interface Props {
   receiptRef?: React.RefObject<HTMLDivElement>;
 }
 
-// --- HELPER: Strip extra text like "(NGN) - Nigerian Naira" ---
-// This ensures ONLY the number is used for math and display
-const cleanDisplayPrice = (val: any): number => {
+// --- NEW: Helper to extract only the symbol (e.g., "₦" from "₦ (NGN) - Nigerian Naira") ---
+const cleanCurrency = (currencyStr: string) => {
+  if (!currencyStr) return '₦';
+  // Splits by space and takes the first part (the symbol)
+  return currencyStr.split(' ')[0]; 
+};
+
+// --- NEW: Helper to ensure price is always a pure number ---
+const cleanPrice = (val: any): number => {
   if (typeof val === 'number') return val;
-  // This removes everything except numbers and decimal points
+  // Remove currency symbols, commas, and letters, then parse
   const cleaned = String(val).replace(/[^0-9.]/g, '');
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
@@ -20,9 +26,12 @@ const cleanDisplayPrice = (val: any): number => {
 export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
   const { user } = useAuth();
 
-  // Clean calculations to ensure no "NaN" or string errors
+  // Clean the currency symbol for the entire receipt
+  const currencySymbol = cleanCurrency(data.currency); 
+
+  // Strict math calculations using cleaned numbers
   const subtotal = data.items.reduce((acc, item) => 
-    acc + (cleanDisplayPrice(item.price) * (item.qty || 0)), 0);
+    acc + (cleanPrice(item.price) * (item.qty || 0)), 0);
 
   const total = subtotal + (Number(data.shipping) || 0) - (Number(data.discount) || 0);
   const logoLetter = (data.businessName?.charAt(0) || 'R').toUpperCase();
@@ -31,12 +40,12 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
 
   return (
     <div className="flex justify-center items-start font-sans antialiased p-4 relative">
-      {/* 1. Multiple Slanted Watermark for Guest Users */}
+      {/* Watermark for Guest Users */}
       {!user && (
         <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center overflow-hidden opacity-[0.06]">
           {[...Array(15)].map((_, i) => (
             <div key={i} className="whitespace-nowrap text-3xl font-black rotate-[-25deg] py-6 uppercase">
-              Preview Only • Sign up to Download • MifimnPay • Preview Only • Sign up to Download
+              Preview Only • Sign up to Download • MifimnPay
             </div>
           ))}
         </div>
@@ -48,7 +57,7 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
         className="relative text-zinc-900 leading-tight drop-shadow-xl overflow-hidden"
         style={{ width: '320px', backgroundColor: '#ffffff' }}
       >
-        {/* 2. Repeated Slanted Background Logo Pattern (Clearer at 0.07 opacity) */}
+        {/* Slanted Background Pattern */}
         <div className="absolute inset-0 opacity-[0.07] pointer-events-none z-0 flex flex-wrap gap-14 p-6 rotate-[-15deg] scale-125 justify-center items-center">
           {[...Array(24)].map((_, i) => (
             <div key={i} className="w-8 h-8 flex items-center justify-center">
@@ -80,13 +89,9 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                     </div>
                 )}
                 <h2 className="font-extrabold text-base uppercase tracking-tight mb-0.5">{data.businessName || 'Business Name'}</h2>
-
                 {data.tagline && (
-                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mb-1 italic">
-                    {data.tagline}
-                  </p>
+                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mb-1 italic">{data.tagline}</p>
                 )}
-
                 <p className="text-[10px] text-zinc-500 font-medium">{data.businessPhone}</p>
             </div>
 
@@ -110,19 +115,19 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
 
                 <div className="space-y-2"> 
                     {data.items.map((item) => {
-                      const itemPrice = cleanDisplayPrice(item.price); // Clean the price here
+                      const itemPrice = cleanPrice(item.price); // CLEAN PRICE HERE
                       return (
                         <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 text-xs items-start leading-snug">
                             <div className="flex flex-col">
                                 <span className="font-bold text-zinc-800 block break-words">{item.name || 'Item Name'}</span>
                                 {settings.template === 'detailed' && (
                                     <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
-                                      {item.qty} x {data.currency}{itemPrice.toLocaleString()}
+                                      {item.qty} x {currencySymbol}{itemPrice.toLocaleString()}
                                     </span>
                                 )}
                             </div>
                             <span className="font-mono font-bold text-zinc-900 whitespace-nowrap text-right block">
-                                {data.currency}{( (item.qty || 0) * itemPrice ).toLocaleString()}
+                                {currencySymbol}{( (item.qty || 0) * itemPrice ).toLocaleString()}
                             </span>
                         </div>
                       );
@@ -134,18 +139,18 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                 <div className="space-y-2 mb-4 text-left">
                     <div className="flex justify-between text-[10px] font-medium text-zinc-500">
                         <span>Subtotal</span>
-                        <span>{data.currency}{subtotal.toLocaleString()}</span>
+                        <span>{currencySymbol}{subtotal.toLocaleString()}</span>
                     </div>
                     {(Number(data.shipping) > 0) && (
                         <div className="flex justify-between text-[10px] font-medium text-zinc-500">
                         <span>Shipping</span>
-                        <span>{data.currency}{Number(data.shipping).toLocaleString()}</span>
+                        <span>{currencySymbol}{Number(data.shipping).toLocaleString()}</span>
                     </div>
                     )}
                     {(Number(data.discount) > 0) && (
                         <div className="flex justify-between text-[10px] font-bold text-green-600">
                         <span>Discount</span>
-                        <span>-{data.currency}{Number(data.discount).toLocaleString()}</span>
+                        <span>-{currencySymbol}{Number(data.discount).toLocaleString()}</span>
                     </div>
                     )}
                 </div>
@@ -153,7 +158,7 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
                 <div className="flex justify-between items-center pt-3 border-t border-zinc-100 -mx-5 px-5 py-2 bg-zinc-50/50">
                     <span className="font-black text-sm uppercase tracking-tight text-zinc-700">TOTAL PAID</span>
                     <span className="font-black text-xl font-mono tracking-tight leading-none" style={{ color: settings.color }}>
-                        {data.currency}{total.toLocaleString()}
+                        {currencySymbol}{total.toLocaleString()}
                     </span>
                 </div>
             </div>
@@ -170,15 +175,7 @@ export default function ReceiptPreview({ data, settings, receiptRef }: Props) {
             </div>
         </div>
 
-        {/* 3. Zigzag Bottom Edge */}
-        <div 
-           className="w-full h-[6px] relative z-20" 
-           style={{ 
-             backgroundImage: `url("${zigzagImage}")`, 
-             backgroundSize: '12px 6px', 
-             backgroundRepeat: 'repeat-x' 
-           }} 
-        />
+        <div className="w-full h-[6px] relative z-20" style={{ backgroundImage: `url("${zigzagImage}")`, backgroundSize: '12px 6px', backgroundRepeat: 'repeat-x' }} />
       </div>
     </div>
   );
