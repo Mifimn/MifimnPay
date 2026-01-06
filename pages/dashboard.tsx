@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
-  Calendar, QrCode, Download, ExternalLink 
+  Calendar, QrCode, Download, ExternalLink, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -25,6 +25,9 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [isDownloadingQR, setIsDownloadingQR] = useState(false);
+
+  // State to manage mobile visibility of the QR Section
+  const [isQrExpanded, setIsQrExpanded] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -81,8 +84,7 @@ export default function Dashboard() {
     } catch (err) { console.error(err); } finally { setIsFetching(false); }
   };
 
-  // URL Generation
-  const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+  const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';
   const storeUrl = `https://mifimnpay.vercel.app/m/${businessSlug}`;
 
   const downloadQR = async () => {
@@ -91,7 +93,7 @@ export default function Dashboard() {
     try {
       const dataUrl = await toPng(qrRef.current, { pixelRatio: 3, backgroundColor: '#ffffff' });
       const link = document.createElement('a');
-      link.download = `qr-store-${businessSlug}.png`;
+      link.download = `qr-code-${businessSlug}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) { console.error(err); } finally { setIsDownloadingQR(false); }
@@ -125,56 +127,19 @@ export default function Dashboard() {
       <DashboardNavbar />
       <ProfileAlert />
 
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-10">
-        
-        {/* UNIVERSAL QR STOREFRONT SECTION */}
-        <section className="bg-zinc-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-            <div className="flex-1 space-y-4 text-center md:text-left">
-              <h2 className="text-2xl font-black tracking-tight">QR Price List & Store 🚀</h2>
-              <p className="text-zinc-400 text-sm font-medium max-w-md">
-                Switching prices? Just update them in Settings. Customers scan this QR to see your live product list and current rates instantly.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                <button 
-                  onClick={downloadQR} 
-                  disabled={isDownloadingQR}
-                  className="bg-white text-zinc-900 px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg active:scale-95 transition-all"
-                >
-                  {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
-                  Download QR Image
-                </button>
-                <a href={storeUrl} target="_blank" className="bg-zinc-800 text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 border border-zinc-700 hover:bg-zinc-700 transition-all">
-                  <ExternalLink size={16} /> Open Live Store
-                </a>
-              </div>
-            </div>
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
 
-            {/* QR Code Container for Image Generation */}
-            <div className="flex flex-col items-center">
-              <div ref={qrRef} className="bg-white p-6 rounded-3xl flex flex-col items-center border-[8px] border-zinc-800">
-                <QRCodeSVG value={storeUrl} size={150} level="H" />
-                <div className="mt-4 text-center">
-                  <p className="text-zinc-900 text-[10px] font-black uppercase tracking-[0.2em]">{profile?.business_name}</p>
-                  <p className="text-zinc-400 text-[8px] font-bold uppercase mt-1">Scan for Live Price List</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -bottom-10 -left-10 opacity-5 pointer-events-none rotate-12"><QrCode size={250} /></div>
-        </section>
-
-        {/* ANALYTICS FILTERS */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-4">
+        {/* BUSINESS OVERVIEW (Moved to Top for Phone View) */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-black text-zinc-900 tracking-tight">Business Analytics</h1>
+            <h1 className="text-3xl font-black text-zinc-900 tracking-tight">Business Overview</h1>
             <p className="text-zinc-500 font-medium tracking-tight">Real-time performance for {profile?.business_name}.</p>
           </div>
           <div className="flex items-center gap-3">
-            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2.5 text-xs font-black text-zinc-600 outline-none shadow-sm">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2 text-xs font-black text-zinc-600 outline-none">
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2.5 text-xs font-black text-zinc-600 outline-none shadow-sm">
+            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2 text-xs font-black text-zinc-600 outline-none">
               <option value="all">Full Year</option>
               {months.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -183,13 +148,81 @@ export default function Dashboard() {
 
         {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard title="Total Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-green-600" />
+          <StatsCard title="Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-green-600" />
           <StatsCard title="Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-600" />
-          <StatsCard title="Customers" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-600" />
+          <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-600" />
         </div>
 
-        {/* CHART */}
+        {/* COLLAPSIBLE QR STOREFRONT SECTION (Optimized for Mobile) */}
+        <section className="bg-zinc-900 rounded-3xl overflow-hidden shadow-xl transition-all duration-300">
+          <button 
+            onClick={() => setIsQrExpanded(!isQrExpanded)}
+            className="w-full p-6 md:p-8 flex items-center justify-between text-white hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/10 rounded-2xl text-white">
+                <QrCode size={20} />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg font-black tracking-tight">QR Storefront Tools</h2>
+                <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Live Price List & QR Generator</p>
+              </div>
+            </div>
+            {isQrExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+
+          <AnimatePresence>
+            {isQrExpanded && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="px-6 pb-8 md:px-8 md:pb-10"
+              >
+                <div className="pt-4 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+                  <div className="flex-1 space-y-4 text-center md:text-left">
+                    <p className="text-zinc-400 text-sm font-medium max-w-md leading-relaxed">
+                      Update your product prices in Settings. Customers scan this QR to see your live storefront instantly.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                      <button 
+                        onClick={downloadQR} 
+                        disabled={isDownloadingQR}
+                        className="bg-white text-zinc-900 px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg active:scale-95 transition-all"
+                      >
+                        {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
+                        Download QR Image
+                      </button>
+                      <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-zinc-800 text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 border border-zinc-700 hover:bg-zinc-700 transition-all">
+                        <ExternalLink size={16} /> Open Web Store
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    <div ref={qrRef} className="bg-white p-6 rounded-3xl flex flex-col items-center border-[8px] border-zinc-800 shadow-2xl">
+                      <QRCodeSVG value={storeUrl} size={150} level="H" />
+                      <div className="mt-4 text-center">
+                        <p className="text-zinc-900 text-[10px] font-black uppercase tracking-[0.2em]">{profile?.business_name || 'MifimnPay User'}</p>
+                        <p className="text-zinc-400 text-[8px] font-bold uppercase mt-1">Scan for Live Price List</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {/* CHART SECTION */}
         <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
+           <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4 text-center md:text-left">
+            <div>
+              <h3 className="font-bold text-zinc-900 text-lg">{selectedMonth === "all" ? `Revenue Trend (${selectedYear})` : `${selectedMonth} ${selectedYear} Breakdown`}</h3>
+              <p className="text-xs text-zinc-400 font-bold uppercase tracking-[0.15em]">{selectedMonth === "all" ? "Monthly Cumulative" : "Daily Sales Tracking"}</p>
+            </div>
+            {isFetching && <Loader2 className="animate-spin text-zinc-400" size={20} />}
+          </div>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
