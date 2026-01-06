@@ -11,7 +11,7 @@ export default function PublicStore() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Define site URL for absolute image paths
+  // Define site URL for absolute image paths required by social scrapers
   const siteUrl = 'https://mifimnpay.vercel.app';
 
   useEffect(() => {
@@ -51,34 +51,38 @@ export default function PublicStore() {
 
   const logoLetter = (profile.business_name?.charAt(0) || 'B').toUpperCase();
   const currencySymbol = profile.currency?.split(' ')[0] || '₦';
-
+  
   // Dynamic SEO Data
   const pageTitle = `${profile.business_name} | Official Price List`;
   const pageDesc = profile.tagline || `View the live price list and products from ${profile.business_name} on MifimnPay.`;
-  const shareImage = profile.logo_url || `${siteUrl}/og-image.png`;
+  const shareImage = profile.logo_url || `${siteUrl}/favicon.png`;
 
   return (
     <div className="min-h-screen bg-white font-sans text-zinc-900 relative overflow-hidden selection:bg-zinc-900 selection:text-white">
       <Head>
-        {/* Basic SEO */}
+        {/* Standard SEO */}
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc} />
 
-        {/* Open Graph / Facebook / WhatsApp */}
+        {/* Essential Open Graph Tags for WhatsApp & Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${siteUrl}/m/${slug}`} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
         <meta property="og:image" content={shareImage} />
+        <meta property="og:image:secure_url" content={shareImage} />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="400" />
+        <meta property="og:image:height" content="400" />
 
-        {/* Twitter */}
+        {/* Twitter Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDesc} />
         <meta name="twitter:image" content={shareImage} />
       </Head>
-
-      {/* Subtle Background Pattern */}
+      
+      {/* Background Logo Pattern with Increased Visibility (0.07 opacity) */}
       <div className="fixed inset-0 opacity-[0.07] pointer-events-none z-0 flex flex-wrap gap-12 p-6 rotate-[-15deg] scale-150 justify-center items-center">
         {[...Array(50)].map((_, i) => (
           <div key={i} className="w-10 h-10 flex items-center justify-center">
@@ -92,7 +96,7 @@ export default function PublicStore() {
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header Section */}
+        {/* Minimal Header with Reduced Spacing */}
         <header className="pt-10 pb-6 px-6 border-b border-zinc-100 bg-white/70 backdrop-blur-xl sticky top-0 z-20">
           <div className="max-w-screen-md mx-auto text-center">
             {profile.logo_url && (
