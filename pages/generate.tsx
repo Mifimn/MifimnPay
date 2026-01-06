@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Settings, Lock, AlertTriangle, User 
+  Settings, Lock, AlertTriangle, User, Store, Edit3
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '../types';
@@ -12,8 +12,6 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient'; 
 import { useAuth } from '../lib/AuthContext'; 
 
-// --- HELPER: Strict Math Safety ---
-// Prevents "10" + "20" = "1020" errors
 const safeFloat = (value: any): number => {
   const num = parseFloat(value);
   return isNaN(num) ? 0 : num;
@@ -30,7 +28,11 @@ export default function Generator() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // --- State for Customer Suggestions ---
+  // --- NEW: Store Mode States ---
+  const [useStoreMode, setUseStoreMode] = useState(false);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  // ------------------------------
+
   const [pastCustomers, setPastCustomers] = useState<string[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -40,7 +42,7 @@ export default function Generator() {
     date: '...',
     customerName: '',
     currency: '₦',
-    items: [{ id: '1', name: '', qty: 1, price: '' }], // Removed 'as any', handled by safeFloat
+    items: [{ id: '1', name: '', qty: 1, price: '' }], 
     paymentMethod: 'Transfer',
     status: 'Paid',
     discount: '',
@@ -86,7 +88,13 @@ export default function Generator() {
             }));
           }
 
-          // Fetch Past Customers
+          // Fetch Products from Digital Price List
+          const { data: products } = await supabase
+            .from('menu_items')
+            .select('*')
+            .eq('user_id', user.id);
+          if (products) setAvailableProducts(products);
+
           const { data: receipts } = await supabase
             .from('receipts')
             .select('customer_name')
@@ -95,9 +103,7 @@ export default function Generator() {
 
           if (receipts) {
             const uniqueNames = Array.from(new Set(
-              receipts
-                .map(r => r.customer_name)
-                .filter(name => name && name.trim() !== '' && name !== 'Walk-in Customer')
+              receipts.map(r => r.customer_name).filter(name => name && name.trim() !== '' && name !== 'Walk-in Customer')
             ));
             setPastCustomers(uniqueNames);
           }
@@ -110,8 +116,6 @@ export default function Generator() {
     if (!authLoading) initializeData();
   }, [user, authLoading]);
 
-  // --- PERFORMANCE: Debounced Search ---
-  // Waits 300ms after typing stops before filtering (Fixes lag on slow phones)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (data.customerName.length > 0) {
@@ -123,13 +127,12 @@ export default function Generator() {
       } else {
         setShowSuggestions(false);
       }
-    }, 300); // 300ms delay
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [data.customerName, pastCustomers]);
 
   const handleCustomerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Just update state, let the useEffect handle the heavy filtering
     setData({ ...data, customerName: e.target.value });
   };
 
@@ -138,16 +141,24 @@ export default function Generator() {
     setShowSuggestions(false);
   };
 
-  // --- SECURITY: Strict Calculation Logic ---
+  // --- NEW: Automated Store Item Selection ---
+  const handleStoreItemSelect = (id: string, productId: string) => {
+    const product = availableProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(item => 
+        item.id === id ? { ...item, name: product.name, price: product.price } : item
+      )
+    }));
+  };
+
   const saveToHistory = async () => {
     if (!user) return; 
-
-    // Use safeFloat to ensure these are numbers
     const subtotal = data.items.reduce((acc, i) => acc + (safeFloat(i.price) * safeFloat(i.qty)), 0);
     const shipping = safeFloat(data.shipping);
     const discount = safeFloat(data.discount);
-
-    // Explicit math
     const numericTotal = subtotal + shipping - discount;
 
     const { error } = await supabase.from('receipts').insert([{
@@ -170,7 +181,6 @@ export default function Generator() {
   };
 
   const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
-    // Allow empty string for UI editing, but don't cast to 'any' globally
     setData(prev => ({
       ...prev,
       items: prev.items.map(item => item.id === id ? { ...item, [field]: value } : item)
@@ -295,6 +305,23 @@ export default function Generator() {
       <div className="flex-1 relative overflow-hidden flex flex-col md:flex-row">
         <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
+
+            {/* NEW: STORE MODE TOGGLE */}
+            <section className="bg-white p-2 rounded-2xl border border-zinc-200 shadow-sm flex items-center gap-2">
+               <button 
+                  onClick={() => setUseStoreMode(false)}
+                  className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all ${!useStoreMode ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400'}`}
+               >
+                  <Edit3 size={16}/> Manual
+               </button>
+               <button 
+                  onClick={() => setUseStoreMode(true)}
+                  className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all ${useStoreMode ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400'}`}
+               >
+                  <Store size={16}/> Store Mode
+               </button>
+            </section>
+
             <section className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
               <h3 className="font-bold text-xs text-zinc-500 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-50 pb-2"><Settings size={16} className="text-zinc-400" /> Details</h3>
 
@@ -351,7 +378,19 @@ export default function Generator() {
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-2">
                       <div className="flex-1">
                         <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Description</label>
-                        <input placeholder="Item Name" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-white md:bg-zinc-50" />
+                        {useStoreMode ? (
+                          <select 
+                            onChange={(e) => handleStoreItemSelect(item.id, e.target.value)}
+                            className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-white md:bg-zinc-50 appearance-none"
+                          >
+                            <option value="">Select from Price List</option>
+                            {availableProducts.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} ({data.currency}{p.price})</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input placeholder="Item Name" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-medium bg-white md:bg-zinc-50" />
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <div className="w-20">
@@ -360,7 +399,14 @@ export default function Generator() {
                         </div>
                         <div className="flex-1 md:w-32">
                           <label className="text-[10px] font-bold text-zinc-400 mb-1 block md:hidden uppercase">Price</label>
-                          <input type="number" placeholder="0" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} className="w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-bold bg-white md:bg-zinc-50" />
+                          <input 
+                            type="number" 
+                            disabled={useStoreMode}
+                            placeholder="0" 
+                            value={item.price} 
+                            onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} 
+                            className={`w-full p-3 text-base border-2 border-zinc-100 rounded-xl focus:border-zinc-900 outline-none font-bold bg-white md:bg-zinc-50 ${useStoreMode ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                          />
                         </div>
                         <button onClick={() => removeItem(item.id)} className="p-3 text-zinc-300 hover:text-red-500 self-end md:self-center transition-colors"><Trash2 size={20}/></button>
                       </div>
