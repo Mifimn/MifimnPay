@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { 
-  Store, Upload, Save, Mail, Phone, MapPin, 
-  FileText, Loader2, Utensils, Trash2, Plus, Link as LinkIcon 
+  Store, Save, Mail, Phone, MapPin, 
+  FileText, Loader2, Package, Trash2, Plus, Link as LinkIcon, AlertCircle, CheckCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext';
@@ -42,7 +42,7 @@ export default function Settings() {
         phone: data.business_phone || '',
         email: data.business_email || '',
         address: data.address || '',
-        footer_message: data.footer_message || '',
+        footerMessage: data.footer_message || '',
         currency: data.currency || '₦ (NGN)',
         slug: data.slug || ''
       });
@@ -55,7 +55,7 @@ export default function Settings() {
     if (data) setMenuItems(data);
   };
 
-  const handleSave = async () => {
+  const handleSaveProfile = async () => {
     setIsLoading(true);
     let finalLogoUrl = logoPreview;
     try {
@@ -67,6 +67,8 @@ export default function Settings() {
         finalLogoUrl = urlData.publicUrl;
       }
 
+      const cleanSlug = formData.slug.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+
       const { error } = await supabase.from('profiles').update({
         business_name: formData.businessName,
         tagline: formData.tagline,
@@ -76,12 +78,12 @@ export default function Settings() {
         footer_message: formData.footerMessage,
         currency: formData.currency,
         logo_url: finalLogoUrl,
-        slug: formData.slug.toLowerCase().trim().replace(/[\s_]+/g, '-'),
+        slug: cleanSlug,
         updated_at: new Date(),
       }).eq('id', user?.id);
 
       if (error) throw error;
-      alert("Settings saved successfully!");
+      alert("Business profile updated!");
     } catch (err: any) { alert(err.message); } finally { setIsLoading(false); }
   };
 
@@ -109,7 +111,7 @@ export default function Settings() {
         }
       }
       fetchMenu();
-      alert("Menu updated!");
+      alert("Price list synced successfully!");
     } catch (err: any) { alert(err.message); } finally { setIsLoading(false); }
   };
 
@@ -118,7 +120,7 @@ export default function Settings() {
       setMenuItems(menuItems.filter(i => i.id !== id));
       return;
     }
-    if (confirm("Delete this item?")) {
+    if (confirm("Remove this product from your list?")) {
       await supabase.from('menu_items').delete().eq('id', id);
       fetchMenu();
     }
@@ -128,76 +130,92 @@ export default function Settings() {
     <div className="min-h-screen bg-zinc-50 font-sans pb-20">
       <Head><title>Settings | MifimnPay</title></Head>
       <DashboardNavbar />
-      <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Business Management</h1>
-          <p className="text-zinc-500 text-sm mt-1">Configure your profile and digital menu.</p>
-        </div>
-
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-10 space-y-10">
+        
         {/* PROFILE SECTION */}
-        <section className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+        <section className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 flex items-center gap-3 bg-zinc-50/50">
              <Store size={18} className="text-zinc-400" />
-             <h2 className="font-bold text-zinc-900">Business Profile</h2>
+             <h2 className="font-black text-sm uppercase tracking-widest text-zinc-900">Business Profile</h2>
           </div>
-          <div className="p-6 grid md:grid-cols-2 gap-6">
+          <div className="p-8 grid md:grid-cols-2 gap-8">
             <div className="md:col-span-2">
-              <label className="block text-xs font-black uppercase tracking-widest text-zinc-400 mb-3">Logo</label>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Logo</label>
               <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-full border-2 border-zinc-100 bg-zinc-50 flex items-center justify-center overflow-hidden relative group shadow-inner">
+                <div className="w-24 h-24 rounded-full border-4 border-zinc-100 bg-zinc-50 flex items-center justify-center overflow-hidden relative group shadow-inner">
                   {logoPreview ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" /> : <Store className="text-zinc-200" size={32} />}
                   <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f){ setLogoFile(f); setLogoPreview(URL.createObjectURL(f)); }}} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
-                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Tap to upload <br/> PNG/JPG</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-zinc-900">Upload Image</p>
+                  <p className="text-[10px] text-zinc-400 font-medium">Recommended: 500x500px Square</p>
+                </div>
               </div>
             </div>
+
             <InputField label="Business Name" value={formData.businessName} onChange={(v) => setFormData({...formData, businessName: v})} />
-            <InputField label="Menu URL Slug" value={formData.slug} onChange={(v) => setFormData({...formData, slug: v})} placeholder="item-7" icon={<LinkIcon size={16}/>} />
-            <InputField label="Tagline" value={formData.tagline} onChange={(v) => setFormData({...formData, tagline: v})} />
-            <InputField label="Phone" value={formData.phone} onChange={(v) => setFormData({...formData, phone: v})} icon={<Phone size={16}/>} />
+            
+            {/* SLUG INPUT WITH WARNING */}
+            <div className="space-y-2">
+              <InputField label="Store URL Slug" value={formData.slug} onChange={(v) => setFormData({...formData, slug: v})} placeholder="e.g. item-7" icon={<LinkIcon size={14}/>} />
+              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] leading-relaxed text-amber-700 font-bold">
+                  WARNING: Changing your slug will change your store URL. Any previously printed QR codes will stop working.
+                </p>
+              </div>
+            </div>
+
+            <InputField label="Tagline" value={formData.tagline} onChange={(v) => setFormData({...formData, tagline: v})} placeholder="e.g. Quality You Can Trust" />
+            <InputField label="Business Phone" value={formData.phone} onChange={(v) => setFormData({...formData, phone: v})} icon={<Phone size={14}/>} />
+            <div className="md:col-span-2 flex justify-end">
+              <button onClick={handleSaveProfile} disabled={isLoading} className="bg-zinc-900 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                {isLoading ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Save Profile
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* MENU MANAGER SECTION */}
-        <section className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+        {/* UNIVERSAL PRICE LIST MANAGER */}
+        <section className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
              <div className="flex items-center gap-3">
-               <Utensils size={18} className="text-zinc-400" />
-               <h2 className="font-bold text-zinc-900">Digital QR Menu</h2>
+               <Package size={18} className="text-zinc-400" />
+               <h2 className="font-black text-sm uppercase tracking-widest text-zinc-900">Digital Price List</h2>
              </div>
              <button onClick={addMenuItem} className="text-[10px] font-black uppercase tracking-widest bg-zinc-900 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-               <Plus size={14}/> Add Item
+               <Plus size={14}/> New Product
              </button>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-8 space-y-4">
             {menuItems.map((item, idx) => (
-              <div key={item.id} className="flex flex-col md:flex-row gap-3 p-4 bg-zinc-50 rounded-xl border border-zinc-100 relative group">
-                <div className="flex-1 space-y-2">
-                   <input placeholder="Item Name (e.g. Jollof Rice)" value={item.name} onChange={(e) => { const n = [...menuItems]; n[idx].name = e.target.value; setMenuItems(n); }} className="w-full bg-white border-none text-sm font-bold p-0 focus:ring-0" />
-                   <input placeholder="Short description..." value={item.description} onChange={(e) => { const n = [...menuItems]; n[idx].description = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-xs text-zinc-400 p-0 focus:ring-0" />
+              <div key={item.id} className="flex flex-col md:flex-row gap-4 p-5 bg-zinc-50 rounded-2xl border border-zinc-100 relative group transition-all hover:bg-white hover:shadow-md">
+                <div className="flex-1 space-y-3">
+                   <input placeholder="Product Name (e.g. Cement, Jollof Rice)" value={item.name} onChange={(e) => { const n = [...menuItems]; n[idx].name = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-sm font-black p-0 focus:ring-0 text-zinc-900" />
+                   <input placeholder="Short details or specs..." value={item.description} onChange={(e) => { const n = [...menuItems]; n[idx].description = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-xs text-zinc-400 p-0 focus:ring-0 font-medium" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-24 relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">₦</span>
-                    <input type="number" value={item.price} onChange={(e) => { const n = [...menuItems]; n[idx].price = e.target.value; setMenuItems(n); }} className="w-full bg-white border border-zinc-200 rounded-lg pl-6 pr-2 py-2 text-xs font-bold focus:border-zinc-900 outline-none" />
+                <div className="flex items-center gap-4">
+                  <div className="w-32 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-400">₦</span>
+                    <input type="number" value={item.price} onChange={(e) => { const n = [...menuItems]; n[idx].price = e.target.value; setMenuItems(n); }} className="w-full bg-white border-2 border-zinc-100 rounded-xl pl-8 pr-3 py-3 text-sm font-black focus:border-zinc-900 outline-none transition-all" />
                   </div>
-                  <button onClick={() => deleteMenuItem(item.id)} className="p-2 text-zinc-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                  <button onClick={() => deleteMenuItem(item.id)} className="p-2 text-zinc-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
                 </div>
               </div>
             ))}
-            {menuItems.length > 0 && (
-              <button onClick={saveMenu} disabled={isLoading} className="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2">
-                {isLoading ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18}/>} Sync Menu Items
+            {menuItems.length > 0 ? (
+              <button onClick={saveMenu} disabled={isLoading} className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                {isLoading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16}/>} Sync Price List
               </button>
+            ) : (
+              <div className="py-12 text-center text-zinc-400 border-2 border-dashed border-zinc-100 rounded-3xl">
+                <Package size={32} className="mx-auto mb-3 opacity-20" />
+                <p className="text-xs font-bold uppercase tracking-widest">No products listed yet</p>
+              </div>
             )}
           </div>
         </section>
 
-        <div className="flex justify-end gap-3">
-          <button onClick={handleSave} disabled={isLoading} className="w-full md:w-auto bg-zinc-900 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
-            {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Save All Changes
-          </button>
-        </div>
       </main>
     </div>
   );
@@ -205,13 +223,12 @@ export default function Settings() {
 
 function InputField({ label, value, onChange, icon, placeholder }: any) {
   return (
-    <div className="space-y-1.5">
-      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">{label}</label>
+    <div className="space-y-2">
+      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">{label}</label>
       <div className="relative">
-        {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">{icon}</div>}
-        <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`w-full h-12 border-2 border-zinc-100 rounded-xl text-sm font-bold focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white ${icon ? 'pl-10 pr-4' : 'px-4'}`} />
+        {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">{icon}</div>}
+        <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`w-full h-14 border-2 border-zinc-50 rounded-2xl text-sm font-bold focus:border-zinc-900 outline-none transition-all bg-zinc-100/50 focus:bg-white ${icon ? 'pl-11 pr-4' : 'px-5'}`} />
       </div>
     </div>
   );
 }
-import { CheckCircle2 } from 'lucide-react';
