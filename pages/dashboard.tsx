@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
-  Calendar, QrCode, Download, ExternalLink, ChevronDown, ChevronUp 
+  Calendar, QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon 
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -49,8 +49,10 @@ export default function Dashboard() {
   }, [user, selectedYear]);
 
   const fetchProfile = async () => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-    if (data) setProfile(data);
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+      if (data) setProfile(data);
+    } catch (err) { console.error(err); }
   };
 
   const fetchGlobalStats = async () => {
@@ -86,6 +88,11 @@ export default function Dashboard() {
 
   const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';
   const storeUrl = `https://mifimnpay.vercel.app/m/${businessSlug}`;
+
+  const copyStoreLink = () => {
+    navigator.clipboard.writeText(storeUrl);
+    alert("Store link copied to clipboard! You can now paste it on WhatsApp or SMS.");
+  };
 
   const downloadQR = async () => {
     if (!qrRef.current) return;
@@ -192,6 +199,12 @@ export default function Dashboard() {
                       >
                         {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
                         Download QR Image
+                      </button>
+                      <button 
+                        onClick={copyStoreLink}
+                        className="bg-zinc-800 text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 border border-zinc-700 hover:bg-zinc-700 transition-all"
+                      >
+                        <LinkIcon size={16} /> Copy Store Link
                       </button>
                       <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-zinc-800 text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 border border-zinc-700 hover:bg-zinc-700 transition-all">
                         <ExternalLink size={16} /> Open Web Store

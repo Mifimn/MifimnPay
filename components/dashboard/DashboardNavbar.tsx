@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Bell, User, LayoutGrid, History, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Bell, User, LayoutGrid, History, Settings, LogOut, Menu, X, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
@@ -32,9 +32,8 @@ export default function DashboardNavbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-4 md:px-6 py-3">
       <div className="max-w-6xl mx-auto flex justify-between items-center">
-        
+
         <div className="flex items-center gap-8">
-          {/* Logo Section - Replaced placeholder with favicon.png */}
           <Link href="/dashboard" className="flex items-center gap-2">
             <img 
               src="/favicon.png" 
@@ -44,10 +43,12 @@ export default function DashboardNavbar() {
             <span className="font-bold text-zinc-900 text-lg hidden md:block tracking-tight">MifimnPay</span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Nav - Added Price List Link */}
           <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
             <NavLink href="/dashboard" icon={<LayoutGrid size={16} />} label="Overview" active={isActive('/dashboard')} />
             <NavLink href="/history" icon={<History size={16} />} label="History" active={isActive('/history')} />
+            {/* Direct link to the Price List section in settings */}
+            <NavLink href="/settings" icon={<Package size={16} />} label="Price List" active={false} />
             <NavLink href="/settings" icon={<Settings size={16} />} label="Settings" active={isActive('/settings')} />
           </div>
         </div>
@@ -57,7 +58,7 @@ export default function DashboardNavbar() {
             <Bell size={20} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
           </button>
-          
+
           <div className="relative">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 focus:outline-none group">
               <div className="text-right hidden md:block">
@@ -84,11 +85,12 @@ export default function DashboardNavbar() {
                      <div className="md:hidden p-2 border-b border-zinc-100">
                         <MobileLink href="/dashboard" icon={<LayoutGrid size={16}/>} label="Overview" active={isActive('/dashboard')} onClick={() => setIsMenuOpen(false)} />
                         <MobileLink href="/history" icon={<History size={16}/>} label="History" active={isActive('/history')} onClick={() => setIsMenuOpen(false)} />
+                        <MobileLink href="/settings" icon={<Package size={16}/>} label="Price List" active={false} onClick={() => setIsMenuOpen(false)} />
                         <MobileLink href="/settings" icon={<Settings size={16}/>} label="Settings" active={isActive('/settings')} onClick={() => setIsMenuOpen(false)} />
                      </div>
                      <div className="p-2">
                         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-                           <LogOut size={16} /> Log Out
+                            <LogOut size={16} /> Log Out
                         </button>
                      </div>
                   </motion.div>
