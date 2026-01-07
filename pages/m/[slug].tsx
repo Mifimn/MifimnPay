@@ -53,7 +53,7 @@ export default function PublicStore() {
   
   const pageTitle = `${profile.business_name} | Official Price List`;
   const pageDesc = profile.tagline || `View the live price list and products from ${profile.business_name} on MifimnPay.`;
-  // Fallback to absolute favicon URL if no logo exists
+  // Use absolute URL for the fallback image
   const shareImage = profile.logo_url || `${siteUrl}/favicon.png`;
 
   return (
@@ -62,14 +62,14 @@ export default function PublicStore() {
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc} />
 
-        {/* Open Graph Tags for WhatsApp & Facebook */}
+        {/* Essential Open Graph Tags for WhatsApp & Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${siteUrl}/m/${slug}`} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
         <meta property="og:image" content={shareImage} />
         <meta property="og:image:secure_url" content={shareImage} />
-        {/* Removed og:image:type to allow automatic detection of JPG/PNG/WebP */}
+        {/* REMOVED og:image:type to prevent mismatches if your logo is a JPEG/WebP */}
         <meta property="og:image:width" content="400" />
         <meta property="og:image:height" content="400" />
 
@@ -80,6 +80,7 @@ export default function PublicStore() {
         <meta name="twitter:image" content={shareImage} />
       </Head>
       
+      {/* Rest of your component code remains the same */}
       <div className="fixed inset-0 opacity-[0.07] pointer-events-none z-0 flex flex-wrap gap-12 p-6 rotate-[-15deg] scale-150 justify-center items-center">
         {[...Array(50)].map((_, i) => (
           <div key={i} className="w-10 h-10 flex items-center justify-center">

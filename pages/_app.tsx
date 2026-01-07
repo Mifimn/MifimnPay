@@ -9,8 +9,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const siteUrl = 'https://mifimnpay.vercel.app'; 
   const title = "MifimnPay | Professional Receipt Generator";
   const description = "Generate authentic branded receipts instantly with MifimnPay.";
-  // Ensure this image exists in your /public folder and is under 300KB
-  const ogImage = `${siteUrl}/og-image.png`;
+  // IMPORTANT: Ensure og-image.png is in your /public folder and under 300KB
+  const ogImage = `${siteUrl}/og-image.jpg`;
 
   return (
     <AuthProvider>
@@ -28,7 +28,8 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
-        {/* WhatsApp specifically looks for these dimensions for large previews */}
+        {/* Added secure_url for improved WhatsApp compatibility */}
+        <meta property="og:image:secure_url" content={ogImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
 
