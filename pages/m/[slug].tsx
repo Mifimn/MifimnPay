@@ -1,64 +1,55 @@
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import Head from 'next/head';
 import { supabase } from '../../lib/supabaseClient';
-import { Loader2, Package, Globe, ShieldCheck } from 'lucide-react';
+import Head from 'next/head';
+import { Package, ShieldCheck, Loader2 } from 'lucide-react';
 
-export default function PublicStore() {
-  const router = useRouter();
-  const { slug } = router.query;
-  const [profile, setProfile] = useState<any>(null);
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
+// This function runs on the server for every request
+export async function getServerSideProps(context: any) {
+  const { slug } = context.params;
   const siteUrl = 'https://mifimnpay.vercel.app';
 
-  useEffect(() => {
-    if (slug) fetchStore();
-  }, [slug]);
+  // Fetch profile data directly on the server
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('slug', slug)
+    .single();
 
-  const fetchStore = async () => {
-    try {
-      const { data: prof } = await supabase.from('profiles').select('*').eq('slug', slug).single();
-      if (prof) {
-        setProfile(prof);
-        const { data: prod } = await supabase
-          .from('menu_items')
-          .select('*')
-          .eq('user_id', prof.id)
-          .order('created_at', { ascending: true });
-        setItems(prod || []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  if (profileError || !profile) {
+    return {
+      notFound: true, // Returns 404 page if store doesn't exist
+    };
+  }
+
+  // Fetch product items for this store
+  const { data: items } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: true });
+
+  return {
+    props: {
+      profile,
+      items: items || [],
+      slug,
+      siteUrl,
+    },
   };
+}
 
-  if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-white">
-      <Loader2 className="animate-spin text-zinc-900" size={24} />
-    </div>
-  );
-
-  if (!profile) return (
-    <div className="h-screen flex items-center justify-center bg-zinc-50">
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Storefront Not Found</p>
-    </div>
-  );
-
+export default function PublicStore({ profile, items, slug, siteUrl }: any) {
   const logoLetter = (profile.business_name?.charAt(0) || 'B').toUpperCase();
   const currencySymbol = profile.currency?.split(' ')[0] || '₦';
   
+  // SEO Data
   const pageTitle = `${profile.business_name} | Official Price List`;
   const pageDesc = profile.tagline || `View the live price list and products from ${profile.business_name} on MifimnPay.`;
-  // Use absolute URL for the fallback image
   const shareImage = profile.logo_url || `${siteUrl}/favicon.png`;
 
   return (
     <div className="min-h-screen bg-white font-sans text-zinc-900 relative overflow-hidden selection:bg-zinc-900 selection:text-white">
       <Head>
+        {/* Standard SEO */}
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc} />
 
@@ -69,7 +60,7 @@ export default function PublicStore() {
         <meta property="og:description" content={pageDesc} />
         <meta property="og:image" content={shareImage} />
         <meta property="og:image:secure_url" content={shareImage} />
-        {/* REMOVED og:image:type to prevent mismatches if your logo is a JPEG/WebP */}
+        {/* Dimensions help WhatsApp determine the layout */}
         <meta property="og:image:width" content="400" />
         <meta property="og:image:height" content="400" />
 
@@ -80,7 +71,7 @@ export default function PublicStore() {
         <meta name="twitter:image" content={shareImage} />
       </Head>
       
-      {/* Rest of your component code remains the same */}
+      {/* Background Logo Pattern */}
       <div className="fixed inset-0 opacity-[0.07] pointer-events-none z-0 flex flex-wrap gap-12 p-6 rotate-[-15deg] scale-150 justify-center items-center">
         {[...Array(50)].map((_, i) => (
           <div key={i} className="w-10 h-10 flex items-center justify-center">
@@ -131,7 +122,7 @@ export default function PublicStore() {
           </div>
 
           <div className="space-y-0.5">
-            {items.length > 0 ? items.map((item) => (
+            {items.length > 0 ? items.map((item: any) => (
               <div 
                 key={item.id} 
                 className="group flex justify-between items-center py-4 border-b border-zinc-50 hover:bg-zinc-50/50 transition-all duration-300 px-2 -mx-2 rounded-lg"
