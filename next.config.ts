@@ -1,8 +1,16 @@
 import type { NextConfig } from "next";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public", // destination directory for the PWA files
+  disable: process.env.NODE_ENV === "development", // disable PWA in development to avoid caching issues
+  register: true, // automatically register the service worker
+  skipWaiting: true, // skip waiting for service worker activation
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // We enable this to ensure html2canvas works smoothly with external images if needed later
+  // ensure html2canvas works smoothly with external images
   images: {
     remotePatterns: [
       {
@@ -11,14 +19,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // This prevents the build from failing if there are minor TS type errors
+  // prevents build from failing on minor TS type errors
   typescript: {
     ignoreBuildErrors: true,
   },
-  // This prevents the build from failing on ESLint errors
+  // prevents build from failing on ESLint errors
   eslint: {
     ignoreDuringBuilds: true,
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

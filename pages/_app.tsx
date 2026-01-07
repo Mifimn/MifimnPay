@@ -9,6 +9,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const siteUrl = 'https://mifimnpay.vercel.app'; 
   const title = "MifimnPay | Professional Receipt Generator";
   const description = "Generate authentic branded receipts instantly with MifimnPay.";
+  // Using an absolute URL is required for social media previews
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (
@@ -21,16 +22,27 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="google-site-verification" content="3LLBnYF_neMyal_kjtQyVOSE25JcDQBwnw40fWe_yEE" />
         <link rel="icon" href="/favicon.png" />
 
-        {/* Open Graph / Facebook */}
+        {/* --- PWA & Mobile App Tags --- */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#09090b" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="MifimnPay" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+
+        {/* --- Open Graph / Facebook / WhatsApp --- */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={siteUrl} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:image:secure_url" content={ogImage} />
+        <meta property="og:image:type" content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
 
-        {/* Twitter */}
+        {/* --- Twitter --- */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={siteUrl} />
         <meta name="twitter:title" content={title} />
