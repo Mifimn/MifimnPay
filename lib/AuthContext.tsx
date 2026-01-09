@@ -1,3 +1,4 @@
+// lib/AuthContext.tsx
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
@@ -33,7 +34,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, session, loading }}>
-      {!loading && children}
+      {/* UPDATED: Removed {!loading &&} so metadata renders immediately */}
+      {children}
     </AuthContext.Provider>
   );
 };

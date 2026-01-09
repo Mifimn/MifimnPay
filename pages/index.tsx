@@ -1,3 +1,4 @@
+// pages/index.tsx
 import { useEffect } from 'react';
 import Head from 'next/head';
 import Navbar from '../components/landing/Navbar';
@@ -8,19 +9,36 @@ import Footer from '../components/landing/Footer';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
+  const siteUrl = 'https://mifimnpay.vercel.app';
+  const title = "MifimnPay | Professional Receipt Generator";
+  const description = "Generate authentic branded receipts instantly with MifimnPay.";
+  const shareImage = `${siteUrl}/favicon.png`;
   
-  // Client-Side Check (Shows in Browser Console)
   useEffect(() => {
     if (supabase) {
-      console.log('✅ CLIENT CHECK: Supabase is ready in the browser!');
+      console.log('✅ CLIENT CHECK: Supabase is ready!');
     }
   }, []);
 
   return (
     <div className="min-h-screen bg-brand-bg selection:bg-brand-black selection:text-white">
       <Head>
-        <title>MifimnPay | Professional Receipt Generator</title>
-        <meta name="description" content="Generate professional receipts for your business in seconds. Trusted by 5,000+ vendors in Nigeria." />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        
+        {/* Open Graph / Facebook / WhatsApp */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={siteUrl} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={shareImage} />
+        <meta property="og:image:secure_url" content={shareImage} />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={shareImage} />
       </Head>
 
       <Navbar />
@@ -36,10 +54,8 @@ export default function Home() {
   );
 }
 
-// Server-Side Check (Shows in Your Terminal)
 export async function getServerSideProps() {
-  console.log('✅ SERVER CHECK: Supabase is connected and ready!');
   return {
-    props: {}, // Passed to the page component as props
+    props: {}, 
   };
 }
