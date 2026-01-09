@@ -28,10 +28,8 @@ export default function Generator() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // --- NEW: Store Mode States ---
   const [useStoreMode, setUseStoreMode] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
-  // ------------------------------
 
   const [pastCustomers, setPastCustomers] = useState<string[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
@@ -44,7 +42,7 @@ export default function Generator() {
     currency: '₦',
     items: [{ id: '1', name: '', qty: 1, price: '' }], 
     paymentMethod: 'Transfer',
-    status: 'Paid',
+    status: 'paid', // UPDATED: Changed to lowercase 'paid'
     discount: '',
     shipping: '',
     businessName: 'My Business',
@@ -88,7 +86,6 @@ export default function Generator() {
             }));
           }
 
-          // Fetch Products from Digital Price List
           const { data: products } = await supabase
             .from('menu_items')
             .select('*')
@@ -141,7 +138,6 @@ export default function Generator() {
     setShowSuggestions(false);
   };
 
-  // --- NEW: Automated Store Item Selection ---
   const handleStoreItemSelect = (id: string, productId: string) => {
     const product = availableProducts.find(p => p.id === productId);
     if (!product) return;
@@ -168,7 +164,7 @@ export default function Generator() {
       total_amount: numericTotal,
       shipping_fee: shipping,
       discount_amount: discount,
-      status: data.status,
+      status: data.status.toLowerCase(), // Save as lowercase
       payment_method: data.paymentMethod,
       items: data.items.map(i => ({
         ...i,
@@ -306,7 +302,6 @@ export default function Generator() {
         <div className={`flex-1 h-full overflow-y-auto bg-zinc-50 p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
 
-            {/* NEW: STORE MODE TOGGLE */}
             <section className="bg-white p-2 rounded-2xl border border-zinc-200 shadow-sm flex items-center gap-2">
                <button 
                   onClick={() => setUseStoreMode(false)}
@@ -430,8 +425,10 @@ export default function Generator() {
                   <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
                      <option>Transfer</option><option>Cash</option><option>POS</option>
                   </select>
-                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
-                     <option>Paid</option><option>Pending</option>
+                  {/* UPDATED SELECT VALUES */}
+                  <select value={data.status} onChange={(e) => setData({...data, status: e.target.value.toLowerCase() as any})} className="w-full h-12 px-4 border-2 border-zinc-100 rounded-xl bg-white outline-none focus:border-zinc-900 text-sm">
+                     <option value="paid">Paid</option>
+                     <option value="pending">Pending</option>
                   </select>
                </div>
             </section>
@@ -452,6 +449,7 @@ export default function Generator() {
           </div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-zinc-100/50 relative">
              <div className="scale-[0.85] md:scale-100 origin-center transition-transform">
+               {/* PASSING UPDATED DATA OBJECT */}
                <ReceiptPreview data={data} settings={settings} receiptRef={receiptRef} />
              </div>
           </div>
