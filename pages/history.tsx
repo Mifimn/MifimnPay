@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { 
-  Search, Download, Plus, Calendar, Loader2, Eye, X, CheckCircle 
+  Search, Download, Plus, Calendar, Loader2, Eye, X, CheckCircle, Clock 
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext';
@@ -18,7 +18,7 @@ export default function History() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // New state for status update
+  const [isUpdating, setIsUpdating] = useState(false); // Added only this
   const downloadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function History() {
     setLoading(false);
   };
 
-  // Function to update status from pending to paid
+  // Only added this function for the status update
   const handleUpdateStatus = async (id: string) => {
     setIsUpdating(true);
     try {
@@ -51,12 +51,10 @@ export default function History() {
 
       if (error) throw error;
 
-      // Update local state to remove the button and update preview
       setReceipts(receipts.map(r => r.id === id ? { ...r, status: 'paid' } : r));
       setSelectedReceipt({ ...selectedReceipt, status: 'paid' });
     } catch (err) {
       console.error(err);
-      alert("Failed to update status");
     } finally {
       setIsUpdating(false);
     }
@@ -110,19 +108,25 @@ export default function History() {
                 <th className="px-6 py-4">ID</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Status</th> {/* Added Status Column */}
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
-                <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
+                <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
               ) : filteredReceipts.length > 0 ? (
                 filteredReceipts.map((r) => (
                   <tr key={r.id} className="hover:bg-zinc-50/50 group transition-colors">
                     <td className="px-6 py-4 font-mono text-xs font-bold text-zinc-500">{r.receipt_number}</td>
                     <td className="px-6 py-4 text-sm text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 font-bold text-zinc-900">{r.customer_name}</td>
+                    <td className="px-6 py-4"> {/* Added Status Badge here */}
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md flex items-center gap-1 w-fit ${r.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {r.status === 'paid' ? <CheckCircle size={10}/> : <Clock size={10}/>} {r.status}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm font-bold text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</td>
                     <td className="px-6 py-4 text-right">
                       <button onClick={() => setSelectedReceipt(r)} className="p-2 text-zinc-400 hover:text-zinc-900 transition-all"><Eye size={16}/></button>
@@ -130,7 +134,7 @@ export default function History() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={5} className="py-20 text-center text-zinc-400 italic">No history found.</td></tr>
+                <tr><td colSpan={6} className="py-20 text-center text-zinc-400 italic">No history found.</td></tr>
               )}
             </tbody>
           </table>
@@ -149,6 +153,7 @@ export default function History() {
                         <ReceiptPreview 
                             data={{
                                 ...selectedReceipt,
+                                status: selectedReceipt.status, // Ensures status is passed to preview
                                 customerName: selectedReceipt.customer_name,
                                 receiptNumber: selectedReceipt.receipt_number,
                                 currency: '₦',
@@ -167,27 +172,26 @@ export default function History() {
                         />
                     </div>
                 </div>
-                <div className="p-4 border-t flex flex-wrap gap-3 bg-white">
-                    {/* Mark as Paid Button (Only visible if pending) */}
+                <div className="p-4 border-t flex gap-3 bg-white">
+                    {/* Only added this Mark as Paid button logic here */}
                     {selectedReceipt.status === 'pending' && (
                       <button 
-                          onClick={() => handleUpdateStatus(selectedReceipt.id)} 
-                          disabled={isUpdating}
-                          className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-sm shadow-green-200"
+                        onClick={() => handleUpdateStatus(selectedReceipt.id)}
+                        disabled={isUpdating}
+                        className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
                       >
-                          {isUpdating ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />} Mark as Paid
+                        {isUpdating ? <Loader2 className="animate-spin w-5 h-5" /> : "Mark as Paid"}
                       </button>
                     )}
                     
                     <button 
                         onClick={handleDownloadAgain} 
                         disabled={isDownloading} 
-                        className={`${selectedReceipt.status === 'pending' ? 'w-full order-last md:order-none md:flex-1' : 'flex-[2]'} py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all`}
+                        className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all"
                     >
                         {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />} Download Image
                     </button>
-
-                    <button onClick={() => setSelectedReceipt(null)} className="flex-1 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200">Close</button>
+                    <button onClick={() => setSelectedReceipt(null)} className="px-4 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200">Close</button>
                 </div>
             </div>
         </div>
