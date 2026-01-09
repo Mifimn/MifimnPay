@@ -3,14 +3,15 @@ import Head from 'next/head';
 import '../styles/globals.css';
 import { AuthProvider } from '../lib/AuthContext';
 import ProfileAlert from '../components/dashboard/ProfileAlert'; 
-import InstallPrompt from '../components/PWA/InstallPrompt'; // Ensure this path matches your file structure
+import InstallPrompt from '../components/PWA/InstallPrompt'; 
 import { GoogleAnalytics } from '@next/third-parties/google';
 
 export default function App({ Component, pageProps }: AppProps) {
   const siteUrl = 'https://mifimnpay.vercel.app'; 
   const title = "MifimnPay | Professional Receipt Generator";
   const description = "Generate authentic branded receipts instantly with MifimnPay.";
-  const ogImage = `${siteUrl}/og-image.png`;
+  // Updated to use favicon.png for everything
+  const shareImage = `${siteUrl}/favicon.png`;
 
   return (
     <AuthProvider>
@@ -36,30 +37,23 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta property="og:url" content={siteUrl} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content={ogImage} />
-        <meta property="og:image:secure_url" content={ogImage} />
+        <meta property="og:image" content={shareImage} />
+        <meta property="og:image:secure_url" content={shareImage} />
         <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
+        {/* Note: Standard OG images are 1200x630, but since you are using a favicon, 
+            removing fixed width/height allows the platform to scale it better */}
 
         {/* --- Twitter Preview --- */}
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:card" content="summary" /> {/* Changed from summary_large_image to summary for a square icon look */}
         <meta name="twitter:url" content={siteUrl} />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={ogImage} />
+        <meta name="twitter:image" content={shareImage} />
       </Head>
       
-      {/* Global PWA Install Banner */}
       <InstallPrompt />
-      
-      {/* Profile Alert Notifications */}
       <ProfileAlert />
-      
-      {/* Main Application Component */}
       <Component {...pageProps} />
-      
-      {/* Analytics */}
       <GoogleAnalytics gaId="G-TTGK2RZ120" />
     </AuthProvider>
   );
