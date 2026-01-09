@@ -41,8 +41,11 @@ export default function History() {
   const handleUpdateStatus = async (id: string) => {
     setIsUpdating(true);
     try {
+      // Standardize to lowercase 'paid' for consistency
       const { error } = await supabase.from('receipts').update({ status: 'paid' }).eq('id', id);
       if (error) throw error;
+      
+      // Update local states instantly
       setReceipts(receipts.map(r => r.id === id ? { ...r, status: 'paid' } : r));
       setSelectedReceipt({ ...selectedReceipt, status: 'paid' });
     } catch (err) {
@@ -61,7 +64,11 @@ export default function History() {
       link.href = dataUrl;
       link.download = `receipt-${selectedReceipt.receipt_number}.png`;
       link.click();
-    } catch (err) { console.error(err); } finally { setIsDownloading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setIsDownloading(false); 
+    }
   };
 
   const filteredReceipts = receipts.filter(r => 
@@ -80,7 +87,13 @@ export default function History() {
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-zinc-200 mb-6">
-          <input type="text" placeholder="Search customer or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-96 px-4 py-2 bg-zinc-50 border rounded-lg text-sm outline-none focus:border-zinc-900" />
+          <input 
+            type="text" 
+            placeholder="Search customer or ID..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            className="w-full md:w-96 px-4 py-2 bg-zinc-50 border rounded-lg text-sm outline-none focus:border-zinc-900" 
+          />
         </div>
 
         <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
@@ -105,9 +118,10 @@ export default function History() {
                     <td className="px-6 py-4 text-sm text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 font-bold text-zinc-900">{r.customer_name}</td>
                     <td className="px-6 py-4">
-                      {/* FIXED COLORS: GREEN FOR PAID, AMBER FOR PENDING */}
-                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md flex items-center gap-1 w-fit ${r.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {r.status === 'paid' ? <CheckCircle size={10}/> : <Clock size={10}/>} {r.status}
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md flex items-center gap-1 w-fit ${
+                        r.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {r.status?.toLowerCase() === 'paid' ? <CheckCircle size={10}/> : <Clock size={10}/>} {r.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</td>
@@ -136,6 +150,7 @@ export default function History() {
                         <ReceiptPreview 
                             data={{
                                 ...selectedReceipt,
+                                status: selectedReceipt.status?.toLowerCase(),
                                 customerName: selectedReceipt.customer_name,
                                 receiptNumber: selectedReceipt.receipt_number,
                                 currency: '₦',
@@ -154,17 +169,37 @@ export default function History() {
                         />
                     </div>
                 </div>
-                <div className="p-4 border-t flex flex-wrap gap-3 bg-white">
-                    {/* BUTTON TO MARK AS PAID */}
-                    {selectedReceipt.status === 'pending' && (
-                      <button onClick={() => handleUpdateStatus(selectedReceipt.id)} disabled={isUpdating} className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all">
-                        {isUpdating ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />} Mark as Paid
+                
+                {/* RESPONSIVE MODAL FOOTER */}
+                <div className="p-4 border-t bg-white">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {selectedReceipt.status?.toLowerCase() === 'pending' && (
+                      <button 
+                        onClick={() => handleUpdateStatus(selectedReceipt.id)} 
+                        disabled={isUpdating} 
+                        className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-sm shadow-green-200"
+                      >
+                        {isUpdating ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />} 
+                        <span className="whitespace-nowrap">Mark as Paid</span>
                       </button>
                     )}
-                    <button onClick={handleDownloadAgain} disabled={isDownloading} className="flex-[2] py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all">
-                        {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />} Download Image
+                    
+                    <button 
+                      onClick={handleDownloadAgain} 
+                      disabled={isDownloading} 
+                      className={`${selectedReceipt.status?.toLowerCase() === 'pending' ? 'flex-1' : 'flex-[2]'} py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all`}
+                    >
+                      {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />} 
+                      <span className="whitespace-nowrap">Download Image</span>
                     </button>
-                    <button onClick={() => setSelectedReceipt(null)} className="flex-1 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200">Close</button>
+
+                    <button 
+                      onClick={() => setSelectedReceipt(null)} 
+                      className="flex-1 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
             </div>
         </div>
