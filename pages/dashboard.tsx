@@ -87,7 +87,7 @@ export default function Dashboard() {
   };
 
   const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';
-  const storeUrl = `https://mifimnpay.vercel.app/m/${businessSlug}`;
+  const storeUrl = `https://mifimnpay.com.ng/m/${businessSlug}`;
 
   const copyStoreLink = () => {
     navigator.clipboard.writeText(storeUrl);
