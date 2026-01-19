@@ -12,7 +12,7 @@ export default function PublicStore() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const siteUrl = 'https://mifimnpay.vercel.app';
+  const siteUrl = 'https://mifimnpay.com.ng';
 
   useEffect(() => {
     if (slug) fetchStore();
