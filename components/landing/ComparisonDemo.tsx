@@ -57,7 +57,7 @@ export default function ComparisonDemo() {
               <div className="w-12 h-12 bg-brand-black rounded-full mx-auto mb-2 flex items-center justify-center">
                 <span className="text-xl font-bold text-white">R</span>
               </div>
-              <h3 className="font-bold text-brand-black uppercase tracking-wider">Receiptify Store</h3>
+              <h3 className="font-bold text-brand-black uppercase tracking-wider">MifimnPay Store</h3>
               <p className="text-xs text-brand-gray">Ilorin, Kwara State</p>
             </div>
 
