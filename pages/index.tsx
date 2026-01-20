@@ -9,10 +9,11 @@ import Footer from '../components/landing/Footer';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
-  const siteUrl = 'https://mifimnpay.vercel.app';
-  const title = "MifimnPay | Professional Receipt Generator";
-  const description = "Generate authentic branded receipts instantly with MifimnPay.";
-  const shareImage = `${siteUrl}/favicon.png`;
+  // Updated to your professional domain
+  const siteUrl = 'https://mifimnpay.com.ng';
+  const title = "MifimnPay | Professional Receipt & Business Management";
+  const description = "Generate branded receipts, track sales analytics, and share your digital storefront via QR codes.";
+  const shareImage = `${siteUrl}/og-image.png`;
   
   useEffect(() => {
     if (supabase) {
@@ -33,9 +34,11 @@ export default function Home() {
         <meta property="og:description" content={description} />
         <meta property="og:image" content={shareImage} />
         <meta property="og:image:secure_url" content={shareImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         
         {/* Twitter */}
-        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={shareImage} />
@@ -44,6 +47,7 @@ export default function Home() {
       <Navbar />
       
       <main>
+        {/* These components now need to be updated to show all features */}
         <Hero />
         <HowItWorks />
         <Testimonials />

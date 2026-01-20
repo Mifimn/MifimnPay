@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { AlertCircle, X, Clock } from 'lucide-react';
+import { AlertCircle, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProfileAlert() {
   const { user } = useAuth();
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
-  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    // Prevent display if already on settings page
-    if (user && router.pathname !== '/settings') {
+    // CONSTRAINT 1: Only apply to the dashboard page
+    // CONSTRAINT 2: User must be logged in
+    if (user && router.pathname === '/dashboard') {
+      
       const checkProfile = async () => {
         const { data } = await supabase
           .from('profiles')
@@ -22,69 +24,72 @@ export default function ProfileAlert() {
           .single();
 
         const missing = [];
-        if (!data?.logo_url) missing.push("Business Logo");
-        if (!data?.business_phone) missing.push("Phone Number");
-        if (!data?.tagline) missing.push("Brand Tagline");
-        if (!data?.address) missing.push("Business Address");
+        if (!data?.logo_url) missing.push("Logo");
+        if (!data?.business_phone) missing.push("Phone");
+        if (!data?.tagline) missing.push("Tagline");
+        if (!data?.address) missing.push("Address");
 
         if (missing.length > 0) {
           setMissingInfo(missing);
-          setIsVisible(true);
-          setCountdown(10); // Reset countdown when shown
+          
+          // CONSTRAINT 3: Wait 2 seconds before displaying
+          const timer = setTimeout(() => {
+            setIsVisible(true);
+          }, 2000);
+
+          return () => clearTimeout(timer);
         }
       };
+
       checkProfile();
     } else {
       setIsVisible(false);
     }
   }, [user, router.pathname]);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isVisible && countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (countdown === 0) {
-      setIsVisible(false);
-    }
-    return () => clearTimeout(timer);
-  }, [isVisible, countdown]);
-
   if (!isVisible || missingInfo.length === 0) return null;
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-[100] md:left-auto md:w-[400px] animate-in slide-in-from-right duration-500">
-      <div className="bg-white border-l-4 border-orange-500 shadow-2xl rounded-2xl overflow-hidden">
-        <div className="p-5">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-2 text-orange-600">
-              <AlertCircle size={20} />
-              <span className="font-black uppercase text-xs tracking-widest">Incomplete Profile</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-2 py-1 rounded-lg text-[10px] font-bold">
-              <Clock size={12} /> {countdown}s
-            </div>
-          </div>
-          
-          <p className="text-zinc-600 text-sm mb-4 leading-relaxed">
-            To provide the best experience for your customers, please upload:
-          </p>
-
-          <div className="flex flex-wrap gap-2 mb-4">
-            {missingInfo.map((item, i) => (
-              <span key={i} className="bg-zinc-100 text-zinc-900 text-[10px] font-bold px-2.5 py-1 rounded-full border border-zinc-200">
-                + {item}
-              </span>
-            ))}
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-[340px]"
+      >
+        <div className="bg-zinc-950 text-white rounded-2xl p-4 shadow-2xl border border-zinc-800 flex items-center gap-4">
+          {/* Compact Icon */}
+          <div className="flex-shrink-0 w-10 h-10 bg-orange-500/10 text-orange-500 rounded-xl flex items-center justify-center">
+            <AlertCircle size={20} />
           </div>
 
+          {/* Mini Content */}
+          <div className="flex-grow min-w-0">
+            <h3 className="text-[11px] font-black uppercase tracking-widest text-orange-500 mb-0.5">
+              Complete Profile
+            </h3>
+            <p className="text-zinc-400 text-[10px] font-medium truncate">
+              Missing: {missingInfo.join(', ')}
+            </p>
+          </div>
+
+          {/* Compact Action Button */}
           <button 
             onClick={() => router.push('/settings')}
-            className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95"
+            className="flex-shrink-0 w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center transition-colors group"
           >
-            Go to Settings
+            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          {/* Close Button */}
+          <button 
+            onClick={() => setIsVisible(false)}
+            className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white"
+          >
+            <X size={12} />
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Bell, User, LayoutGrid, History, Settings, LogOut, Menu, X, Package } from 'lucide-react';
+// REPLACED: Bell with Plus
+import { Plus, User, LayoutGrid, History, Settings, LogOut, Menu, X, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
@@ -43,21 +44,24 @@ export default function DashboardNavbar() {
             <span className="font-bold text-zinc-900 text-lg hidden md:block tracking-tight">MifimnPay</span>
           </Link>
 
-          {/* Desktop Nav - Added Price List Link */}
           <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
             <NavLink href="/dashboard" icon={<LayoutGrid size={16} />} label="Overview" active={isActive('/dashboard')} />
             <NavLink href="/history" icon={<History size={16} />} label="History" active={isActive('/history')} />
-            {/* Direct link to the Price List section in settings */}
             <NavLink href="/settings" icon={<Package size={16} />} label="Price List" active={false} />
             <NavLink href="/settings" icon={<Settings size={16} />} label="Settings" active={isActive('/settings')} />
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="p-2 text-zinc-400 hover:text-zinc-900 transition-all relative">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
+          {/* UPDATED: Replaced Bell button with a Link to Generate Receipt */}
+          <Link 
+            href="/generate" 
+            className="p-2 bg-zinc-900 text-white hover:bg-zinc-800 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+            title="Create New Receipt"
+          >
+            <Plus size={20} strokeWidth={2.5} />
+            <span className="text-xs font-black hidden sm:block pr-1">NEW RECEIPT</span>
+          </Link>
 
           <div className="relative">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 focus:outline-none group">
@@ -87,6 +91,8 @@ export default function DashboardNavbar() {
                         <MobileLink href="/history" icon={<History size={16}/>} label="History" active={isActive('/history')} onClick={() => setIsMenuOpen(false)} />
                         <MobileLink href="/settings" icon={<Package size={16}/>} label="Price List" active={false} onClick={() => setIsMenuOpen(false)} />
                         <MobileLink href="/settings" icon={<Settings size={16}/>} label="Settings" active={isActive('/settings')} onClick={() => setIsMenuOpen(false)} />
+                        {/* Mobile Add Receipt Link */}
+                        <MobileLink href="/generate" icon={<Plus size={16}/>} label="Create Receipt" active={false} onClick={() => setIsMenuOpen(false)} />
                      </div>
                      <div className="p-2">
                         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
