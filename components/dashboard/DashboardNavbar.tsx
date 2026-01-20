@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-// REPLACED: Bell with Plus
+// Replaced Bell with Plus
 import { Plus, User, LayoutGrid, History, Settings, LogOut, Menu, X, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
@@ -44,6 +44,7 @@ export default function DashboardNavbar() {
             <span className="font-bold text-zinc-900 text-lg hidden md:block tracking-tight">MifimnPay</span>
           </Link>
 
+          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
             <NavLink href="/dashboard" icon={<LayoutGrid size={16} />} label="Overview" active={isActive('/dashboard')} />
             <NavLink href="/history" icon={<History size={16} />} label="History" active={isActive('/history')} />
@@ -53,14 +54,19 @@ export default function DashboardNavbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* UPDATED: Replaced Bell button with a Link to Generate Receipt */}
+          {/* REFINED PLUS ICON: Small, Circular, and Eye-Catching */}
           <Link 
             href="/generate" 
-            className="p-2 bg-zinc-900 text-white hover:bg-zinc-800 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+            className="group relative flex items-center justify-center w-10 h-10 bg-zinc-950 text-white rounded-full hover:scale-110 active:scale-95 transition-all duration-200 shadow-lg shadow-zinc-200"
             title="Create New Receipt"
           >
-            <Plus size={20} strokeWidth={2.5} />
-            <span className="text-xs font-black hidden sm:block pr-1">NEW RECEIPT</span>
+            {/* Bold Plus icon for clarity */}
+            <Plus size={22} strokeWidth={3} />
+            
+            {/* Tooltip that appears on hover */}
+            <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-zinc-900 text-[10px] font-black text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-tighter whitespace-nowrap z-50">
+              New Receipt
+            </span>
           </Link>
 
           <div className="relative">
