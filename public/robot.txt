@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /dashboard
-Disallow: /settings
-Disallow: /onboarding
-
-Sitemap: https://mifimnpay.vercel.app/sitemap.xml
