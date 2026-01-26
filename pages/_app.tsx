@@ -1,6 +1,7 @@
 // pages/_app.tsx
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
+import { useRouter } from 'next/router'; // Import useRouter
 import '../styles/globals.css';
 import { AuthProvider } from '../lib/AuthContext';
 import ProfileAlert from '../components/dashboard/ProfileAlert'; 
@@ -8,12 +9,17 @@ import InstallPrompt from '../components/PWA/InstallPrompt';
 import { GoogleAnalytics } from '@next/third-parties/google';
 
 export default function App({ Component, pageProps }: AppProps) {
-  // Use the new production domain
+  const router = useRouter();
+  
+  // Base domain
   const siteUrl = 'https://mifimnpay.com.ng'; 
+  
+  // Dynamic Canonical URL: This ensures every page points to the .com.ng version
+  // We remove query parameters (split('?')[0]) so tracking links don't confuse Google
+  const canonicalUrl = `${siteUrl}${router.asPath === '/' ? '' : router.asPath}`.split('?')[0];
+
   const title = "MifimnPay | Professional Receipt Generator";
   const description = "Generate authentic branded receipts instantly with MifimnPay.";
-  
-  // Use a larger image for social sharing to fix WhatsApp/Facebook previews
   const shareImage = `${siteUrl}/og-image.png`;
 
   return (
@@ -22,17 +28,24 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <title key="title">{title}</title>
         <meta name="description" content={description} key="desc" />
+        
+        {/* --- CRITICAL FIX: Canonical Tag --- */}
+        {/* This tells Google: "Even if you found this on vercel.app, the REAL version is on .com.ng" */}
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* --- CRITICAL FIX: Robots Tag --- */}
+        {/* Explicitly tells bots to index this site */}
+        <meta name="robots" content="index, follow" />
 
         {/* --- Open Graph / WhatsApp / Facebook --- */}
-        {/* Added a default app_id to help with social crawler verification */}
         <meta property="fb:app_id" content="966242223397117" />
         <meta property="og:type" content="website" key="ogtype" />
-        <meta property="og:url" content={siteUrl} key="ogurl" />
+        {/* Update og:url to be dynamic too */}
+        <meta property="og:url" content={canonicalUrl} key="ogurl" />
         <meta property="og:title" content={title} key="ogtitle" />
         <meta property="og:description" content={description} key="ogdesc" />
         <meta property="og:image" content={shareImage} key="ogimage" />
         <meta property="og:image:secure_url" content={shareImage} key="ogimagesecure" />
-        {/* Updated dimensions to standard social preview sizes */}
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" key="ogimgtype" />
