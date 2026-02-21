@@ -22,8 +22,8 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { 
-        // Updated to your new production domain and dashboard path
-        redirectTo: `https://mifimnpay.com.ng/dashboard` 
+        // Redirecting to the callback page to handle admin routing
+        redirectTo: `${window.location.origin}/auth-callback` 
       },
     });
     if (error) setError(error.message);
@@ -53,24 +53,19 @@ export default function Login() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        // UPDATED: Check for admin status and onboarding completion
+        // Fetch profile to check admin status and onboarding completion
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_name, is_admin')
           .eq('id', data.user.id)
           .single();
 
-        // 1. If admin, go straight to admin panel
+        // Redirect based on role and onboarding status
         if (profile?.is_admin) {
           router.push('/admin');
-          return;
-        }
-
-        // 2. If regular user, check for onboarding
-        if (!profile?.business_name || profile.business_name === 'My Business') {
+        } else if (!profile?.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
-          // Direct to regular dashboard
           router.push('/dashboard');
         }
       }
@@ -87,7 +82,6 @@ export default function Login() {
       
       <Navbar />
 
-      {/* EMAIL CONFIRMATION MODAL */}
       <AnimatePresence>
         {showEmailModal && (
           <motion.div 
