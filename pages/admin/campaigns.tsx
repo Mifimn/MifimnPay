@@ -11,7 +11,9 @@ import {
   Sparkles, 
   Mail, 
   Info,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon, // Added for flyer
+  Loader2 // Added for upload state
 } from 'lucide-react';
 
 // 1. PRE-SET TEMPLATES
@@ -38,6 +40,10 @@ export default function CampaignManager() {
   const [loading, setLoading] = useState(true);
   const [dispatching, setDispatching] = useState(false);
 
+  // NEW: Flyer States (Added for the image feature)
+  const [flyerUrl, setFlyerUrl] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+
   useEffect(() => {
     loadRecipients();
   }, []);
@@ -50,11 +56,39 @@ export default function CampaignManager() {
       console.error("Selection Error:", error);
     } else {
       setUsers(data || []);
-      // Auto-select all by default
       setSelectedIds(data?.map((u: any) => u.id) || []);
     }
     setLoading(false);
   }
+
+  // NEW: Handle Flyer Upload to Supabase Storage
+  const handleFlyerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `campaigns/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('campaign-flyers') // Ensure you created this bucket in Supabase
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('campaign-flyers')
+        .getPublicUrl(filePath);
+
+      setFlyerUrl(data.publicUrl);
+    } catch (error: any) {
+      alert("Upload failed: " + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // 3. APPLY TEMPLATE LOGIC
   const applyTemplate = (type: keyof typeof TEMPLATES) => {
@@ -62,14 +96,17 @@ export default function CampaignManager() {
     setMessageBody(TEMPLATES[type].message);
   };
 
-  // 4. PREVIEW HTML GENERATOR (Matches the API backend)
-  const generateHtmlPreview = (businessName: string, content: string) => {
+  // 4. PREVIEW HTML GENERATOR (Updated to include Flyer Image)
+  const generateHtmlPreview = (businessName: string, content: string, flyer: string) => {
     return `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
         <div style="background-color: #09090b; padding: 32px; text-align: center;">
           <div style="background-color: #22c55e; width: 40px; height: 40px; border-radius: 8px; display: inline-block; line-height: 40px; color: white; font-weight: 900; font-size: 20px; text-align: center;">M</div>
           <h1 style="color: white; margin-top: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">MifimnPay</h1>
         </div>
+
+        ${flyer ? `<div style="width: 100%;"><img src="${flyer}" style="width: 100%; display: block;" /></div>` : ''}
+
         <div style="padding: 40px; color: #18181b; line-height: 1.6;">
           <h2 style="font-size: 18px; margin-bottom: 20px; font-weight: 900;">Hello ${businessName},</h2>
           <div style="color: #52525b; font-size: 15px;">${content.replace(/\n/g, '<br/>') || 'Your message will appear here...'}</div>
@@ -85,7 +122,7 @@ export default function CampaignManager() {
     `;
   };
 
-  // 5. DISPATCH ACTION
+  // 5. DISPATCH ACTION (Updated to send flyerUrl)
   const handleDispatch = async () => {
     if (!subject || !messageBody || selectedIds.length === 0) {
       alert("Please check: Subject, Message, and at least one Recipient.");
@@ -102,7 +139,8 @@ export default function CampaignManager() {
         body: JSON.stringify({
           subject,
           messageBody,
-          recipients: selectedUsers
+          recipients: selectedUsers,
+          flyerUrl // Sending the flyer URL to the API
         }),
       });
 
@@ -110,6 +148,7 @@ export default function CampaignManager() {
         alert(`Success! Campaign sent to ${selectedUsers.length} users.`);
         setSubject('');
         setMessageBody('');
+        setFlyerUrl(''); // Reset flyer after send
       } else {
         const err = await response.json();
         throw new Error(err.error || "Failed to dispatch");
@@ -175,7 +214,7 @@ export default function CampaignManager() {
                   <Mail size={12}/> Message Content
                 </label>
                 <textarea 
-                  rows={10}
+                  rows={8}
                   value={messageBody}
                   onChange={(e) => setMessageBody(e.target.value)}
                   placeholder="Write your professional message here..."
@@ -183,9 +222,37 @@ export default function CampaignManager() {
                 />
               </div>
 
+              {/* NEW: Flyer Upload Box */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-2 px-1">
+                  <ImageIcon size={12}/> Optional Campaign Flyer
+                </label>
+                <div className="p-4 border-2 border-dashed border-zinc-500/20 rounded-2xl bg-zinc-500/5">
+                    <label className="flex flex-col items-center justify-center cursor-pointer gap-2">
+                        {isUploading ? (
+                            <div className="flex flex-col items-center py-4">
+                                <Loader2 className="animate-spin text-green-500" />
+                                <p className="text-[8px] font-black uppercase text-zinc-500 mt-2">Uploading Flyer...</p>
+                            </div>
+                        ) : flyerUrl ? (
+                            <div className="relative">
+                                <img src={flyerUrl} className="h-32 rounded-lg mb-2" alt="Flyer Preview" />
+                                <p className="text-[8px] text-center font-black text-green-500 uppercase">Image Ready</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center py-4">
+                                <ImageIcon className="text-zinc-500" size={32} />
+                                <p className="text-[10px] font-black uppercase text-zinc-500 mt-2">Click to Upload Flyer</p>
+                            </div>
+                        )}
+                        <input type="file" className="hidden" onChange={handleFlyerUpload} accept="image/*" />
+                    </label>
+                </div>
+              </div>
+
               <button 
                 onClick={handleDispatch}
-                disabled={dispatching || selectedIds.length === 0}
+                disabled={dispatching || isUploading || selectedIds.length === 0}
                 className="w-full bg-green-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
               >
                 <Send size={18} /> {dispatching ? 'DISPATCHING CAMPAIGN...' : `SEND TO ${selectedIds.length} RECIPIENTS`}
@@ -199,7 +266,7 @@ export default function CampaignManager() {
               </h3>
               <div className="bg-zinc-100 rounded-[40px] p-4 border-[10px] border-zinc-900 shadow-2xl max-w-sm mx-auto">
                 <div className="bg-white h-[450px] overflow-y-auto rounded-2xl custom-scrollbar">
-                  <div dangerouslySetInnerHTML={{ __html: generateHtmlPreview("Your Customer", messageBody) }} />
+                  <div dangerouslySetInnerHTML={{ __html: generateHtmlPreview("Your Customer", messageBody, flyerUrl) }} />
                 </div>
               </div>
             </div>
