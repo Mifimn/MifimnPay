@@ -3,39 +3,30 @@
 @tailwind utilities;
 
 :root {
-  /* YOUR NEW COLOR PALETTE */
-  --primary: #09090B;      /* Jet Black */
-  --secondary: #71717A;    /* Medium Gray */
-  --background: #FAFAFA;   /* Off White */
-  --paper: #FFFFFF;        /* Pure White */
-  --accent: #E4E4E7;       /* Subtle Silver */
-  
-  /* Helper for overlays (just black) */
-  --overlay: 8 9 11;       
+  --background: #ffffff;
+  --foreground: #000000;
+  --card-bg: #f8fafc;
+  --border-color: #e2e8f0;
+}
+
+/* This class will be applied to the Admin Layout container */
+.admin-dark {
+  --background: #0f172a; /* Deep Slate */
+  --foreground: #f8fafc;
+  --card-bg: #1e293b;
+  --border-color: #334155;
 }
 
 body {
-  color: var(--primary);
   background: var(--background);
-  -webkit-font-smoothing: antialiased;
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Selection Color (matches brand) */
-::selection {
-  background-color: var(--primary);
-  color: var(--paper);
-}
-
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background-color: var(--secondary);
-  border-radius: 20px;
-  border: 3px solid transparent;
-  background-clip: content-box;
+@layer components {
+  .admin-card {
+    @apply rounded-xl border p-6 transition-colors duration-300;
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+  }
 }

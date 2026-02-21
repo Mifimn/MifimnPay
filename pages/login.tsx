@@ -53,17 +53,24 @@ export default function Login() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        // Check if user has completed onboarding
+        // UPDATED: Check for admin status and onboarding completion
         const { data: profile } = await supabase
           .from('profiles')
-          .select('business_name')
+          .select('business_name, is_admin')
           .eq('id', data.user.id)
           .single();
 
+        // 1. If admin, go straight to admin panel
+        if (profile?.is_admin) {
+          router.push('/admin');
+          return;
+        }
+
+        // 2. If regular user, check for onboarding
         if (!profile?.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
-          // Direct to dashboard
+          // Direct to regular dashboard
           router.push('/dashboard');
         }
       }
