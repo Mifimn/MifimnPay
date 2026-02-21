@@ -1,21 +1,47 @@
-// pages/_app.tsx
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
-import { useRouter } from 'next/router'; // Import useRouter
+import { useRouter } from 'next/router'; 
+import { useEffect } from 'react'; // Added useEffect for tracking
 import '../styles/globals.css';
-import { AuthProvider } from '../lib/AuthContext';
+import { AuthProvider, useAuth } from '../lib/AuthContext'; // Updated to import useAuth
+import { supabase } from '../lib/supabaseClient'; // Imported supabase client
 import ProfileAlert from '../components/dashboard/ProfileAlert'; 
 import InstallPrompt from '../components/PWA/InstallPrompt'; 
 import { GoogleAnalytics } from '@next/third-parties/google';
 
+// Internal component to handle activity tracking
+function ActivityTracker() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    const logActivity = async () => {
+      // We only track activity for logged-in users to identify "Top Users"
+      if (!user) return;
+
+      try {
+        await supabase.from('site_activity').insert({
+          user_id: user.id,
+          page_path: router.pathname,
+          // Creating a simple session ID based on the date to group "minutes used"
+          session_id: new Date().toISOString().substring(0, 13), 
+        });
+      } catch (error) {
+        console.error("Tracking Error:", error);
+      }
+    };
+
+    // Log activity on every initial load and every route change
+    logActivity();
+  }, [router.pathname, user]);
+
+  return null;
+}
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   
-  // Base domain
   const siteUrl = 'https://mifimnpay.com.ng'; 
-  
-  // Dynamic Canonical URL: This ensures every page points to the .com.ng version
-  // We remove query parameters (split('?')[0]) so tracking links don't confuse Google
   const canonicalUrl = `${siteUrl}${router.asPath === '/' ? '' : router.asPath}`.split('?')[0];
 
   const title = "MifimnPay | Professional Receipt Generator";
@@ -29,18 +55,11 @@ export default function App({ Component, pageProps }: AppProps) {
         <title key="title">{title}</title>
         <meta name="description" content={description} key="desc" />
         
-        {/* --- CRITICAL FIX: Canonical Tag --- */}
-        {/* This tells Google: "Even if you found this on vercel.app, the REAL version is on .com.ng" */}
         <link rel="canonical" href={canonicalUrl} />
-
-        {/* --- CRITICAL FIX: Robots Tag --- */}
-        {/* Explicitly tells bots to index this site */}
         <meta name="robots" content="index, follow" />
 
-        {/* --- Open Graph / WhatsApp / Facebook --- */}
         <meta property="fb:app_id" content="966242223397117" />
         <meta property="og:type" content="website" key="ogtype" />
-        {/* Update og:url to be dynamic too */}
         <meta property="og:url" content={canonicalUrl} key="ogurl" />
         <meta property="og:title" content={title} key="ogtitle" />
         <meta property="og:description" content={description} key="ogdesc" />
@@ -50,7 +69,6 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" key="ogimgtype" />
 
-        {/* --- Twitter --- */}
         <meta name="twitter:card" content="summary_large_image" key="twcard" />
         <meta name="twitter:title" content={title} key="twtitle" />
         <meta name="twitter:description" content={description} key="twdesc" />
@@ -60,6 +78,9 @@ export default function App({ Component, pageProps }: AppProps) {
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#09090b" />
       </Head>
+      
+      {/* INITIALIZE TRACKING */}
+      <ActivityTracker /> 
       
       <InstallPrompt />
       <ProfileAlert />
