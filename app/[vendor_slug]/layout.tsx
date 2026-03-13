@@ -5,7 +5,6 @@ import "@/styles/globals.css"; // ADD THIS IMPORT
 import BrandHeader from '@/storefront/components/Showroom/BrandHeader';
 import CartDrawer from '@/storefront/components/Showroom/CartDrawer';
 import ModalController from '@/storefront/components/Global/ModalController';
-import MobileNavbar from '@/storefront/components/Showroom/MobileNavbar';
 import InquiryBasket from '@/storefront/components/Showroom/InquiryBasket';
 import { useThemeStore } from '@/storefront/store/useThemeStore';
 import { useCartStore } from '@/storefront/store/useCartStore';
@@ -27,7 +26,6 @@ export default function StorefrontLayout({
       <main className="bg-white dark:bg-[#0a0a0a] min-h-screen relative flex flex-col pb-24 lg:pb-0">
         <BrandHeader />
         <CartDrawer />
-        <ModalController />
         <div className="hidden lg:block">
            {basket.length > 0 && (
              <InquiryBasket 
