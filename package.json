@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@next/third-parties": "^16.1.1",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "clsx": "^2.1.1",
-    "framer-motion": "^12.23.26",
+    "framer-motion": "^12.36.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.562.0",
@@ -26,7 +28,9 @@
     "react-dom": "^19.0.0",
     "recharts": "^3.6.0",
     "resend": "^6.9.2",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "three": "^0.183.2",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@types/node": "^22.13.11",
