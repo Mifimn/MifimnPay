@@ -29,32 +29,32 @@ export default function Navbar() {
             transition-all duration-300
             border
             ${scrolled 
-              ? 'bg-white/70 backdrop-blur-xl border-white/50 shadow-lg shadow-black/5' 
-              : 'bg-white/50 backdrop-blur-lg border-white/30 shadow-sm' 
+              ? 'bg-brand-paper/80 backdrop-blur-xl border-brand-border/50 shadow-lg dark:shadow-none' 
+              : 'bg-brand-paper/50 backdrop-blur-lg border-brand-border/30 shadow-sm dark:shadow-none' 
             }
           `}
         >
-          {/* Logo Section - Replaced placeholder with favicon.png */}
+          {/* Logo Section */}
           <Link href="/" className="flex items-center gap-2">
             <img 
               src="/favicon.png" 
               alt="MifimnPay" 
               className="w-8 h-8 rounded-lg shadow-md object-cover" 
             />
-            <span className="font-bold text-zinc-900 text-lg tracking-tight">MifimnPay</span>
+            <span className="font-bold text-brand-black text-lg tracking-tight transition-colors duration-300">MifimnPay</span>
           </Link>
 
-          {/* Desktop Links - Updated for Global Navigation */}
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-600">
-            <Link href="/" className="hover:text-zinc-900 transition-colors">Home</Link>
-            <Link href="/#how-it-works" className="hover:text-zinc-900 transition-colors">How it Works</Link>
-            <Link href="/login" className="hover:text-zinc-900 transition-colors">Pricing</Link>
+          {/* Desktop Links */}
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-brand-gray">
+            <Link href="/" className="hover:text-brand-black transition-colors duration-300">Home</Link>
+            <Link href="/#how-it-works" className="hover:text-brand-black transition-colors duration-300">How it Works</Link>
+            <Link href="/login" className="hover:text-brand-black transition-colors duration-300">Pricing</Link>
           </div>
 
           {/* Desktop Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Log In</Link>
-            <Link href="/generate" className="bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-zinc-900/20 active:scale-95">
+            <Link href="/login" className="text-sm font-medium text-brand-gray hover:text-brand-black transition-colors duration-300">Log In</Link>
+            <Link href="/generate" className="bg-brand-black hover:opacity-90 text-brand-paper text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-lg active:scale-95 duration-300">
               Get Started
             </Link>
           </div>
@@ -62,7 +62,7 @@ export default function Navbar() {
           {/* Mobile Toggle Button */}
           <button 
             onClick={() => setIsOpen(!isOpen)} 
-            className="md:hidden p-2 text-zinc-900 bg-white/50 hover:bg-white rounded-lg transition-colors"
+            className="md:hidden p-2 text-brand-black bg-brand-paper/50 hover:bg-brand-paper rounded-lg transition-colors duration-300"
           >
             {isOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -76,12 +76,12 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-20 left-4 right-4 bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 p-6 md:hidden flex flex-col gap-4 z-40"
+              className="absolute top-20 left-4 right-4 bg-brand-paper/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-brand-border p-6 md:hidden flex flex-col gap-4 z-40 transition-colors duration-300"
             >
-              <Link href="/" onClick={() => setIsOpen(false)} className="text-lg font-medium text-zinc-900 py-2 border-b border-zinc-100/50">Home</Link>
-              <Link href="/#how-it-works" onClick={() => setIsOpen(false)} className="text-lg font-medium text-zinc-900 py-2 border-b border-zinc-100/50">How it Works</Link>
-              <Link href="/login" onClick={() => setIsOpen(false)} className="text-lg font-medium text-zinc-900 py-2 border-b border-zinc-100/50">Log In</Link>
-              <Link href="/generate" onClick={() => setIsOpen(false)} className="bg-zinc-900 text-center text-white text-lg font-medium px-5 py-3 rounded-xl shadow-lg">
+              <Link href="/" onClick={() => setIsOpen(false)} className="text-lg font-medium text-brand-black py-2 border-b border-brand-border/50 transition-colors duration-300">Home</Link>
+              <Link href="/#how-it-works" onClick={() => setIsOpen(false)} className="text-lg font-medium text-brand-black py-2 border-b border-brand-border/50 transition-colors duration-300">How it Works</Link>
+              <Link href="/login" onClick={() => setIsOpen(false)} className="text-lg font-medium text-brand-black py-2 border-b border-brand-border/50 transition-colors duration-300">Log In</Link>
+              <Link href="/generate" onClick={() => setIsOpen(false)} className="bg-brand-black text-center text-brand-paper text-lg font-medium px-5 py-3 rounded-xl shadow-lg transition-colors duration-300 hover:opacity-90">
                 Create Receipt Now
               </Link>
             </motion.div>

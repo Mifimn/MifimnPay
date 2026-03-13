@@ -44,10 +44,10 @@ export default function AuthCallback() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg transition-colors duration-300">
       <div className="text-center space-y-4">
-        <Loader2 className="animate-spin text-zinc-900 mx-auto" size={40} />
-        <p className="text-zinc-500 font-bold animate-pulse uppercase tracking-widest text-xs">
+        <Loader2 className="animate-spin text-brand-black mx-auto transition-colors duration-300" size={40} />
+        <p className="text-brand-gray font-bold animate-pulse uppercase tracking-widest text-xs transition-colors duration-300">
           Verifying Account...
         </p>
       </div>

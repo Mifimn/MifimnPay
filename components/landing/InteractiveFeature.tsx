@@ -44,19 +44,19 @@ export default function InteractiveFeature() {
             onClick={() => setActiveStep(step.id)}
             className={`w-full text-left p-6 rounded-2xl transition-all duration-300 border ${
               activeStep === step.id
-                ? "bg-zinc-900 text-white border-zinc-900 shadow-xl scale-105"
-                : "bg-white text-zinc-500 border-zinc-100 hover:border-zinc-300"
+                ? "bg-brand-black text-brand-paper border-brand-black shadow-xl scale-105"
+                : "bg-brand-paper text-brand-gray border-brand-border hover:border-brand-black dark:hover:border-brand-paper"
             }`}
           >
             <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl ${activeStep === step.id ? 'bg-zinc-800' : 'bg-zinc-100 text-zinc-900'}`}>
+              <div className={`p-3 rounded-xl transition-colors duration-300 ${activeStep === step.id ? 'bg-brand-paper/10 text-brand-paper' : 'bg-brand-bg text-brand-black'}`}>
                 {step.icon}
               </div>
               <div>
-                <h3 className={`font-black text-lg ${activeStep === step.id ? 'text-white' : 'text-zinc-900'}`}>
+                <h3 className={`font-black text-lg transition-colors duration-300 ${activeStep === step.id ? 'text-brand-paper' : 'text-brand-black'}`}>
                   {step.title}
                 </h3>
-                <p className={`text-sm font-medium mt-1 ${activeStep === step.id ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                <p className={`text-sm font-medium mt-1 transition-colors duration-300 ${activeStep === step.id ? 'text-brand-paper/70' : 'text-brand-gray'}`}>
                   {step.desc}
                 </p>
               </div>
@@ -66,16 +66,16 @@ export default function InteractiveFeature() {
       </div>
 
       {/* RIGHT SIDE: The Virtual Phone Screen */}
-      <div className="relative mx-auto border-zinc-800 bg-zinc-900 border-[14px] rounded-[2.5rem] h-[550px] w-[300px] shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative mx-auto border-brand-black bg-brand-black border-[14px] rounded-[2.5rem] h-[550px] w-[300px] shadow-2xl flex flex-col overflow-hidden transition-colors duration-300">
         {/* Phone Notch */}
-        <div className="h-[32px] bg-zinc-800 w-full absolute top-0 left-0 z-20 flex justify-center">
-            <div className="h-4 w-24 bg-black rounded-b-xl"></div>
+        <div className="h-[32px] bg-brand-black/20 w-full absolute top-0 left-0 z-20 flex justify-center">
+            <div className="h-4 w-24 bg-brand-black rounded-b-xl"></div>
         </div>
-        
-        {/* Screen Content */}
+
+        {/* Screen Content - Kept mostly light to mimic real app UI inside the frame */}
         <div className="bg-zinc-50 w-full h-full pt-12 relative flex flex-col items-center font-sans">
           <AnimatePresence mode="wait">
-            
+
             {/* SCENE 1: RECEIPT GENERATION MOTION */}
             {activeStep === 1 && (
               <motion.div
@@ -128,7 +128,7 @@ export default function InteractiveFeature() {
                 <div className="bg-zinc-900 p-5 rounded-[24px] text-white shadow-xl">
                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Revenue Growth</p>
                   <p className="text-2xl font-black mt-1 tracking-tight">₦450,200</p>
-                  
+
                   {/* Animated Bar Chart */}
                   <div className="flex items-end gap-2 h-24 mt-6">
                     <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} transition={{ delay: 0.2 }} className="bg-zinc-800 w-full rounded-t-md" />
@@ -169,10 +169,10 @@ export default function InteractiveFeature() {
                  >
                     <QrCode size={130} strokeWidth={1} className="text-zinc-900" />
                  </motion.div>
-                 
+
                  <h4 className="font-black text-zinc-950 text-sm mb-1 uppercase tracking-tighter">Scan to Browse</h4>
                  <p className="text-zinc-400 text-[10px] font-medium mb-8">mifimnpay.com.ng/m/store</p>
-                 
+
                  <motion.div 
                    initial={{ width: '0%' }}
                    animate={{ width: '100%' }}

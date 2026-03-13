@@ -56,22 +56,22 @@ export default function ProfileAlert() {
         exit={{ opacity: 0, y: -20 }}
         className="fixed top-20 left-0 right-0 z-[100] px-4 flex justify-center pointer-events-none"
       >
-        <div className="pointer-events-auto w-full max-w-[450px] bg-white border border-orange-100 shadow-xl rounded-2xl overflow-hidden">
+        <div className="pointer-events-auto w-full max-w-[450px] bg-brand-paper border border-orange-200 dark:border-orange-900/30 shadow-xl rounded-2xl overflow-hidden transition-colors duration-300">
           <div className="flex items-center gap-3 p-3 md:p-4">
             {/* Minimalist Icon Section */}
-            <div className="flex-shrink-0 w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center">
+            <div className="flex-shrink-0 w-10 h-10 bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400 rounded-xl flex items-center justify-center transition-colors duration-300">
               <AlertCircle size={20} />
             </div>
 
             {/* Content Section */}
             <div className="flex-grow min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 transition-colors duration-300">
                   Profile Incomplete
                 </span>
               </div>
-              <p className="text-zinc-500 text-[11px] font-medium leading-tight">
-                Upload your <span className="text-zinc-900 font-bold">{missingInfo.join(', ')}</span> to look professional.
+              <p className="text-brand-gray text-[11px] font-medium leading-tight transition-colors duration-300">
+                Upload your <span className="text-brand-black font-bold transition-colors duration-300">{missingInfo.join(', ')}</span> to look professional.
               </p>
             </div>
 
@@ -79,14 +79,14 @@ export default function ProfileAlert() {
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => router.push('/settings')}
-                className="h-9 px-4 bg-zinc-900 text-white rounded-xl text-[11px] font-bold hover:bg-zinc-800 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                className="h-9 px-4 bg-brand-black text-brand-paper rounded-xl text-[11px] font-bold hover:opacity-90 transition-all flex items-center gap-1.5 whitespace-nowrap"
               >
                 Fix <ArrowRight size={14} />
               </button>
               
               <button 
                 onClick={() => setIsVisible(false)}
-                className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-colors"
+                className="w-9 h-9 flex items-center justify-center text-brand-gray hover:text-brand-black hover:bg-brand-bg rounded-xl transition-colors duration-300"
               >
                 <X size={18} />
               </button>
@@ -94,7 +94,7 @@ export default function ProfileAlert() {
           </div>
           
           {/* Subtle progress indicator at the bottom */}
-          <div className="h-1 w-full bg-zinc-50">
+          <div className="h-1 w-full bg-brand-bg transition-colors duration-300">
             <div 
               className="h-full bg-orange-500 transition-all duration-500" 
               style={{ width: `${((4 - missingInfo.length) / 4) * 100}%` }}

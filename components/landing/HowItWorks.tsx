@@ -21,11 +21,11 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="py-24 bg-white border-y border-brand-border">
+    <section className="py-24 bg-brand-paper border-y border-brand-border transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-20 space-y-4">
-          <h2 className="text-4xl md:text-5xl font-black text-brand-black tracking-tighter">BEYOND JUST RECEIPTS</h2>
-          <p className="text-brand-gray font-medium max-w-2xl mx-auto">Everything you need to move from a "DM vendor" to a professional business owner.</p>
+          <h2 className="text-4xl md:text-5xl font-black text-brand-black tracking-tighter transition-colors duration-300 uppercase">BEYOND JUST RECEIPTS</h2>
+          <p className="text-brand-gray font-medium max-w-2xl mx-auto transition-colors duration-300">Everything you need to move from a "DM vendor" to a professional business owner.</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-12">
@@ -36,13 +36,13 @@ export default function HowItWorks() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
-              className="group p-8 rounded-[32px] bg-brand-bg border border-brand-border hover:border-zinc-950 transition-all"
+              className="group p-8 rounded-[32px] bg-brand-bg border border-brand-border hover:border-brand-black dark:hover:border-brand-paper transition-all duration-300"
             >
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-brand-black shadow-sm border border-brand-border mb-8 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 bg-brand-paper rounded-2xl flex items-center justify-center text-brand-black shadow-sm border border-brand-border mb-8 group-hover:scale-110 transition-all duration-300">
                 {step.icon}
               </div>
-              <h3 className="text-2xl font-black text-brand-black mb-4 tracking-tight">{step.title}</h3>
-              <p className="text-brand-gray font-medium leading-relaxed">{step.desc}</p>
+              <h3 className="text-2xl font-black text-brand-black mb-4 tracking-tight transition-colors duration-300">{step.title}</h3>
+              <p className="text-brand-gray font-medium leading-relaxed transition-colors duration-300">{step.desc}</p>
             </motion.div>
           ))}
         </div>

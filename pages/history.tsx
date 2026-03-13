@@ -77,28 +77,28 @@ export default function History() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans">
+    <div className="min-h-screen bg-brand-bg font-sans transition-colors duration-300">
       <Head><title>History | MifimnPay</title></Head>
       <DashboardNavbar />
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Receipt History</h1>
-          <Link href="/generate" className="bg-zinc-900 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all"><Plus size={18} /> New Receipt</Link>
+          <h1 className="text-2xl font-bold text-brand-black transition-colors duration-300">Receipt History</h1>
+          <Link href="/generate" className="bg-brand-black text-brand-paper px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all"><Plus size={18} /> New Receipt</Link>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 mb-6">
+        <div className="bg-brand-paper p-4 rounded-xl border border-brand-border mb-6 transition-colors duration-300">
           <input 
             type="text" 
             placeholder="Search customer or ID..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full md:w-96 px-4 py-2 bg-zinc-50 border rounded-lg text-sm outline-none focus:border-zinc-900" 
+            className="w-full md:w-96 px-4 py-2 bg-brand-bg border border-brand-border rounded-lg text-sm outline-none focus:border-brand-black text-brand-black placeholder:text-brand-gray transition-colors duration-300" 
           />
         </div>
 
-        <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+        <div className="bg-brand-paper border border-brand-border rounded-xl overflow-hidden shadow-sm overflow-x-auto transition-colors duration-300">
           <table className="w-full text-left min-w-[700px]">
-            <thead className="bg-zinc-50 border-b text-xs uppercase text-zinc-500 font-bold">
+            <thead className="bg-brand-bg border-b border-brand-border text-xs uppercase text-brand-gray font-bold transition-colors duration-300">
               <tr>
                 <th className="px-6 py-4">ID</th>
                 <th className="px-6 py-4">Date</th>
@@ -108,30 +108,30 @@ export default function History() {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-brand-border transition-colors duration-300">
               {loading ? (
-                <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" /></td></tr>
+                <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-brand-gray" /></td></tr>
               ) : filteredReceipts.length > 0 ? (
                 filteredReceipts.map((r) => (
-                  <tr key={r.id} className="hover:bg-zinc-50/50 group transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-zinc-500">{r.receipt_number}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 font-bold text-zinc-900">{r.customer_name}</td>
+                  <tr key={r.id} className="hover:bg-brand-bg group transition-colors duration-300">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-brand-gray transition-colors duration-300">{r.receipt_number}</td>
+                    <td className="px-6 py-4 text-sm text-brand-gray transition-colors duration-300">{new Date(r.created_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 font-bold text-brand-black transition-colors duration-300">{r.customer_name}</td>
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md flex items-center gap-1 w-fit ${
-                        r.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md flex items-center gap-1 w-fit transition-colors duration-300 ${
+                        r.status?.toLowerCase() === 'paid' ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                       }`}>
                         {r.status?.toLowerCase() === 'paid' ? <CheckCircle size={10}/> : <Clock size={10}/>} {r.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-brand-black transition-colors duration-300">₦{Number(r.total_amount).toLocaleString()}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => setSelectedReceipt(r)} className="p-2 text-zinc-400 hover:text-zinc-900 transition-all"><Eye size={16}/></button>
+                      <button onClick={() => setSelectedReceipt(r)} className="p-2 text-brand-gray hover:text-brand-black transition-all"><Eye size={16}/></button>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={6} className="py-20 text-center text-zinc-400 italic">No history found.</td></tr>
+                <tr><td colSpan={6} className="py-20 text-center text-brand-gray italic transition-colors duration-300">No history found.</td></tr>
               )}
             </tbody>
           </table>
@@ -140,13 +140,13 @@ export default function History() {
 
       {selectedReceipt && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                <div className="p-4 border-b flex justify-between items-center bg-zinc-50">
-                    <h3 className="font-bold">Receipt Details</h3>
-                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-zinc-200 rounded-full"><X size={20}/></button>
+            <div className="bg-brand-paper border border-brand-border rounded-2xl shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 transition-colors duration-300">
+                <div className="p-4 border-b border-brand-border flex justify-between items-center bg-brand-bg rounded-t-2xl transition-colors duration-300">
+                    <h3 className="font-bold text-brand-black transition-colors duration-300">Receipt Details</h3>
+                    <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-brand-border text-brand-gray hover:text-brand-black rounded-full transition-colors duration-300"><X size={20}/></button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex flex-col items-center">
-                    <div className="scale-90 origin-top">
+                <div className="flex-1 overflow-y-auto p-6 bg-brand-bg/50 flex flex-col items-center transition-colors duration-300">
+                    <div className="scale-90 origin-top shadow-xl">
                         <ReceiptPreview 
                             data={{
                                 ...selectedReceipt,
@@ -164,6 +164,7 @@ export default function History() {
                                 items: selectedReceipt.items || [],
                                 date: new Date(selectedReceipt.created_at).toLocaleDateString('en-GB')
                             }} 
+                            // Hardcoding light mode colors here so the actual receipt remains professional/printable
                             settings={{ color: '#09090b', showLogo: true, template: 'detailed' }} 
                             receiptRef={downloadRef} 
                         />
@@ -171,13 +172,13 @@ export default function History() {
                 </div>
                 
                 {/* RESPONSIVE MODAL FOOTER */}
-                <div className="p-4 border-t bg-white">
+                <div className="p-4 border-t border-brand-border bg-brand-paper rounded-b-2xl transition-colors duration-300">
                   <div className="flex flex-col sm:flex-row gap-3">
                     {selectedReceipt.status?.toLowerCase() === 'pending' && (
                       <button 
                         onClick={() => handleUpdateStatus(selectedReceipt.id)} 
                         disabled={isUpdating} 
-                        className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-sm shadow-green-200"
+                        className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all shadow-sm"
                       >
                         {isUpdating ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />} 
                         <span className="whitespace-nowrap">Mark as Paid</span>
@@ -187,15 +188,15 @@ export default function History() {
                     <button 
                       onClick={handleDownloadAgain} 
                       disabled={isDownloading} 
-                      className={`${selectedReceipt.status?.toLowerCase() === 'pending' ? 'flex-1' : 'flex-[2]'} py-3 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all`}
+                      className={`${selectedReceipt.status?.toLowerCase() === 'pending' ? 'flex-1' : 'flex-[2]'} py-3 bg-brand-black text-brand-paper font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all`}
                     >
-                      {isDownloading ? <Loader2 className="animate-spin w-5 h-5" /> : <Download size={18} />} 
+                      {isDownloading ? <Loader2 className="animate-spin w-5 h-5 text-brand-paper" /> : <Download size={18} />} 
                       <span className="whitespace-nowrap">Download Image</span>
                     </button>
 
                     <button 
                       onClick={() => setSelectedReceipt(null)} 
-                      className="flex-1 py-3 bg-zinc-100 font-bold rounded-xl transition-colors hover:bg-zinc-200"
+                      className="flex-1 py-3 bg-brand-bg text-brand-black font-bold rounded-xl transition-colors hover:bg-brand-border border border-brand-border"
                     >
                       Close
                     </button>

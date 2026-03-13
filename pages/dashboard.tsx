@@ -11,11 +11,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../lib/AuthContext';
+import { useTheme } from '../lib/ThemeContext'; // Imported useTheme hook
 import DashboardNavbar from '../components/dashboard/DashboardNavbar';
 import ProfileAlert from '../components/dashboard/ProfileAlert';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
+  const { theme } = useTheme(); // Getting the active theme for dynamic chart colors
   const router = useRouter();
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -126,10 +128,14 @@ export default function Dashboard() {
     }
   }, [yearReceipts, selectedYear, selectedMonth]);
 
-  if (loading) return <div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="animate-spin text-zinc-900" size={32} /></div>;
+  // Dynamic colors for the chart based on the current theme
+  const chartLineColor = theme === 'dark' ? '#ffffff' : '#18181b';
+  const chartGridColor = theme === 'dark' ? '#27272a' : '#f4f4f5';
+
+  if (loading) return <div className="min-h-screen bg-brand-bg flex items-center justify-center transition-colors duration-300"><Loader2 className="animate-spin text-brand-black" size={32} /></div>;
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20 font-sans">
+    <div className="min-h-screen bg-brand-bg pb-20 font-sans transition-colors duration-300">
       <Head><title>Dashboard | MifimnPay</title></Head>
       <DashboardNavbar />
       <ProfileAlert />
@@ -139,14 +145,14 @@ export default function Dashboard() {
         {/* BUSINESS OVERVIEW (Moved to Top for Phone View) */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-black text-zinc-900 tracking-tight">Business Overview</h1>
-            <p className="text-zinc-500 font-medium tracking-tight">Real-time performance for {profile?.business_name}.</p>
+            <h1 className="text-3xl font-black text-brand-black tracking-tight transition-colors duration-300">Business Overview</h1>
+            <p className="text-brand-gray font-medium tracking-tight transition-colors duration-300">Real-time performance for {profile?.business_name}.</p>
           </div>
           <div className="flex items-center gap-3">
-            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2 text-xs font-black text-zinc-600 outline-none">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-brand-paper border-2 border-brand-border rounded-xl px-4 py-2 text-xs font-black text-brand-gray outline-none transition-colors duration-300 cursor-pointer">
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border-2 border-zinc-100 rounded-xl px-4 py-2 text-xs font-black text-zinc-600 outline-none">
+            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-brand-paper border-2 border-brand-border rounded-xl px-4 py-2 text-xs font-black text-brand-gray outline-none transition-colors duration-300 cursor-pointer">
               <option value="all">Full Year</option>
               {months.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -155,13 +161,13 @@ export default function Dashboard() {
 
         {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard title="Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-green-600" />
-          <StatsCard title="Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-600" />
-          <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-600" />
+          <StatsCard title="Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-green-600 dark:text-green-500" />
+          <StatsCard title="Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-600 dark:text-blue-500" />
+          <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-600 dark:text-purple-500" />
         </div>
 
         {/* COLLAPSIBLE QR STOREFRONT SECTION (Optimized for Mobile) */}
-        <section className="bg-zinc-900 rounded-3xl overflow-hidden shadow-xl transition-all duration-300">
+        <section className="bg-zinc-900 border border-transparent dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xl transition-all duration-300">
           <button 
             onClick={() => setIsQrExpanded(!isQrExpanded)}
             className="w-full p-6 md:p-8 flex items-center justify-between text-white hover:bg-white/5 transition-colors"
@@ -171,7 +177,7 @@ export default function Dashboard() {
                 <QrCode size={20} />
               </div>
               <div className="text-left">
-                <h2 className="text-lg font-black tracking-tight">QR Storefront Tools</h2>
+                <h2 className="text-lg font-black tracking-tight text-white">QR Storefront Tools</h2>
                 <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Live Price List & QR Generator</p>
               </div>
             </div>
@@ -228,23 +234,32 @@ export default function Dashboard() {
         </section>
 
         {/* CHART SECTION */}
-        <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
+        <div className="bg-brand-paper p-8 rounded-3xl border border-brand-border shadow-sm transition-colors duration-300">
            <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4 text-center md:text-left">
             <div>
-              <h3 className="font-bold text-zinc-900 text-lg">{selectedMonth === "all" ? `Revenue Trend (${selectedYear})` : `${selectedMonth} ${selectedYear} Breakdown`}</h3>
-              <p className="text-xs text-zinc-400 font-bold uppercase tracking-[0.15em]">{selectedMonth === "all" ? "Monthly Cumulative" : "Daily Sales Tracking"}</p>
+              <h3 className="font-bold text-brand-black text-lg transition-colors duration-300">{selectedMonth === "all" ? `Revenue Trend (${selectedYear})` : `${selectedMonth} ${selectedYear} Breakdown`}</h3>
+              <p className="text-xs text-brand-gray font-bold uppercase tracking-[0.15em] transition-colors duration-300">{selectedMonth === "all" ? "Monthly Cumulative" : "Daily Sales Tracking"}</p>
             </div>
-            {isFetching && <Loader2 className="animate-spin text-zinc-400" size={20} />}
+            {isFetching && <Loader2 className="animate-spin text-brand-gray" size={20} />}
           </div>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
-                <defs><linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#18181b" stopOpacity={0.1}/><stop offset="95%" stopColor="#18181b" stopOpacity={0}/></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <defs><linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={chartLineColor} stopOpacity={0.1}/><stop offset="95%" stopColor={chartLineColor} stopOpacity={0}/></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridColor} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#a1a1aa', fontWeight: 700}} dy={10} interval={selectedMonth === "all" ? 0 : 4} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="total" stroke="#18181b" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#18181b' : '#ffffff', 
+                    borderColor: theme === 'dark' ? '#27272a' : '#e2e8f0', 
+                    color: theme === 'dark' ? '#fafafa' : '#000000',
+                    borderRadius: '16px', 
+                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' 
+                  }} 
+                  itemStyle={{ color: theme === 'dark' ? '#fafafa' : '#000000', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="total" stroke={chartLineColor} strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -253,26 +268,30 @@ export default function Dashboard() {
         {/* RECENT ACTIVITY */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-6">
-            <h3 className="font-bold text-zinc-900 text-lg">Recent History</h3>
-            <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm divide-y divide-zinc-100">
+            <h3 className="font-bold text-brand-black text-lg transition-colors duration-300">Recent History</h3>
+            <div className="bg-brand-paper border border-brand-border rounded-3xl overflow-hidden shadow-sm divide-y divide-brand-border transition-colors duration-300">
               {recentReceipts.map((r, i) => (
-                <div key={i} className="p-5 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                <div key={i} className="p-5 flex items-center justify-between hover:bg-brand-bg transition-colors duration-300">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center text-zinc-600 font-black text-lg uppercase">{r.customer_name?.[0] || 'W'}</div>
+                    <div className="w-12 h-12 bg-brand-bg rounded-2xl flex items-center justify-center text-brand-gray font-black text-lg uppercase transition-colors duration-300">{r.customer_name?.[0] || 'W'}</div>
                     <div>
-                      <p className="font-bold text-zinc-900 text-sm">{r.customer_name || 'Walk-in'}</p>
-                      <p className="text-[10px] text-zinc-400 font-bold tracking-tight uppercase">#{r.receipt_number} • {new Date(r.created_at).toLocaleDateString()}</p>
+                      <p className="font-bold text-brand-black text-sm transition-colors duration-300">{r.customer_name || 'Walk-in'}</p>
+                      <p className="text-[10px] text-brand-gray font-bold tracking-tight uppercase transition-colors duration-300">#{r.receipt_number} • {new Date(r.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <span className="font-black text-zinc-900">₦{Number(r.total_amount).toLocaleString()}</span>
+                  <span className="font-black text-brand-black transition-colors duration-300">₦{Number(r.total_amount).toLocaleString()}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-zinc-950 rounded-3xl p-8 text-white h-fit shadow-2xl border border-white/5 space-y-6">
+          
+          {/* DYNAMIC CTA BOX */}
+          <div className="bg-brand-black rounded-3xl p-8 text-brand-paper h-fit shadow-2xl space-y-6 transition-colors duration-300 border border-transparent dark:border-brand-border">
              <h4 className="text-2xl font-black">Issue Billing</h4>
-             <p className="text-zinc-500 text-sm font-medium leading-relaxed">Ready to generate a professional receipt for a client?</p>
-             <button onClick={() => router.push('/generate')} className="w-full py-5 bg-white text-zinc-950 rounded-2xl font-black text-lg flex items-center justify-center gap-3 active:scale-95 transition-all"><Plus size={22} strokeWidth={3}/> New Receipt</button>
+             <p className="text-brand-paper opacity-70 text-sm font-medium leading-relaxed">Ready to generate a professional receipt for a client?</p>
+             <button onClick={() => router.push('/generate')} className="w-full py-5 bg-brand-paper text-brand-black rounded-2xl font-black text-lg flex items-center justify-center gap-3 active:scale-95 transition-all">
+               <Plus size={22} strokeWidth={3}/> New Receipt
+             </button>
           </div>
         </div>
       </main>
@@ -282,10 +301,10 @@ export default function Dashboard() {
 
 function StatsCard({ title, value, icon, color }: any) {
   return (
-    <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
-      <div className={`w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center mb-6 ${color} border border-zinc-100`}>{icon}</div>
-      <p className="text-xs text-zinc-400 mb-1 font-black uppercase tracking-widest">{title}</p>
-      <h3 className="text-3xl font-black text-zinc-950 tracking-tight">{value}</h3>
+    <div className="bg-brand-paper p-8 rounded-3xl border border-brand-border shadow-sm transition-colors duration-300">
+      <div className={`w-12 h-12 bg-brand-bg rounded-2xl flex items-center justify-center mb-6 ${color} border border-brand-border transition-colors duration-300`}>{icon}</div>
+      <p className="text-xs text-brand-gray mb-1 font-black uppercase tracking-widest transition-colors duration-300">{title}</p>
+      <h3 className="text-3xl font-black text-brand-black tracking-tight transition-colors duration-300">{value}</h3>
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-brand-bg selection:bg-brand-black selection:text-white">
+    <div className="min-h-screen bg-brand-bg text-brand-black selection:bg-brand-black selection:text-white dark:selection:text-black transition-colors duration-300">
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />

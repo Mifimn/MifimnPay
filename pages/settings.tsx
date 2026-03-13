@@ -158,99 +158,99 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans pb-20">
+    <div className="min-h-screen bg-brand-bg font-sans pb-20 transition-colors duration-300">
       <Head><title>Settings | MifimnPay</title></Head>
       <DashboardNavbar />
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Business Settings</h1>
-          <p className="text-zinc-500 text-sm mt-1">Manage your business profile and subscription.</p>
+          <h1 className="text-2xl font-bold text-brand-black transition-colors duration-300">Business Settings</h1>
+          <p className="text-brand-gray text-sm mt-1 transition-colors duration-300">Manage your business profile and subscription.</p>
         </div>
 
-        <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-zinc-100 flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500"><Store size={18} /></div>
-             <div><h2 className="font-bold text-zinc-900">Business Profile</h2></div>
+        <section className="bg-brand-paper rounded-xl border border-brand-border shadow-sm overflow-hidden transition-colors duration-300">
+          <div className="p-6 border-b border-brand-border flex items-center gap-3 transition-colors duration-300">
+             <div className="w-8 h-8 rounded-full bg-brand-bg flex items-center justify-center text-brand-gray transition-colors duration-300"><Store size={18} /></div>
+             <div><h2 className="font-bold text-brand-black transition-colors duration-300">Business Profile</h2></div>
           </div>
 
           <div className="p-6 grid md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-zinc-700 mb-2">Business Logo</label>
+              <label className="block text-sm font-bold text-brand-black mb-2 transition-colors duration-300">Business Logo</label>
               <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-full border-2 border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center overflow-hidden relative group">
-                  {logoPreview ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" /> : <Store className="text-zinc-300" size={32} />}
+                <div className="w-24 h-24 rounded-full border-2 border-dashed border-brand-border bg-brand-bg flex items-center justify-center overflow-hidden relative group transition-colors duration-300">
+                  {logoPreview ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" /> : <Store className="text-brand-gray/50" size={32} />}
                   <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs text-zinc-400">Click circle to upload PNG or JPG.</p>
+                  <p className="text-xs text-brand-gray transition-colors duration-300">Click circle to upload PNG or JPG.</p>
                 </div>
               </div>
             </div>
 
-            <InputField label="Business Name" value={formData.businessName} onChange={(v) => setFormData({...formData, businessName: v})} />
+            <InputField label="Business Name" value={formData.businessName} onChange={(v: any) => setFormData({...formData, businessName: v})} />
 
             <div className="space-y-2">
-              <InputField label="Store URL Slug" value={formData.slug} onChange={(v) => setFormData({...formData, slug: v})} placeholder="e.g. item-7" icon={<LinkIcon size={14}/>} />
-              <div className="flex items-start gap-2 p-3 bg-red-50 rounded-xl border border-red-100">
-                <AlertTriangle size={14} className="text-red-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] leading-relaxed text-red-700 font-bold uppercase">
+              <InputField label="Store URL Slug" value={formData.slug} onChange={(v: any) => setFormData({...formData, slug: v})} placeholder="e.g. item-7" icon={<LinkIcon size={14}/>} />
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-100 dark:border-red-500/20 transition-colors duration-300">
+                <AlertTriangle size={14} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5 transition-colors duration-300" />
+                <p className="text-[10px] leading-relaxed text-red-700 dark:text-red-400 font-bold uppercase transition-colors duration-300">
                   Warning: Changing this slug will change your QR Store URL. Any printed QR codes will stop working.
                 </p>
               </div>
             </div>
 
-            <InputField label="Tagline" value={formData.tagline} onChange={(v) => setFormData({...formData, tagline: v})} placeholder="Fast and Reliable" />
-            <InputField label="Phone Number" value={formData.phone} onChange={(v) => setFormData({...formData, phone: v})} icon={<Phone size={16}/>} />
-            <InputField label="Email Address" value={formData.email} onChange={(v) => setFormData({...formData, email: v})} icon={<Mail size={16}/>} />
+            <InputField label="Tagline" value={formData.tagline} onChange={(v: any) => setFormData({...formData, tagline: v})} placeholder="Fast and Reliable" />
+            <InputField label="Phone Number" value={formData.phone} onChange={(v: any) => setFormData({...formData, phone: v})} icon={<Phone size={16}/>} />
+            <InputField label="Email Address" value={formData.email} onChange={(v: any) => setFormData({...formData, email: v})} icon={<Mail size={16}/>} />
             <div className="md:col-span-2">
-              <InputField label="Address" value={formData.address} onChange={(v) => setFormData({...formData, address: v})} icon={<MapPin size={16}/>} />
+              <InputField label="Address" value={formData.address} onChange={(v: any) => setFormData({...formData, address: v})} icon={<MapPin size={16}/>} />
             </div>
           </div>
         </section>
 
         {/* UNIVERSAL PRICE LIST MANAGER */}
-        <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-zinc-100 flex justify-between items-center">
+        <section className="bg-brand-paper rounded-xl border border-brand-border shadow-sm overflow-hidden transition-colors duration-300">
+          <div className="p-6 border-b border-brand-border flex justify-between items-center transition-colors duration-300">
              <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500"><Package size={18} /></div>
-               <h2 className="font-bold text-zinc-900">Digital Price List</h2>
+               <div className="w-8 h-8 rounded-full bg-brand-bg flex items-center justify-center text-brand-gray transition-colors duration-300"><Package size={18} /></div>
+               <h2 className="font-bold text-brand-black transition-colors duration-300">Digital Price List</h2>
              </div>
-             <button onClick={addMenuItem} className="text-xs font-bold bg-zinc-900 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+             <button onClick={addMenuItem} className="text-xs font-bold bg-brand-black text-brand-paper px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-300 hover:opacity-90">
                <Plus size={14}/> Add Product
              </button>
           </div>
           <div className="p-6 space-y-4">
             {menuItems.map((item, idx) => (
-              <div key={item.id} className="flex flex-col md:flex-row gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+              <div key={item.id} className="flex flex-col md:flex-row gap-4 p-4 bg-brand-bg rounded-xl border border-brand-border transition-colors duration-300">
                 <div className="flex-1 space-y-2">
-                   <input placeholder="Product Name" value={item.name} onChange={(e) => { const n = [...menuItems]; n[idx].name = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-sm font-bold p-0 focus:ring-0" />
-                   <input placeholder="Brief description..." value={item.description} onChange={(e) => { const n = [...menuItems]; n[idx].description = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-xs text-zinc-400 p-0 focus:ring-0" />
+                   <input placeholder="Product Name" value={item.name} onChange={(e) => { const n = [...menuItems]; n[idx].name = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-brand-black text-sm font-bold p-0 focus:ring-0 placeholder:text-brand-gray/50 transition-colors duration-300" />
+                   <input placeholder="Brief description..." value={item.description} onChange={(e) => { const n = [...menuItems]; n[idx].description = e.target.value; setMenuItems(n); }} className="w-full bg-transparent border-none text-brand-gray text-xs p-0 focus:ring-0 placeholder:text-brand-gray/50 transition-colors duration-300" />
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-32 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">₦</span>
-                    <input type="number" value={item.price} onChange={(e) => { const n = [...menuItems]; n[idx].price = e.target.value; setMenuItems(n); }} className="w-full bg-white border border-zinc-200 rounded-lg pl-8 pr-3 py-2 text-sm font-bold focus:border-zinc-900 outline-none" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-brand-gray transition-colors duration-300">₦</span>
+                    <input type="number" value={item.price} onChange={(e) => { const n = [...menuItems]; n[idx].price = e.target.value; setMenuItems(n); }} className="w-full bg-brand-paper border border-brand-border rounded-lg pl-8 pr-3 py-2 text-sm font-bold text-brand-black focus:border-brand-black outline-none transition-colors duration-300" />
                   </div>
-                  <button onClick={() => deleteMenuItem(item.id)} className="p-2 text-zinc-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
+                  <button onClick={() => deleteMenuItem(item.id)} className="p-2 text-brand-gray hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-zinc-100 flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500"><FileText size={18} /></div>
-             <div><h2 className="font-bold text-zinc-900">Receipt Defaults</h2></div>
+        <section className="bg-brand-paper rounded-xl border border-brand-border shadow-sm overflow-hidden transition-colors duration-300">
+          <div className="p-6 border-b border-brand-border flex items-center gap-3 transition-colors duration-300">
+             <div className="w-8 h-8 rounded-full bg-brand-bg flex items-center justify-center text-brand-gray transition-colors duration-300"><FileText size={18} /></div>
+             <div><h2 className="font-bold text-brand-black transition-colors duration-300">Receipt Defaults</h2></div>
           </div>
           <div className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-1.5">Default Footer Message</label>
-              <textarea value={formData.footerMessage} onChange={(e) => setFormData({...formData, footerMessage: e.target.value})} rows={3} className="w-full p-4 border border-zinc-200 rounded-lg text-sm focus:border-zinc-900 outline-none transition-all resize-none" />
+              <label className="block text-sm font-bold text-brand-black mb-1.5 transition-colors duration-300">Default Footer Message</label>
+              <textarea value={formData.footerMessage} onChange={(e) => setFormData({...formData, footerMessage: e.target.value})} rows={3} className="w-full p-4 bg-brand-bg border border-brand-border rounded-lg text-sm text-brand-black focus:bg-brand-paper focus:border-brand-black outline-none transition-colors duration-300 resize-none" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-1.5">Default Currency</label>
-              <select value={formData.currency} onChange={(e) => setFormData({...formData, currency: e.target.value})} className="w-full h-11 px-4 border border-zinc-200 rounded-lg text-sm focus:border-zinc-900 outline-none bg-white">
+              <label className="block text-sm font-bold text-brand-black mb-1.5 transition-colors duration-300">Default Currency</label>
+              <select value={formData.currency} onChange={(e) => setFormData({...formData, currency: e.target.value})} className="w-full h-11 px-4 bg-brand-bg border border-brand-border rounded-lg text-sm text-brand-black focus:bg-brand-paper focus:border-brand-black outline-none transition-colors duration-300">
                 <option>₦ (NGN) - Nigerian Naira</option>
                 <option>$ (USD) - US Dollar</option>
               </select>
@@ -259,7 +259,7 @@ export default function Settings() {
         </section>
 
         <div className="flex justify-end z-20">
-          <button onClick={handleSave} disabled={isLoading} className="w-full md:w-auto bg-zinc-900 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-70">
+          <button onClick={handleSave} disabled={isLoading} className="w-full md:w-auto bg-brand-black text-brand-paper px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 transition-colors duration-300">
             {isLoading ? <Loader2 className="animate-spin" /> : <Save size={18} />} Save Changes
           </button>
         </div>
@@ -271,13 +271,13 @@ export default function Settings() {
 function InputField({ label, value, onChange, icon, placeholder }: any) {
   return (
     <div className="relative">
-      <label className="block text-sm font-bold text-zinc-700 mb-1.5">{label}</label>
-      {icon && <div className="absolute left-3 top-[38px] text-zinc-400">{icon}</div>}
+      <label className="block text-sm font-bold text-brand-black mb-1.5 transition-colors duration-300">{label}</label>
+      {icon && <div className="absolute left-3 top-[38px] text-brand-gray transition-colors duration-300">{icon}</div>}
       <input 
         value={value} 
         onChange={(e) => onChange(e.target.value)} 
         placeholder={placeholder}
-        className={`w-full h-11 border border-zinc-200 rounded-lg text-sm focus:border-zinc-900 outline-none transition-all ${icon ? 'pl-10 pr-4' : 'px-4'}`} 
+        className={`w-full h-11 border border-brand-border bg-brand-bg focus:bg-brand-paper text-brand-black rounded-lg text-sm focus:border-brand-black outline-none transition-colors duration-300 placeholder:text-brand-gray/50 ${icon ? 'pl-10 pr-4' : 'px-4'}`} 
       />
     </div>
   );

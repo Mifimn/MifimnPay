@@ -3,10 +3,32 @@
 @tailwind utilities;
 
 :root {
+  /* Base Colors */
   --background: #ffffff;
   --foreground: #000000;
   --card-bg: #f8fafc;
   --border-color: #e2e8f0;
+
+  /* Tailwind Config Brand Colors (Light Mode) */
+  --primary: #09090b;    /* brand-black */
+  --secondary: #71717a;  /* brand-gray */
+  --paper: #ffffff;      /* brand-paper */
+  --accent: #e4e4e7;     /* brand-border */
+}
+
+/* Global Dark Mode (Activated by ThemeContext) */
+.dark {
+  /* Base Colors */
+  --background: #09090b;   /* Deep dark background */
+  --foreground: #fafafa;   /* Light text */
+  --card-bg: #18181b;      /* Slightly elevated dark color for cards */
+  --border-color: #27272a; /* Subtle dark borders */
+
+  /* Tailwind Config Brand Colors (Dark Mode) */
+  --primary: #ffffff;      /* Inverted: brand-black acts as white in dark mode */
+  --secondary: #a1a1aa;    /* Lighter gray for better text readability */
+  --paper: #18181b;        /* Dark paper to match cards */
+  --accent: #27272a;       /* Dark accent for borders/dividers */
 }
 
 /* This class will be applied to the Admin Layout container */

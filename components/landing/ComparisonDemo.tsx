@@ -15,10 +15,10 @@ export default function ComparisonDemo() {
   }, []);
 
   return (
-    <div className="relative w-full max-w-md mx-auto h-[420px] perspective-1000">
+    <div className="relative w-full max-w-md mx-auto h-[420px] perspective-1000 transition-colors duration-300">
       {/* Subtle Shadow behind the element */}
-      <div className="absolute inset-0 bg-brand-black/5 blur-3xl rounded-full scale-90" />
-      
+      <div className="absolute inset-0 bg-brand-black/5 dark:bg-brand-paper/5 blur-3xl rounded-full scale-90" />
+
       <AnimatePresence mode="wait">
         {mode === 'chat' ? (
           <motion.div
@@ -27,9 +27,9 @@ export default function ComparisonDemo() {
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: 90 }}
             transition={{ duration: 0.6, type: "spring" }}
-            className="bg-brand-paper p-5 rounded-2xl rounded-tr-none shadow-xl border border-brand-border max-w-[300px] ml-auto relative z-10"
+            className="bg-brand-paper p-5 rounded-2xl rounded-tr-none shadow-xl border border-brand-border max-w-[300px] ml-auto relative z-10 transition-colors duration-300"
           >
-            <p className="text-sm text-brand-black leading-relaxed font-medium">
+            <p className="text-sm text-brand-black leading-relaxed font-medium transition-colors duration-300">
               Hello ma, thanks for the order.<br/>
               2 Perfumes - 10k<br/>
               Delivery - 2k<br/>
@@ -37,9 +37,8 @@ export default function ComparisonDemo() {
               Send to Opay 90123...
             </p>
             <div className="flex justify-end items-center mt-3 gap-1">
-              <span className="text-[10px] text-brand-gray">10:42 AM</span>
-              {/* Used standard blue for 'read receipt' context, or we can make it black */}
-              <CheckCheck className="w-3 h-3 text-brand-black" />
+              <span className="text-[10px] text-brand-gray transition-colors duration-300">10:42 AM</span>
+              <CheckCheck className="w-3 h-3 text-brand-black transition-colors duration-300" />
             </div>
           </motion.div>
         ) : (
@@ -49,25 +48,28 @@ export default function ComparisonDemo() {
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: -90 }}
             transition={{ duration: 0.6, type: "spring" }}
-            className="bg-brand-paper p-6 w-[320px] mx-auto shadow-2xl rounded-lg border-t-8 border-brand-black relative z-10"
-            style={{ backgroundImage: 'radial-gradient(#E4E4E7 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+            className="bg-brand-paper p-6 w-[320px] mx-auto shadow-2xl rounded-lg border-t-8 border-brand-black relative z-10 transition-colors duration-300"
+            style={{ 
+                backgroundImage: 'radial-gradient(var(--border-color) 1px, transparent 1px)', 
+                backgroundSize: '20px 20px' 
+            }}
           >
             {/* Receipt Header */}
             <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-brand-black rounded-full mx-auto mb-2 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">M</span>
+              <div className="w-12 h-12 bg-brand-black rounded-full mx-auto mb-2 flex items-center justify-center transition-colors duration-300">
+                <span className="text-xl font-bold text-brand-paper">M</span>
               </div>
-              <h3 className="font-bold text-brand-black uppercase tracking-wider">MifimnPay Store</h3>
-              <p className="text-xs text-brand-gray">Ilorin, Kwara State</p>
+              <h3 className="font-bold text-brand-black uppercase tracking-wider transition-colors duration-300">MifimnPay Store</h3>
+              <p className="text-xs text-brand-gray transition-colors duration-300">Ilorin, Kwara State</p>
             </div>
 
             {/* Receipt Items */}
-            <div className="border-b-2 border-dashed border-brand-border pb-4 mb-4">
-              <div className="flex justify-between text-sm mb-2 text-brand-black">
+            <div className="border-b-2 border-dashed border-brand-border pb-4 mb-4 transition-colors duration-300">
+              <div className="flex justify-between text-sm mb-2 text-brand-black transition-colors duration-300">
                 <span>2x Perfume Oil</span>
                 <span className="font-mono font-medium">₦10,000</span>
               </div>
-              <div className="flex justify-between text-sm text-brand-black">
+              <div className="flex justify-between text-sm text-brand-black transition-colors duration-300">
                 <span>Delivery</span>
                 <span className="font-mono font-medium">₦2,000</span>
               </div>
@@ -75,29 +77,35 @@ export default function ComparisonDemo() {
 
             {/* Total */}
             <div className="flex justify-between items-center mb-6">
-              <span className="font-bold text-brand-black text-lg">TOTAL</span>
-              <span className="font-mono text-2xl font-bold text-brand-black">₦12,000</span>
+              <span className="font-bold text-brand-black text-lg transition-colors duration-300">TOTAL</span>
+              <span className="font-mono text-2xl font-bold text-brand-black transition-colors duration-300">₦12,000</span>
             </div>
 
             {/* Footer */}
             <div className="text-center">
-              <p className="text-[10px] text-brand-gray mb-2">Generated by MifimnPay</p>
-              <div className="w-full h-8 bg-brand-bg rounded flex items-center justify-center overflow-hidden">
-                 <div className="text-[10px] tracking-widest font-mono text-brand-gray opacity-50">||| |||| || ||||| |||</div>
+              <p className="text-[10px] text-brand-gray mb-2 transition-colors duration-300">Generated by MifimnPay</p>
+              <div className="w-full h-8 bg-brand-bg rounded flex items-center justify-center overflow-hidden transition-colors duration-300">
+                 <div className="text-[10px] tracking-widest font-mono text-brand-gray opacity-50 transition-colors duration-300">||| |||| || ||||| |||</div>
               </div>
             </div>
-            
+
             {/* Tear Effect CSS */}
-            <div className="absolute -bottom-2 left-0 w-full h-4 bg-brand-paper" 
-                 style={{ maskImage: 'linear-gradient(45deg, transparent 50%, black 50%), linear-gradient(-45deg, transparent 50%, black 50%)', maskSize: '20px 20px', maskRepeat: 'repeat-x', WebkitMaskImage: 'linear-gradient(45deg, transparent 50%, black 50%), linear-gradient(-45deg, transparent 50%, black 50%)', WebkitMaskSize: '20px 20px' }}>
+            <div className="absolute -bottom-2 left-0 w-full h-4 bg-brand-paper transition-colors duration-300" 
+                 style={{ 
+                    maskImage: 'linear-gradient(45deg, transparent 50%, black 50%), linear-gradient(-45deg, transparent 50%, black 50%)', 
+                    maskSize: '20px 20px', 
+                    maskRepeat: 'repeat-x', 
+                    WebkitMaskImage: 'linear-gradient(45deg, transparent 50%, black 50%), linear-gradient(-45deg, transparent 50%, black 50%)', 
+                    WebkitMaskSize: '20px 20px' 
+                }}>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Label */}
       <div className="absolute -bottom-10 left-0 right-0 text-center">
-        <span className="bg-brand-black text-white text-xs px-4 py-2 rounded-full uppercase tracking-widest font-bold shadow-lg">
+        <span className="bg-brand-black text-brand-paper text-xs px-4 py-2 rounded-full uppercase tracking-widest font-bold shadow-lg transition-colors duration-300 border border-brand-border dark:border-transparent">
           {mode === 'chat' ? 'The Old Way' : 'The New Way'}
         </span>
       </div>
