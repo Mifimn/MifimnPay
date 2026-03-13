@@ -4,35 +4,27 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import ShowroomMain from '@/storefront/components/Showroom/ShowroomMain';
 
-/**
- * Vendor Showroom Page
- * This is the main landing page for a specific vendor's store.
- * It dynamically detects the vendor via the URL slug.
- */
 export default function VendorShowroomPage() {
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
-  
-  // State for loading and vendor-specific products
+
   const [isLoading, setIsLoading] = useState(true);
+  // We'll keep this empty for now to test the "Inactive" state, 
+  // or you can populate it with mock data to see the products.
   const [vendorProducts, setVendorProducts] = useState([]);
 
   useEffect(() => {
-    /**
-     * fetchVendorData
-     * In the future, this will call your Supabase/API to fetch 
-     * products where vendor_slug === vendor_slug.
-     */
     const fetchVendorData = async () => {
       setIsLoading(true);
       try {
-        // Simulation delay to show the Glow Skeletons
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        
-        // Example: const { data } = await supabase.from('products').select('*').eq('slug', vendor_slug);
-        // setVendorProducts(data || []);
+        // Simulation delay to test UI transitions and skeletons
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+
+        // FRONTEND-ONLY PREVIEW: 
+        // You can uncomment the line below to test how it looks with data
+        // setVendorProducts([...MOCK_DATA]); 
       } catch (error) {
-        console.error("Error fetching vendor products:", error);
+        console.error("Error connecting frontend:", error);
       } finally {
         setIsLoading(false);
       }
@@ -45,20 +37,15 @@ export default function VendorShowroomPage() {
 
   return (
     <div className="min-h-screen">
-      {/* ShowroomMain handles the Hero slideshow, categories, and product grid.
-        We pass the loading state to trigger the FeedSkeleton.
-      */}
       <ShowroomMain 
         isSkeleton={isLoading} 
+        products={vendorProducts} // Now passing the dynamic state
+        vendorName={vendor_slug}   // Passing the slug to display on the frontend
         onAddInquiry={(product: any) => {
-          // This triggers the basket logic defined in useCartStore
-          console.log("Customer is adding product to inquiry:", product);
+          console.log("Customer adding to inquiry:", product);
         }} 
       />
-      
-      {/* Empty State Display
-        Shown only if loading is finished and no products exist for this slug.
-      */}
+
       {!isLoading && vendorProducts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <div className="w-16 h-16 bg-brand-orange/10 rounded-full flex items-center justify-center mb-4">
