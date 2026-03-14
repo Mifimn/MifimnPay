@@ -1,13 +1,17 @@
+"use client";
+
 import React, { useState } from 'react';
 import { LayoutDashboard, Mail, Users, Moon, Sun, LogOut, ChevronRight, X, Menu } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { supabase } from '../../lib/supabaseClient';
+import { useRouter, usePathname } from 'next/navigation'; // Updated for App Router
+import { supabase } from '@/lib/supabaseClient'; // Path alias update
 
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDark, setIsDark] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const router = useRouter();
+  const pathname = usePathname(); // Replaces router.pathname
 
   const navItems = [
     { label: 'Intelligence', href: '/admin', icon: LayoutDashboard },
@@ -20,7 +24,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className={isDark ? 'admin-dark min-h-screen' : 'min-h-screen transition-colors duration-300'}>
       <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        
+
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={closeSidebar} />
@@ -37,9 +41,9 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <nav className="flex-1 space-y-2">
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href} onClick={closeSidebar}
-                  className={`flex items-center justify-between p-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${router.pathname === item.href ? 'bg-green-500 text-white' : 'hover:bg-zinc-500/10 opacity-70'}`}>
+                  className={`flex items-center justify-between p-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${pathname === item.href ? 'bg-green-500 text-white' : 'hover:bg-zinc-500/10 opacity-70'}`}>
                   <div className="flex items-center gap-3"><item.icon size={18}/>{item.label}</div>
-                  {router.pathname === item.href && <ChevronRight size={14}/>}
+                  {pathname === item.href && <ChevronRight size={14}/>}
                 </Link>
               ))}
             </nav>
@@ -50,7 +54,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {isDark ? <Sun size={18} className="text-yellow-500"/> : <Moon size={18} className="text-zinc-600"/>}
                 <span className="text-[10px] font-black uppercase tracking-widest">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
-              
+
               <button onClick={() => supabase.auth.signOut().then(() => router.push('/login'))} className="w-full flex items-center gap-3 p-3 text-red-500 opacity-70 hover:opacity-100 transition-all font-black text-[10px] uppercase">
                 <LogOut size={18}/> Sign Out
               </button>

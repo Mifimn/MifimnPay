@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 const InstallPrompt = () => {
@@ -40,26 +42,26 @@ const InstallPrompt = () => {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] p-4 animate-in fade-in slide-in-from-top duration-500">
-      <div className="max-w-md mx-auto bg-brand-paper text-brand-black rounded-2xl shadow-2xl p-4 flex items-center justify-between border border-brand-border backdrop-blur-md transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-bg rounded-lg flex items-center justify-center transition-colors duration-300">
-             <img src="/favicon.png" alt="Logo" className="w-6 h-6" />
+      <div className="max-w-md mx-auto bg-white dark:bg-[#0f0f0f] text-slate-900 dark:text-white rounded-[24px] shadow-2xl p-4 flex items-center justify-between border border-slate-200 dark:border-white/10 backdrop-blur-md transition-all">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-white/5 transition-colors">
+             <img src="/favicon.png" alt="Logo" className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-brand-black transition-colors duration-300">MifimnPay</p>
-            <p className="text-[10px] text-brand-gray transition-colors duration-300">Install for faster access</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">MifimnPay OS</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tight mt-0.5">Install for faster access</p>
           </div>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={() => setIsVisible(false)}
-            className="px-3 py-2 text-[10px] font-bold uppercase text-brand-gray hover:text-brand-black transition-colors duration-300"
+            className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             Later
           </button>
           <button 
             onClick={handleInstallClick}
-            className="px-4 py-2 bg-brand-black text-brand-paper text-[10px] font-black uppercase rounded-lg hover:opacity-90 transition-all active:scale-95 duration-300"
+            className="px-5 py-3 bg-brand-orange text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-glow-orange hover:scale-105 active:scale-95 transition-all"
           >
             Install
           </button>

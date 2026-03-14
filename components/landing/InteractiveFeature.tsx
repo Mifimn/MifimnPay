@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit3, BarChart3, QrCode, Check, TrendingUp, Smartphone, ArrowUpRight } from 'lucide-react';

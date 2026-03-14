@@ -1,5 +1,7 @@
-import { ReceiptData, ReceiptSettings } from '../../types';
-import { useAuth } from '../../lib/AuthContext';
+"use client";
+
+import { ReceiptData, ReceiptSettings } from '@/types';
+import { useAuth } from '@/lib/AuthContext';
 
 interface Props {
   data: ReceiptData;
