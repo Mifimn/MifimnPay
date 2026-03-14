@@ -49,14 +49,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  // Prevent rendering children until the theme is resolved to avoid flashes of unstyled content
-  if (!mounted) {
-    return <div className="invisible">{children}</div>;
-  }
-
+  // Wrap the children in the Provider regardless of the mounted state
+  // to ensure useTheme doesn't throw errors during Next.js prerendering
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+      {!mounted ? (
+        <div className="invisible">{children}</div>
+      ) : (
+        children
+      )}
     </ThemeContext.Provider>
   );
 };
