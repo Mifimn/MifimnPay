@@ -6,7 +6,9 @@ import { Search, UserPlus, MoreHorizontal, Mail, Phone, ArrowUpRight, Inbox, Loa
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
-// Define the Customer type based on the Supabase schema we will use
+// --- VERCEL BUILD PROTECTION ---
+export const dynamic = 'force-dynamic';
+
 type Customer = {
   id: string;
   name: string;
@@ -21,8 +23,13 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  // Fetch customers from Supabase
+  // Ensure we are in the browser before rendering theme-dependent UI
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const fetchCustomers = async () => {
       if (!user) return;
@@ -42,10 +49,14 @@ export default function CustomersPage() {
       }
     };
 
-    fetchCustomers();
-  }, [user]);
+    if (mounted) fetchCustomers();
+  }, [user, mounted]);
 
-  // Filter customers based on search query
+  // Prevent Prerender Error: return empty shell during build
+  if (!mounted) {
+    return <div className="min-h-screen bg-brand-bg animate-pulse" />;
+  }
+
   const filteredCustomers = customers.filter(customer => 
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -64,23 +75,23 @@ export default function CustomersPage() {
             Manage your buyers and track their spending.
           </p>
         </div>
-        
+
         <button className="bg-brand-black text-brand-paper px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg">
           <UserPlus size={18} />
           Add Customer
         </button>
       </div>
 
-      {/* Controls / Search Bar */}
+      {/* Search Bar */}
       <div className="flex items-center gap-4 bg-brand-paper p-2 rounded-2xl border border-brand-border shadow-sm transition-colors duration-300">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" />
           <input 
             type="text"
-            placeholder="Search customers by name, email, or phone..."
+            placeholder="Search by name, email, or phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-12 pr-4 bg-transparent outline-none text-brand-black font-medium placeholder:text-brand-gray/60 transition-colors duration-300"
+            className="w-full h-12 pl-12 pr-4 bg-transparent outline-none text-brand-black font-medium placeholder:text-brand-gray/60"
           />
         </div>
       </div>
@@ -88,13 +99,11 @@ export default function CustomersPage() {
       {/* Content Area */}
       <div className="bg-brand-paper rounded-3xl border border-brand-border overflow-hidden shadow-sm min-h-[400px] transition-colors duration-300">
         {isLoading ? (
-          // Loading State
           <div className="flex flex-col items-center justify-center h-[400px] text-brand-gray">
             <Loader2 size={40} className="animate-spin mb-4" />
             <p className="text-sm font-bold uppercase tracking-widest">Loading CRM...</p>
           </div>
         ) : filteredCustomers.length > 0 ? (
-          // Customer List
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -115,7 +124,6 @@ export default function CustomersPage() {
                       transition={{ delay: idx * 0.05 }}
                       className="border-b border-brand-border last:border-0 hover:bg-brand-bg transition-colors group"
                     >
-                      {/* Name & Avatar */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-brand-black text-brand-paper flex items-center justify-center font-black text-sm uppercase shadow-sm">
@@ -123,12 +131,13 @@ export default function CustomersPage() {
                           </div>
                           <div>
                             <p className="font-bold text-brand-black text-sm">{customer.name}</p>
-                            <p className="text-xs text-brand-gray font-medium md:hidden">{customer.phone || customer.email || 'No contact'}</p>
+                            <p className="text-xs text-brand-gray font-medium md:hidden">
+                              {customer.phone || customer.email || 'No contact'}
+                            </p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Contact Info (Desktop Only) */}
                       <td className="px-6 py-4 hidden md:table-cell">
                         <div className="space-y-1">
                           {customer.email && (
@@ -141,22 +150,17 @@ export default function CustomersPage() {
                               <Phone size={12} /> {customer.phone}
                             </div>
                           )}
-                          {!customer.email && !customer.phone && (
-                            <span className="text-xs text-brand-gray/50 italic">No contact info</span>
-                          )}
                         </div>
                       </td>
 
-                      {/* Total Spent */}
                       <td className="px-6 py-4">
                         <span className="font-mono font-bold text-brand-black text-sm bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border">
-                          ₦{customer.total_spent.toLocaleString()}
+                          ₦{(customer.total_spent || 0).toLocaleString()}
                         </span>
                       </td>
 
-                      {/* Actions */}
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-brand-gray hover:text-brand-black hover:bg-brand-paper rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100">
+                        <button className="p-2 text-brand-gray hover:text-brand-black rounded-lg transition-all opacity-0 group-hover:opacity-100">
                           <ArrowUpRight size={18} />
                         </button>
                       </td>
@@ -167,28 +171,15 @@ export default function CustomersPage() {
             </table>
           </div>
         ) : (
-          // Empty State
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center h-[400px] text-center px-6"
-          >
-            <div className="w-20 h-20 bg-brand-bg rounded-full flex items-center justify-center text-brand-gray mb-6 border border-brand-border shadow-inner">
-              <Inbox size={32} strokeWidth={1.5} />
+          <div className="flex flex-col items-center justify-center h-[400px] text-center px-6">
+            <div className="w-20 h-20 bg-brand-bg rounded-full flex items-center justify-center text-brand-gray mb-6 border border-brand-border">
+              <Inbox size={32} />
             </div>
-            <h3 className="text-xl font-black text-brand-black mb-2 uppercase tracking-tight">No Customers Yet</h3>
-            <p className="text-sm font-medium text-brand-gray max-w-sm mx-auto mb-8">
-              {searchQuery 
-                ? "We couldn't find any customers matching your search." 
-                : "When customers buy from your storefront, they will automatically appear here."}
-            </p>
-            {!searchQuery && (
-              <button className="bg-brand-black text-brand-paper px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg">
-                <UserPlus size={18} />
-                Add Your First Customer
-              </button>
-            )}
-          </motion.div>
+            <h3 className="text-xl font-black text-brand-black mb-2 uppercase">No Customers</h3>
+            <button className="bg-brand-black text-brand-paper px-6 py-3 rounded-2xl font-bold text-sm mt-4 shadow-lg">
+              Add Your First Customer
+            </button>
+          </div>
         )}
       </div>
     </div>
