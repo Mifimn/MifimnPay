@@ -25,20 +25,7 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  
-  // --- SAFETY CHECK START ---
   const themeContext = useTheme();
-
-  // If the context is not yet available, we return a shell/loader 
-  // to prevent the "useTheme must be used within a ThemeProvider" error.
-  if (!themeContext) {
-    return (
-      <aside className="hidden md:block w-72 h-screen bg-brand-paper border-r border-brand-border shrink-0" />
-    );
-  }
-
-  const { theme, toggleTheme } = themeContext;
-  // --- SAFETY CHECK END ---
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [profile, setProfile] = useState<{ business_name: string; logo_url: string | null } | null>(null);
@@ -56,6 +43,15 @@ export default function Sidebar() {
       fetchProfile();
     }
   }, [user]);
+
+  // VERCEL BUILD PROTECTION: Return a skeleton if theme isn't ready
+  if (!themeContext) {
+    return (
+      <aside className="hidden md:block w-72 h-screen bg-brand-paper border-r border-brand-border shrink-0 animate-pulse" />
+    );
+  }
+
+  const { theme, toggleTheme } = themeContext;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -117,16 +113,16 @@ export default function Sidebar() {
 
         <div className="flex items-center gap-2 px-2 py-2">
           <button 
+            type="button"
             onClick={toggleTheme}
             className="flex-1 flex justify-center items-center p-3 text-brand-gray hover:bg-brand-bg hover:text-brand-black rounded-xl transition-all"
-            title="Toggle Theme"
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button 
+            type="button"
             onClick={handleLogout}
             className="flex-1 flex justify-center items-center p-3 text-red-500/70 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all"
-            title="Log Out"
           >
             <LogOut size={18} />
           </button>
@@ -151,20 +147,23 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Mobile Top Bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-brand-paper/80 backdrop-blur-md border-b border-brand-border z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <img src="/favicon.png" alt="MifimnPay" className="w-6 h-6 rounded object-cover" />
           <span className="font-black text-brand-black uppercase italic tracking-tight">MifimnPay</span>
         </div>
-        <button onClick={() => setIsMobileOpen(true)} className="p-2 text-brand-black bg-brand-bg rounded-xl">
+        <button onClick={() => setIsMobileOpen(true)} className="p-2 text-brand-black bg-brand-bg rounded-xl border border-brand-border">
           <Menu size={20} />
         </button>
       </div>
 
+      {/* Desktop Sidebar */}
       <aside className="hidden md:block w-72 h-screen flex-shrink-0 z-30 relative">
         <SidebarContent />
       </aside>
 
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -175,7 +174,7 @@ export default function Sidebar() {
             <motion.aside 
               initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} 
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="md:hidden fixed inset-y-0 left-0 w-4/5 max-w-sm z-50 shadow-2xl"
+              className="md:hidden fixed inset-y-0 left-0 w-[85%] max-w-sm z-50 shadow-2xl"
             >
               <SidebarContent />
               <button onClick={closeMenu} className="absolute top-4 right-4 p-2 bg-brand-bg text-brand-black rounded-full border border-brand-border">
