@@ -2,109 +2,80 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BarChart3, QrCode, Receipt } from 'lucide-react';
+import { Store } from 'lucide-react';
 import ComparisonDemo from './ComparisonDemo';
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center pt-24 pb-12 overflow-hidden bg-brand-bg transition-colors duration-300">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-brand-gray rounded-full blur-[120px] opacity-20 dark:opacity-10 transition-colors duration-300" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-brand-gray rounded-full blur-[120px] opacity-20 dark:opacity-10 transition-colors duration-300" />
-      </div>
+    <section className="relative min-h-[100svh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-10 md:gap-16 items-center">
 
-      <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
-
-        {/* Left Side: Text Content */}
-        <div className="space-y-8">
+        {/* Left Content */}
+        <div className="lg:col-span-7 space-y-8 md:space-y-10 relative z-20 text-center lg:text-left pt-10 md:pt-0">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 bg-brand-paper text-brand-black px-4 py-1.5 rounded-full text-sm font-semibold border border-brand-border shadow-sm transition-colors duration-300"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="inline-flex items-center gap-3 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/10 px-5 py-2.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white shadow-sm"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-black opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-black transition-colors duration-300"></span>
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-orange"></span>
             </span>
-            Complete Business Suite for Nigeria
+            The Next-Gen Retail OS
           </motion.div>
 
           <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-extrabold text-brand-black tracking-tighter leading-[1.1] transition-colors duration-300"
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] uppercase italic"
           >
-            Manage sales. <br/>
-            <span className="text-brand-gray transition-colors duration-300">
-              Not just receipts.
-            </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">Sell Online.</span><br/>
+            <span className="text-brand-orange relative inline-block">
+              Automate
+              <svg className="absolute w-full h-3 md:h-4 -bottom-1 md:-bottom-2 left-0 text-brand-orange/30" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
+            </span><br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">The Rest.</span>
           </motion.h1>
 
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-lg text-brand-gray max-w-lg leading-relaxed font-medium transition-colors duration-300"
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-base md:text-lg lg:text-xl text-slate-600 dark:text-slate-400 font-bold max-w-xl mx-auto lg:mx-0 leading-relaxed"
           >
-            Branded receipts, real-time sales analytics, and professional digital storefronts. 
-            Everything you need to grow your business at mifimnpay.com.ng.
+            Transform your business with a stunning liquid storefront, intelligent order routing, instant branded receipts, and live analytics. Designed perfectly for scaling vendors.
           </motion.p>
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4"
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
           >
-            <Link 
-              href="/generate"
-              className="flex items-center justify-center gap-2 bg-brand-black text-brand-paper px-8 py-4 rounded-xl font-semibold hover:opacity-90 transition-all hover:scale-105 shadow-xl shadow-brand-black/10 duration-300"
-            >
-              Get Started Free
-              <ArrowRight className="w-5 h-5" />
+            <Link href="/generate" className="relative group overflow-hidden bg-brand-orange text-white px-8 py-4 md:py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow-orange flex items-center justify-center gap-3">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              <Store size={18} strokeWidth={3} />
+              Launch Free Store
             </Link>
-
-            <Link 
-              href="/login"
-              className="flex items-center justify-center gap-2 bg-brand-paper text-brand-black border border-brand-border px-8 py-4 rounded-xl font-semibold hover:bg-brand-bg transition-all duration-300"
-            >
-              View Dashboard
+            <Link href="/login" className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-white/40 dark:border-white/10 text-slate-900 dark:text-white px-8 py-4 md:py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white/60 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3">
+               Access Dashboard
             </Link>
-          </motion.div>
-
-          {/* Feature Badges */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-3 gap-4 pt-4"
-          >
-            <div className="flex flex-col gap-1">
-              <Receipt size={20} className="text-brand-black transition-colors duration-300" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-brand-gray transition-colors duration-300">Image Receipts</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <BarChart3 size={20} className="text-brand-black transition-colors duration-300" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-brand-gray transition-colors duration-300">Sales Analysis</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <QrCode size={20} className="text-brand-black transition-colors duration-300" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-brand-gray transition-colors duration-300">QR Storefront</span>
-            </div>
           </motion.div>
         </div>
 
-        {/* Right Side: The Dynamic Visual */}
+        {/* Right Content: 3D Demo Frame */}
         <motion.div 
-           initial={{ opacity: 0, scale: 0.9 }}
-           animate={{ opacity: 1, scale: 1 }}
-           transition={{ duration: 0.8 }}
-           className="relative"
+           initial={{ opacity: 0, x: 50 }}
+           animate={{ opacity: 1, x: 0 }}
+           transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+           className="lg:col-span-5 relative w-full h-[450px] md:h-[500px] lg:h-full flex items-center justify-center"
         >
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand-orange/20 to-transparent rounded-full blur-[60px] md:blur-[80px]" />
           <ComparisonDemo />
         </motion.div>
+
       </div>
     </section>
   );

@@ -1,27 +1,32 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation'; // Updated for App Router
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
-  QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon 
+  QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon,
+  Package, ShoppingBag, ShoppingCart
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
-import { supabase } from '@/lib/supabaseClient'; // Path alias update
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { useThemeStore } from '@/storefront/store/useThemeStore'; // Using the updated storefront theme store
+import { useThemeStore } from '@/storefront/store/useThemeStore';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
-  const { isDark } = useThemeStore(); // Updated to use isDark state
+  const { isDark } = useThemeStore();
   const router = useRouter();
   const qrRef = useRef<HTMLDivElement>(null);
 
   const [yearReceipts, setYearReceipts] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalSales: 0, count: 0, customers: 0 });
+
+  const [storefrontStats, setStorefrontStats] = useState({ products: 0, totalOrders: 0, pendingOrders: 0 });
+  const [recentStoreOrders, setRecentStoreOrders] = useState<any[]>([]);
+
   const [recentReceipts, setRecentReceipts] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [isFetching, setIsFetching] = useState(true);
@@ -29,18 +34,22 @@ export default function DashboardPage() {
 
   const [isQrExpanded, setIsQrExpanded] = useState(false);
 
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  // Dynamic Year Logic: Starts at 2026, auto-expands to current year
+  const actualCurrentYear = new Date().getFullYear();
+  const displayYear = Math.max(actualCurrentYear, 2026);
+  const [selectedYear, setSelectedYear] = useState(displayYear);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  // Generates array like [2026, 2027, 2028...] based on current year
+  const years = Array.from({ length: Math.max(1, actualCurrentYear - 2026 + 1) }, (_, i) => 2026 + i).reverse();
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
     if (user) {
       fetchProfile();
       fetchGlobalStats();
+      fetchStorefrontStats();
     }
   }, [user, loading, router]);
 
@@ -72,6 +81,31 @@ export default function DashboardPage() {
     } catch (err) { console.error(err); }
   };
 
+  const fetchStorefrontStats = async () => {
+    try {
+      const { count: productCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('total_amount, customer_name, created_at, status')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (ordersData) {
+        const pending = ordersData.filter(o => o.status === 'pending' || o.status === 'processing').length;
+        setStorefrontStats({
+          products: productCount || 0,
+          totalOrders: ordersData.length,
+          pendingOrders: pending
+        });
+        setRecentStoreOrders(ordersData.slice(0, 5));
+      }
+    } catch (err) { console.error("Error fetching storefront stats:", err); }
+  };
+
   const fetchYearlyData = async (year: number) => {
     setIsFetching(true);
     try {
@@ -87,7 +121,7 @@ export default function DashboardPage() {
   };
 
   const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';
-  const storeUrl = `https://mifimnpay.com.ng/${businessSlug}`; // Updated to new storefront URL pattern]
+  const storeUrl = `https://mifimnpay.com.ng/${businessSlug}`;
 
   const copyStoreLink = () => {
     navigator.clipboard.writeText(storeUrl);
@@ -126,13 +160,16 @@ export default function DashboardPage() {
     }
   }, [yearReceipts, selectedYear, selectedMonth, months]);
 
-  const chartLineColor = isDark ? '#FF6B00' : '#18181b'; // Using brand-orange for dark mode chart
-  const chartGridColor = isDark ? '#27272a' : '#f4f4f5';
+  const chartLineColor = isDark ? '#FF6B00' : '#18181b';
+  const chartGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
 
-  if (loading) return <div className="min-h-screen bg-white dark:bg-[#0a0a0a] flex items-center justify-center"><Loader2 className="animate-spin text-brand-orange" size={32} /></div>;
+  if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center"><Loader2 className="animate-spin text-brand-orange" size={32} /></div>;
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-8 pb-10 relative z-10">
+      {/* Background ambient light for liquid effect */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-orange/10 via-transparent to-transparent opacity-50 dark:opacity-20" />
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -144,31 +181,39 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 outline-none">
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white/40 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 outline-none shadow-sm">
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 outline-none">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white/40 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-600 dark:text-slate-300 outline-none shadow-sm">
             <option value="all">Full Year</option>
             {months.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Main Stats Cards (Billing/Receipts) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard title="Total Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-brand-orange" />
-        <StatsCard title="Total Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-500" />
-        <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-500" />
+        <StatsCard title="Total Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-brand-orange" bgGlow="bg-brand-orange/10" />
+        <StatsCard title="Total Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-500" bgGlow="bg-blue-500/10" />
+        <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-500" bgGlow="bg-purple-500/10" />
       </div>
 
-      {/* QR Storefront Tools (Swell Mimic) */}
-      <section className="bg-slate-900 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-[32px] overflow-hidden shadow-2xl">
+      {/* Storefront Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatsCard title="Active Products" value={storefrontStats.products.toString()} icon={<Package size={20} />} color="text-indigo-500" bgGlow="bg-indigo-500/10" />
+        <StatsCard title="Storefront Orders" value={storefrontStats.totalOrders.toString()} icon={<ShoppingBag size={20} />} color="text-emerald-500" bgGlow="bg-emerald-500/10" />
+        <StatsCard title="Pending Fulfillment" value={storefrontStats.pendingOrders.toString()} icon={<ShoppingCart size={20} />} color="text-amber-500" bgGlow="bg-amber-500/10" />
+      </div>
+
+      {/* QR Storefront Tools (Glassmorphism + Swell Mimic) */}
+      <section className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-[32px] overflow-hidden shadow-2xl relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
         <button 
           onClick={() => setIsQrExpanded(!isQrExpanded)}
-          className="w-full p-8 flex items-center justify-between text-white hover:bg-white/5 transition-colors"
+          className="w-full p-8 flex items-center justify-between text-white hover:bg-white/5 transition-colors relative z-10"
         >
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-brand-orange rounded-2xl shadow-glow-orange">
+            <div className="p-3 bg-brand-orange/90 backdrop-blur-sm rounded-2xl shadow-glow-orange border border-white/20">
               <QrCode size={20} />
             </div>
             <div className="text-left">
@@ -185,36 +230,36 @@ export default function DashboardPage() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="px-8 pb-10"
+              className="px-8 pb-10 relative z-10"
             >
               <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
                 <div className="flex-1 space-y-6 text-center md:text-left">
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed">
+                  <p className="text-slate-300 text-xs font-bold uppercase tracking-wide leading-relaxed">
                     Share your automated storefront. Customers scan this QR to place orders and view your professional price list.
                   </p>
                   <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                     <button 
                       onClick={downloadQR} 
                       disabled={isDownloadingQR}
-                      className="bg-white text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all"
+                      className="bg-white/90 backdrop-blur-md text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all"
                     >
                       {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
                       Download QR
                     </button>
                     <button 
                       onClick={copyStoreLink}
-                      className="bg-white/10 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/20 transition-all"
+                      className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all"
                     >
                       <LinkIcon size={16} /> Copy Link
                     </button>
-                    <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-white/10 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/20 transition-all">
+                    <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all">
                       <ExternalLink size={16} /> View Store
                     </a>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <div ref={qrRef} className="bg-white p-6 rounded-[32px] flex flex-col items-center border-[10px] border-slate-800 shadow-2xl">
+                  <div ref={qrRef} className="bg-white/90 backdrop-blur-md p-6 rounded-[32px] flex flex-col items-center border-[8px] border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
                     <QRCodeSVG value={storeUrl} size={140} level="H" />
                     <div className="mt-4 text-center">
                       <p className="text-black text-[9px] font-black uppercase tracking-[0.2em]">{profile?.business_name}</p>
@@ -228,7 +273,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Chart Section */}
-      <div className="bg-white dark:bg-[#0f0f0f] p-8 rounded-[32px] border border-slate-200 dark:border-white/10 shadow-sm">
+      <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl p-8 rounded-[32px] border border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
         <div className="flex justify-between items-center mb-10">
           <div>
             <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Revenue Insights</h3>
@@ -238,41 +283,68 @@ export default function DashboardPage() {
         </div>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartLineColor} stopOpacity={0.2}/>
+                  <stop offset="5%" stopColor={chartLineColor} stopOpacity={0.3}/>
                   <stop offset="95%" stopColor={chartLineColor} stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridColor} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#64748b', fontWeight: 800}} dy={10} interval={selectedMonth === "all" ? 0 : 4} />
-              <YAxis hide />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fontSize: 9, fill: '#64748b', fontWeight: 800}} 
+                dy={10} 
+                interval={selectedMonth === "all" ? 0 : 4} 
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fontSize: 9, fill: '#64748b', fontWeight: 800}} 
+                tickFormatter={(value) => value >= 1000 ? `₦${(value / 1000).toFixed(value % 1000 !== 0 ? 1 : 0)}k` : `₦${value}`}
+                domain={[0, 'auto']} 
+                width={45}
+                allowDataOverflow={false}
+              />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: isDark ? '#18181b' : '#ffffff', 
-                  borderColor: isDark ? '#27272a' : '#e2e8f0', 
+                  backgroundColor: isDark ? 'rgba(10, 10, 10, 0.8)' : 'rgba(255, 255, 255, 0.8)', 
+                  backdropFilter: 'blur(12px)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
                   borderRadius: '20px',
-                  borderWidth: '1px'
+                  borderWidth: '1px',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
                 }} 
                 labelStyle={{ fontWeight: 'black', textTransform: 'uppercase', fontSize: '10px', color: isDark ? '#fff' : '#000' }}
                 itemStyle={{ color: '#FF6B00', fontWeight: 'black', fontSize: '12px' }}
               />
-              <Area type="monotone" dataKey="total" stroke={chartLineColor} strokeWidth={4} fillOpacity={1} fill="url(#colorTotal)" />
+              <Area 
+                type="monotone" 
+                dataKey="total" 
+                stroke={chartLineColor} 
+                strokeWidth={4} 
+                fillOpacity={1} 
+                fill="url(#colorTotal)" 
+                isAnimationActive={true}
+                animationDuration={1500}
+                animationEasing="ease-in-out"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Recent History */}
+      {/* Recent History - Receipts vs Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Recent History</h3>
-          <div className="bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
-            {recentReceipts.map((r, i) => (
-              <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+          <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Recent Receipts</h3>
+          <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] divide-y divide-slate-100 dark:divide-white/5">
+            {recentReceipts.length > 0 ? recentReceipts.map((r, i) => (
+              <div key={i} className="p-6 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 transition-all">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-slate-100 dark:bg-white/10 rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase transition-colors">{r.customer_name?.[0] || 'W'}</div>
+                  <div className="w-12 h-12 bg-slate-100/50 dark:bg-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase border border-white/20 dark:border-white/5">{r.customer_name?.[0] || 'W'}</div>
                   <div>
                     <p className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">{r.customer_name || 'Walk-in'}</p>
                     <p className="text-[9px] text-slate-500 font-black tracking-widest uppercase">#{r.receipt_number} • {new Date(r.created_at).toLocaleDateString()}</p>
@@ -280,16 +352,54 @@ export default function DashboardPage() {
                 </div>
                 <span className="font-black text-brand-orange text-lg">₦{Number(r.total_amount).toLocaleString()}</span>
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">No recent receipts found.</div>
+            )}
           </div>
         </div>
-        
-        {/* Quick Action Box */}
-        <div className="bg-slate-900 dark:bg-white/5 rounded-[32px] p-8 text-white h-fit shadow-2xl border border-transparent dark:border-white/10">
-           <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-4">Billing</h4>
-           <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed mb-8">Ready to generate a professional receipt for a client?</p>
-           <button onClick={() => router.push('/generate')} className="w-full py-5 bg-brand-orange text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow-orange active:scale-95 transition-all flex items-center justify-center gap-3">
+
+        {/* Quick Action Box for Receipts */}
+        <div className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-2xl rounded-[32px] p-8 text-white h-fit shadow-2xl border border-white/10 dark:border-white/5 relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/20 blur-[50px] rounded-full pointer-events-none" />
+           <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-4 relative z-10">Billing</h4>
+           <p className="text-slate-300 text-xs font-bold uppercase tracking-wide leading-relaxed mb-8 relative z-10">Ready to generate a professional receipt for a client?</p>
+           <button onClick={() => router.push('/generate')} className="w-full py-5 bg-brand-orange/90 backdrop-blur-md border border-white/20 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow-orange active:scale-95 transition-all flex items-center justify-center gap-3 relative z-10">
              <Plus size={18} strokeWidth={4}/> Create New
+           </button>
+        </div>
+      </div>
+
+      {/* Recent Store Orders vs Store Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <div className="lg:col-span-2 space-y-6">
+          <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Storefront Orders</h3>
+          <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] divide-y divide-slate-100 dark:divide-white/5">
+            {recentStoreOrders.length > 0 ? recentStoreOrders.map((o, i) => (
+              <div key={i} className="p-6 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-100/50 dark:bg-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase border border-white/20 dark:border-white/5">{o.customer_name?.[0] || 'O'}</div>
+                  <div>
+                    <p className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">{o.customer_name || 'Online Order'}</p>
+                    <p className="text-[9px] text-slate-500 font-black tracking-widest uppercase">
+                      Status: <span className={o.status === 'pending' ? 'text-amber-500' : 'text-emerald-500'}>{o.status || 'Received'}</span> • {new Date(o.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <span className="font-black text-brand-orange text-lg">₦{Number(o.total_amount || 0).toLocaleString()}</span>
+              </div>
+            )) : (
+              <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">No recent store orders yet.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Action Box for Storefront */}
+        <div className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-2xl rounded-[32px] p-8 text-white h-fit shadow-2xl border border-white/10 dark:border-white/5 relative overflow-hidden">
+           <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 blur-[50px] rounded-full pointer-events-none" />
+           <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-4 relative z-10">Inventory</h4>
+           <p className="text-slate-300 text-xs font-bold uppercase tracking-wide leading-relaxed mb-8 relative z-10">Add new products or digital items to your storefront catalog.</p>
+           <button onClick={() => router.push('/products/add')} className="w-full py-5 bg-white/90 backdrop-blur-md border border-white/20 text-black rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 relative z-10">
+             <Package size={18} strokeWidth={4}/> Add Product
            </button>
         </div>
       </div>
@@ -297,12 +407,13 @@ export default function DashboardPage() {
   );
 }
 
-function StatsCard({ title, value, icon, color }: any) {
+function StatsCard({ title, value, icon, color, bgGlow }: any) {
   return (
-    <div className="bg-white dark:bg-[#0f0f0f] p-8 rounded-[32px] border border-slate-200 dark:border-white/10 shadow-sm">
-      <div className={`w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-6 ${color} border border-slate-100 dark:border-white/10`}>{icon}</div>
-      <p className="text-[10px] text-slate-500 mb-1 font-black uppercase tracking-widest">{title}</p>
-      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">{value}</h3>
+    <div className="relative group bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl p-8 rounded-[32px] border border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] overflow-hidden transition-all hover:-translate-y-1">
+      <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[40px] opacity-50 transition-opacity group-hover:opacity-100 pointer-events-none ${bgGlow}`} />
+      <div className={`relative z-10 w-12 h-12 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 ${color} border border-white/40 dark:border-white/5 shadow-sm`}>{icon}</div>
+      <p className="relative z-10 text-[10px] text-slate-500 mb-1 font-black uppercase tracking-widest">{title}</p>
+      <h3 className="relative z-10 text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">{value}</h3>
     </div>
   );
 }

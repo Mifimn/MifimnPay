@@ -16,7 +16,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const themeContext = useTheme();
-  
+
   const [mounted, setMounted] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [profile, setProfile] = useState<{ business_name: string; logo_url: string | null } | null>(null);
@@ -40,10 +40,9 @@ export default function Sidebar() {
     }
   }, [user]);
 
-  // If not mounted or context is missing, return a skeleton. 
-  // This prevents Vercel from crashing during build!
+  // If not mounted or context is missing, return a skeleton with liquid glass matching style
   if (!mounted || !themeContext) {
-    return <aside className="hidden md:block w-72 h-screen bg-brand-paper border-r border-brand-border shrink-0" />;
+    return <aside className="hidden md:block w-72 h-screen bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shrink-0" />;
   }
 
   const { theme, toggleTheme } = themeContext;
@@ -59,31 +58,51 @@ export default function Sidebar() {
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'History', href: '/history', icon: History },
     { name: 'Products', href: '/products', icon: Package },
+    { name: 'Settings', href: '/settings', icon: Settings }, // NEW: Settings link added
   ];
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-brand-paper border-r border-brand-border">
-      <div className="p-6 flex items-center gap-3 border-b border-brand-border">
-        <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg" />
-        <span className="font-black text-brand-black text-lg uppercase italic">MifimnPay</span>
+  // We pass onClose to optionally render the X button for mobile
+  const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
+    <div className="flex flex-col h-full bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+      <div className="p-6 flex items-center justify-between border-b border-white/40 dark:border-white/10">
+        <div className="flex items-center gap-3">
+          <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
+          <span className="font-black text-slate-900 dark:text-white text-lg uppercase italic tracking-tighter">MifimnPay</span>
+        </div>
+        {/* Render the Close (X) button ONLY if the onClose function is passed (Mobile View) */}
+        {onClose && (
+          <button 
+            onClick={onClose} 
+            className="md:hidden p-2 text-slate-500 hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-all"
+          >
+            <X size={20} />
+          </button>
+        )}
       </div>
+
       <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-        {navLinks.map((link) => (
-          <Link key={link.name} href={link.href} onClick={() => setIsMobileOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
-              pathname === link.href ? 'bg-brand-black text-brand-paper' : 'text-brand-gray hover:bg-brand-bg'
-            }`}>
-            <link.icon size={18} />
-            {link.name}
-          </Link>
-        ))}
+        {navLinks.map((link) => {
+          const isActive = pathname === link.href;
+          return (
+            <Link key={link.name} href={link.href} onClick={() => setIsMobileOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                isActive 
+                  ? 'bg-brand-orange text-white shadow-glow-orange' 
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5'
+              }`}>
+              <link.icon size={18} />
+              {link.name}
+            </Link>
+          )
+        })}
       </div>
-      <div className="p-4 border-t border-brand-border space-y-2">
+
+      <div className="p-4 border-t border-white/40 dark:border-white/10 space-y-2">
         <div className="flex items-center gap-2">
-          <button onClick={toggleTheme} className="flex-1 p-3 text-brand-gray hover:bg-brand-bg rounded-xl">
+          <button onClick={toggleTheme} className="flex-1 flex justify-center p-3 text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-all shadow-sm">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <button onClick={handleLogout} className="flex-1 p-3 text-red-500/70 hover:bg-red-500/10 rounded-xl">
+          <button onClick={handleLogout} className="flex-1 flex justify-center p-3 text-red-500/80 hover:bg-red-500/10 rounded-xl transition-all shadow-sm">
             <LogOut size={18} />
           </button>
         </div>
@@ -93,16 +112,56 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-brand-paper border-b border-brand-border z-40 flex items-center justify-between px-4">
-        <span className="font-black text-brand-black uppercase italic">MifimnPay</span>
-        <button onClick={() => setIsMobileOpen(true)} className="p-2 bg-brand-bg rounded-xl"><Menu size={20} /></button>
+      {/* MAGIC FIX: This style tag ensures that on mobile devices, the main content 
+        is pushed down by 4rem (64px) so the top liquid header never covers your page content! 
+      */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 768px) {
+          main { padding-top: 5rem !important; }
+        }
+      `}} />
+
+      {/* MOBILE TOP HEADER (Liquid Glass) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/10 z-40 flex items-center justify-between px-4 shadow-[0_4px_30px_rgb(0,0,0,0.05)]">
+        <div className="flex items-center gap-3">
+          <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
+          <span className="font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">MifimnPay</span>
+        </div>
+        <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 rounded-xl transition-all shadow-sm backdrop-blur-md">
+          <Menu size={20} />
+        </button>
       </div>
-      <aside className="hidden md:block w-72 h-screen shrink-0"><SidebarContent /></aside>
+
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden md:block w-72 h-screen shrink-0 relative z-30">
+        <SidebarContent />
+      </aside>
+
+      {/* MOBILE SIDEBAR Overlay & Sliding Panel */}
       <AnimatePresence>
         {isMobileOpen && (
-          <motion.aside initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} className="md:hidden fixed inset-y-0 left-0 w-4/5 z-50 shadow-2xl">
-            <SidebarContent />
-          </motion.aside>
+          <>
+            {/* Background Blur Overlay (Clicking it closes the sidebar) */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileOpen(false)}
+              className="md:hidden fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-40"
+            />
+
+            {/* Sidebar Panel Sliding In */}
+            <motion.aside 
+              initial={{ x: '-100%' }} 
+              animate={{ x: 0 }} 
+              exit={{ x: '-100%' }} 
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="md:hidden fixed inset-y-0 left-0 w-4/5 max-w-[320px] z-50 shadow-2xl"
+            >
+              {/* Passing onClose to trigger the X button */}
+              <SidebarContent onClose={() => setIsMobileOpen(false)} />
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
     </>

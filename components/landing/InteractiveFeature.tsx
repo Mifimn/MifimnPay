@@ -2,217 +2,109 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit3, BarChart3, QrCode, Check, TrendingUp, Smartphone, ArrowUpRight } from 'lucide-react';
+import { MousePointerClick, TrendingUp, CheckCircle2 } from 'lucide-react';
 
 const steps = [
-  {
-    id: 1,
-    title: "1. Smart Generation",
-    desc: "Create branded receipts and track every sale automatically.",
-    icon: <Edit3 size={20} />
-  },
-  {
-    id: 2,
-    title: "2. Sales Analysis",
-    desc: "View real-time charts of your daily and weekly revenue.",
-    icon: <BarChart3 size={20} />
-  },
-  {
-    id: 3,
-    title: "3. Digital Storefront",
-    desc: "Share your QR code so customers can browse your store.",
-    icon: <QrCode size={20} />
-  }
+  { id: 1, title: "1. Upload Inventory", desc: "Add products to your liquid catalog with images, descriptions, and dynamic pricing." },
+  { id: 2, title: "2. Customers Order", desc: "Share your URL. Customers enjoy a frictionless shopping experience optimized for mobile." },
+  { id: 3, title: "3. Track & Bill", desc: "Orders arrive on your dashboard. Fulfill them, generate receipts, and watch revenue climb." }
 ];
 
 export default function InteractiveFeature() {
-  const [activeStep, setActiveStep] = useState(1);
+  const [active, setActive] = useState(1);
 
-  // Auto-cycle through steps every 5 seconds to match the "motion" feel
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveStep((prev) => (prev === 3 ? 1 : prev + 1));
-    }, 5000);
+      setActive((p) => (p === 3 ? 1 : p + 1));
+    }, 4000);
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="grid md:grid-cols-2 gap-12 items-center">
-      {/* LEFT SIDE: The Steps Menu */}
-      <div className="space-y-4">
+    <div className="grid lg:grid-cols-2 gap-16 items-center">
+      {/* Left Menu Navigation */}
+      <div className="space-y-6">
         {steps.map((step) => (
-          <button
-            key={step.id}
-            onClick={() => setActiveStep(step.id)}
-            className={`w-full text-left p-6 rounded-2xl transition-all duration-300 border ${
-              activeStep === step.id
-                ? "bg-brand-black text-brand-paper border-brand-black shadow-xl scale-105"
-                : "bg-brand-paper text-brand-gray border-brand-border hover:border-brand-black dark:hover:border-brand-paper"
+          <div 
+            key={step.id} 
+            onClick={() => setActive(step.id)}
+            className={`cursor-pointer p-8 rounded-[32px] transition-all duration-500 border ${
+              active === step.id 
+                ? 'bg-white/60 dark:bg-white/10 backdrop-blur-2xl border-white/60 dark:border-white/20 shadow-xl scale-105' 
+                : 'bg-transparent border-transparent hover:bg-white/20 dark:hover:bg-white/5 opacity-50'
             }`}
           >
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl transition-colors duration-300 ${activeStep === step.id ? 'bg-brand-paper/10 text-brand-paper' : 'bg-brand-bg text-brand-black'}`}>
-                {step.icon}
-              </div>
-              <div>
-                <h3 className={`font-black text-lg transition-colors duration-300 ${activeStep === step.id ? 'text-brand-paper' : 'text-brand-black'}`}>
-                  {step.title}
-                </h3>
-                <p className={`text-sm font-medium mt-1 transition-colors duration-300 ${activeStep === step.id ? 'text-brand-paper/70' : 'text-brand-gray'}`}>
-                  {step.desc}
-                </p>
-              </div>
-            </div>
-          </button>
+            <h4 className={`text-2xl font-black uppercase italic tracking-tighter mb-2 ${active === step.id ? 'text-brand-orange' : 'text-slate-900 dark:text-white'}`}>
+              {step.title}
+            </h4>
+            <p className="text-slate-600 dark:text-slate-400 font-bold text-sm leading-relaxed">
+              {step.desc}
+            </p>
+          </div>
         ))}
       </div>
 
-      {/* RIGHT SIDE: The Virtual Phone Screen */}
-      <div className="relative mx-auto border-brand-black bg-brand-black border-[14px] rounded-[2.5rem] h-[550px] w-[300px] shadow-2xl flex flex-col overflow-hidden transition-colors duration-300">
-        {/* Phone Notch */}
-        <div className="h-[32px] bg-brand-black/20 w-full absolute top-0 left-0 z-20 flex justify-center">
-            <div className="h-4 w-24 bg-brand-black rounded-b-xl"></div>
-        </div>
+      {/* Right Glass Display Window */}
+      <div className="relative w-full aspect-[4/5] md:aspect-square lg:aspect-[4/5] bg-slate-200/50 dark:bg-[#111]/50 backdrop-blur-3xl rounded-[48px] border border-white/40 dark:border-white/10 shadow-2xl overflow-hidden flex items-center justify-center p-8">
+        <AnimatePresence mode="wait">
 
-        {/* Screen Content - Kept mostly light to mimic real app UI inside the frame */}
-        <div className="bg-zinc-50 w-full h-full pt-12 relative flex flex-col items-center font-sans">
-          <AnimatePresence mode="wait">
+          {/* Step 1 UI */}
+          {active === 1 && (
+            <motion.div key="1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-sm space-y-4">
+               <div className="bg-white dark:bg-black p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5">
+                 <div className="h-4 w-24 bg-slate-200 dark:bg-white/10 rounded-full mb-6" />
+                 <div className="space-y-3">
+                   <div className="h-12 w-full border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-400 uppercase">Upload Image</div>
+                   <div className="h-10 w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 flex items-center text-[10px] font-bold text-slate-500">Product Name...</div>
+                   <div className="h-10 w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 flex items-center text-[10px] font-bold text-slate-500">₦ Price...</div>
+                 </div>
+               </div>
+               <div className="flex justify-end"><div className="bg-brand-orange w-12 h-12 rounded-full flex items-center justify-center shadow-glow-orange text-white"><MousePointerClick size={20}/></div></div>
+            </motion.div>
+          )}
 
-            {/* SCENE 1: RECEIPT GENERATION MOTION */}
-            {activeStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="w-full px-4 pt-4"
-              >
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 mb-4">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-bold text-[10px]">M</div>
-                    <div className="h-2 w-16 bg-zinc-100 rounded-full" />
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Customer</div>
-                      <div className="h-6 border-b border-zinc-100 flex items-center text-[10px] font-bold text-zinc-900">
-                        <Typewriter text="Amina Yusuf" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Amount</div>
-                      <div className="h-6 border-b border-zinc-100 flex items-center text-[10px] font-bold text-zinc-900">
-                        <Typewriter text="₦1,200,000" delay={1.5} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 3 }}
-                  className="bg-green-500 text-white text-center py-3 rounded-xl text-xs font-black shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Check size={14} /> Receipt Generated
-                </motion.div>
-              </motion.div>
-            )}
+          {/* Step 2 UI */}
+          {active === 2 && (
+            <motion.div key="2" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-sm">
+               <div className="bg-gradient-to-br from-brand-orange to-red-500 p-8 rounded-[40px] text-white shadow-2xl">
+                 <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mb-6 border border-white/30" />
+                 <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-2">Liquid Store</h3>
+                 <p className="text-white/80 text-xs font-bold mb-8">Premium Quality Goods</p>
+                 <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex justify-between items-center">
+                   <span className="font-bold text-sm">Shopping Cart</span>
+                   <span className="font-black text-xl">₦120k</span>
+                 </div>
+                 <div className="mt-4 bg-white text-brand-orange w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest text-center shadow-lg cursor-pointer">Place Order</div>
+               </div>
+            </motion.div>
+          )}
 
-            {/* SCENE 2: SALES ANALYTICS MOTION */}
-            {activeStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="w-full px-4 pt-4 space-y-4"
-              >
-                <div className="bg-zinc-900 p-5 rounded-[24px] text-white shadow-xl">
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Revenue Growth</p>
-                  <p className="text-2xl font-black mt-1 tracking-tight">₦450,200</p>
+          {/* Step 3 UI */}
+          {active === 3 && (
+            <motion.div key="3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-sm space-y-4">
+              <div className="bg-white dark:bg-[#0a0a0a] border border-slate-100 dark:border-white/10 p-6 rounded-[32px] shadow-xl">
+                 <div className="flex items-center gap-3 mb-6">
+                   <div className="bg-emerald-500/20 text-emerald-500 p-2 rounded-xl"><TrendingUp size={20}/></div>
+                   <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Analytics Dashboard</h4>
+                 </div>
+                 <div className="h-32 flex items-end gap-2 mb-6">
+                    {[40, 70, 45, 90, 60, 100, 80].map((h, i) => (
+                      <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: i * 0.1 }} className={`flex-1 rounded-t-lg ${i === 5 ? 'bg-brand-orange shadow-glow-orange' : 'bg-slate-200 dark:bg-white/10'}`} />
+                    ))}
+                 </div>
+                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl">
+                   <span className="text-xs font-bold text-slate-500">Today's Revenue</span>
+                   <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">₦120,000</span>
+                 </div>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-emerald-500 text-xs font-black uppercase tracking-widest bg-emerald-500/10 py-3 rounded-full border border-emerald-500/20">
+                <CheckCircle2 size={16}/> Receipt Auto-Generated
+              </div>
+            </motion.div>
+          )}
 
-                  {/* Animated Bar Chart */}
-                  <div className="flex items-end gap-2 h-24 mt-6">
-                    <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} transition={{ delay: 0.2 }} className="bg-zinc-800 w-full rounded-t-md" />
-                    <motion.div initial={{ height: 0 }} animate={{ height: '65%' }} transition={{ delay: 0.3 }} className="bg-zinc-800 w-full rounded-t-md" />
-                    <motion.div initial={{ height: 0 }} animate={{ height: '95%' }} transition={{ delay: 0.4 }} className="bg-white w-full rounded-t-md" />
-                    <motion.div initial={{ height: 0 }} animate={{ height: '55%' }} transition={{ delay: 0.5 }} className="bg-zinc-800 w-full rounded-t-md" />
-                  </div>
-                </div>
-
-                <motion.div 
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="bg-white p-4 rounded-2xl border border-zinc-100 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-50 text-green-600 rounded-lg"><TrendingUp size={16}/></div>
-                    <span className="text-[10px] font-bold text-zinc-900 uppercase">Profit Margin</span>
-                  </div>
-                  <span className="text-[10px] font-black text-green-600">+18%</span>
-                </motion.div>
-              </motion.div>
-            )}
-
-            {/* SCENE 3: QR STOREFRONT MOTION */}
-            {activeStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center w-full px-4 pt-8 text-center"
-              >
-                 <motion.div 
-                   initial={{ scale: 0.8 }}
-                   animate={{ scale: 1 }}
-                   className="bg-white p-6 rounded-[40px] shadow-2xl border border-zinc-100 mb-8"
-                 >
-                    <QrCode size={130} strokeWidth={1} className="text-zinc-900" />
-                 </motion.div>
-
-                 <h4 className="font-black text-zinc-950 text-sm mb-1 uppercase tracking-tighter">Scan to Browse</h4>
-                 <p className="text-zinc-400 text-[10px] font-medium mb-8">mifimnpay.com.ng/m/store</p>
-
-                 <motion.div 
-                   initial={{ width: '0%' }}
-                   animate={{ width: '100%' }}
-                   className="bg-zinc-950 p-3.5 rounded-2xl flex items-center justify-between"
-                 >
-                    <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
-                      <div className="w-6 h-6 bg-white/10 rounded-lg flex items-center justify-center text-white"><Smartphone size={12}/></div>
-                      <span className="text-[9px] text-white font-black tracking-tight">Open Digital Store</span>
-                    </div>
-                    <ArrowUpRight size={14} className="text-zinc-500" />
-                 </motion.div>
-              </motion.div>
-            )}
-
-          </AnimatePresence>
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );
-}
-
-// Typing Animation Helper
-function Typewriter({ text, delay = 0 }: { text: string, delay?: number }) {
-  const [displayed, setDisplayed] = useState('');
-
-  useEffect(() => {
-    setDisplayed('');
-    const startTimeout = setTimeout(() => {
-        let i = 0;
-        const typing = setInterval(() => {
-            setDisplayed(text.slice(0, i + 1));
-            i++;
-            if (i === text.length) clearInterval(typing);
-        }, 60); 
-        return () => clearInterval(typing);
-    }, delay * 1000);
-    return () => clearTimeout(startTimeout);
-  }, [text, delay]);
-
-  return <span>{displayed}<span className="animate-pulse">|</span></span>;
 }
