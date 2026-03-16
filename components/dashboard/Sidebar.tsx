@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  LayoutGrid, History, Settings, LogOut, Menu, X, Package, Sun, Moon, ShoppingCart, Users 
+  LayoutGrid, History, Settings, LogOut, Menu, X, Package, Sun, Moon, ShoppingCart, Users,
+  ExternalLink, FilePlus, Wrench 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -19,9 +20,8 @@ export default function Sidebar() {
 
   const [mounted, setMounted] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profile, setProfile] = useState<{ business_name: string; logo_url: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ business_name: string; logo_url: string | null; slug: string | null } | null>(null);
 
-  // Set mounted to true once we are in the browser
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -31,7 +31,7 @@ export default function Sidebar() {
       const fetchProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('business_name, logo_url')
+          .select('business_name, logo_url, slug')
           .eq('id', user.id)
           .single();
         if (data) setProfile(data);
@@ -40,7 +40,6 @@ export default function Sidebar() {
     }
   }, [user]);
 
-  // If not mounted or context is missing, return a skeleton with liquid glass matching style
   if (!mounted || !themeContext) {
     return <aside className="hidden md:block w-72 h-screen bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shrink-0" />;
   }
@@ -52,51 +51,85 @@ export default function Sidebar() {
     router.push('/login');
   };
 
+  // Corrected icon from 'Tool' to 'Wrench' to fix the Undefined error
   const navLinks = [
     { name: 'Overview', href: '/dashboard', icon: LayoutGrid },
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'History', href: '/history', icon: History },
     { name: 'Products', href: '/products', icon: Package },
-    { name: 'Settings', href: '/settings', icon: Settings }, // NEW: Settings link added
+    { name: 'Store Setup', href: '/setup', icon: Wrench }, 
+    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  // We pass onClose to optionally render the X button for mobile
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="flex flex-col h-full bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+      {/* Brand Header */}
       <div className="p-6 flex items-center justify-between border-b border-white/40 dark:border-white/10">
         <div className="flex items-center gap-3">
           <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
           <span className="font-black text-slate-900 dark:text-white text-lg uppercase italic tracking-tighter">MifimnPay</span>
         </div>
-        {/* Render the Close (X) button ONLY if the onClose function is passed (Mobile View) */}
         {onClose && (
-          <button 
-            onClick={onClose} 
-            className="md:hidden p-2 text-slate-500 hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-all"
-          >
+          <button onClick={onClose} className="md:hidden p-2 text-slate-500 hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-all">
             <X size={20} />
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+      <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+        {/* ACTION: Quick Generate Receipt */}
+        <div className="mb-6 px-2">
+          <Link 
+            href="/generate" 
+            onClick={() => setIsMobileOpen?.(false)}
+            className="w-full flex items-center justify-center gap-3 py-4 bg-brand-orange text-white rounded-[20px] font-black text-[10px] uppercase tracking-[0.2em] shadow-glow-orange hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <FilePlus size={16} />
+            Generate Receipt
+          </Link>
+        </div>
+
+        {/* Main Navigation */}
         {navLinks.map((link) => {
           const isActive = pathname === link.href;
+          const Icon = link.icon;
           return (
-            <Link key={link.name} href={link.href} onClick={() => setIsMobileOpen(false)}
+            <Link 
+              key={link.name} 
+              href={link.href} 
+              onClick={() => setIsMobileOpen?.(false)}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
                 isActive 
-                  ? 'bg-brand-orange text-white shadow-glow-orange' 
+                  ? 'bg-white dark:bg-white/10 text-brand-orange shadow-sm border border-brand-orange/20' 
                   : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5'
-              }`}>
-              <link.icon size={18} />
+              }`}
+            >
+              <Icon size={18} className={isActive ? 'text-brand-orange' : ''} />
               {link.name}
             </Link>
           )
         })}
+
+        {/* View Storefront Link */}
+        {profile?.slug && (
+          <div className="pt-4 mt-4 border-t border-white/20 dark:border-white/5">
+             <Link 
+              href={`/${profile.slug}`} 
+              target="_blank"
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-white/5 border border-transparent hover:border-brand-orange/30 hover:text-brand-orange transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <ExternalLink size={16} />
+                Visit Storefront
+              </div>
+              <span className="text-[8px] bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded-md">LIVE</span>
+            </Link>
+          </div>
+        )}
       </div>
 
+      {/* Footer Actions */}
       <div className="p-4 border-t border-white/40 dark:border-white/10 space-y-2">
         <div className="flex items-center gap-2">
           <button onClick={toggleTheme} className="flex-1 flex justify-center p-3 text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/10 rounded-xl transition-all shadow-sm">
@@ -112,53 +145,42 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* MAGIC FIX: This style tag ensures that on mobile devices, the main content 
-        is pushed down by 4rem (64px) so the top liquid header never covers your page content! 
-      */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 768px) {
           main { padding-top: 5rem !important; }
         }
       `}} />
 
-      {/* MOBILE TOP HEADER (Liquid Glass) */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/10 z-40 flex items-center justify-between px-4 shadow-[0_4px_30px_rgb(0,0,0,0.05)]">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/10 z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
           <span className="font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">MifimnPay</span>
         </div>
-        <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 rounded-xl transition-all shadow-sm backdrop-blur-md">
+        <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/5 rounded-xl transition-all">
           <Menu size={20} />
         </button>
       </div>
 
-      {/* DESKTOP SIDEBAR */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:block w-72 h-screen shrink-0 relative z-30">
         <SidebarContent />
       </aside>
 
-      {/* MOBILE SIDEBAR Overlay & Sliding Panel */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
-            {/* Background Blur Overlay (Clicking it closes the sidebar) */}
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsMobileOpen(false)}
               className="md:hidden fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-40"
             />
-
-            {/* Sidebar Panel Sliding In */}
             <motion.aside 
-              initial={{ x: '-100%' }} 
-              animate={{ x: 0 }} 
-              exit={{ x: '-100%' }} 
+              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} 
               transition={{ type: "spring", bounce: 0, duration: 0.4 }}
               className="md:hidden fixed inset-y-0 left-0 w-4/5 max-w-[320px] z-50 shadow-2xl"
             >
-              {/* Passing onClose to trigger the X button */}
               <SidebarContent onClose={() => setIsMobileOpen(false)} />
             </motion.aside>
           </>

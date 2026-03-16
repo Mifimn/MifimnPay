@@ -2,77 +2,122 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import ProductDetails from '@/storefront/components/Showroom/ProductDetails';
+import ShowroomMain from '@/src/storefront/components/Showroom/ShowroomMain';
+import HeroSlideshow from '@/src/storefront/components/Showroom/HeroSlideshow';
+import { supabase } from '@/lib/supabaseClient';
 
 /**
- * Individual Product Page
- * Path: app/[vendor_slug]/product/[id]/page.tsx
- * * This page acts as the dynamic container for a specific product. 
- * It replaces the manual navigation logic from the previous setup.
+ * VendorShowroomPage Component
+ * Path: app/[vendor_slug]/page.tsx
+ * Dynamic storefront page that adapts to the vendor's branding and inventory.
  */
-export default function ProductPage() {
+export default function VendorShowroomPage() {
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
-  const productId = params?.id as string;
 
-  // State for loading and the specific product data
   const [isLoading, setIsLoading] = useState(true);
-  const [productData, setProductData] = useState<any>(null);
+  const [vendorProducts, setVendorProducts] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    /**
-     * fetchProduct
-     * In your production build, this will fetch a specific product 
-     * from Supabase where the ID matches and belongs to the vendor_slug.
-     */
-    const fetchProduct = async () => {
+    const fetchVendorData = async () => {
+      if (!vendor_slug) return;
       setIsLoading(true);
-      try {
-        // Simulation delay to allow the 3D engine and skeletons to initialize
-        await new Promise((resolve) => setTimeout(resolve, 1200));
 
-        // Placeholder for actual data fetching:
-        // const { data } = await supabase.from('products').select('*').eq('id', productId).single();
-        // setProductData(data);
+      try {
+        // 1. Fetch Profile for branding, banners, and promo text settings
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('slug', vendor_slug)
+          .single();
+
+        if (profileData) {
+          setProfile(profileData);
+
+          // 2. Fetch Products specifically for this vendor
+          const { data: products } = await supabase
+            .from('products')
+            .select('*')
+            .eq('user_id', profileData.id)
+            .order('created_at', { ascending: false });
+
+          setVendorProducts(products || []);
+        }
       } catch (error) {
-        console.error("Error loading product:", error);
+        console.error("Storefront fetch error:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (productId) {
-      fetchProduct();
-    }
-  }, [productId, vendor_slug]);
+    fetchVendorData();
+  }, [vendor_slug]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] transition-colors duration-300">
-      {/* ProductDetails handles the heavy lifting:
-        1. ThreeStage.tsx for the interactive 3D product view.
-        2. Sourcing Intelligence (Quantity selection and basket logic).
-        3. Verified badges and warehouse stock status.
-      */}
-      <ProductDetails 
-        isLoading={isLoading} 
-        // In the next step, we will update ProductDetails to accept the 
-        // fetched productData as a prop instead of using location.state.
-      />
+    <div className="min-h-screen bg-white dark:bg-[#050505] transition-colors duration-500">
 
-      {/* 404 / Missing Product State */}
-      {!isLoading && !productData && productId === "undefined" && (
-        <div className="flex flex-col items-center justify-center h-[70vh] text-center px-6">
-          <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mb-6">
-            <span className="text-brand-orange text-3xl font-black">?</span>
-          </div>
-          <h2 className="text-2xl font-black uppercase italic dark:text-white tracking-tighter">
-            Product <span className="text-brand-orange">Not Found</span>
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium max-w-xs">
-            We couldn&apos;t find this specific item in <span className="text-slate-900 dark:text-white font-bold">@{vendor_slug}&apos;s</span> catalog.
-          </p>
+      {/* 3. Scrolling Promotion Marquee (Top-bar style) */}
+      {profile?.banner_type === 'text' && profile?.promo_texts?.some((t: string) => t.length > 0) && (
+        <div className="bg-slate-900 dark:bg-black text-white py-3 overflow-hidden whitespace-nowrap border-b border-white/10 relative z-20">
+           <div className="inline-block animate-marquee">
+             {profile.promo_texts.map((text: string, i: number) => (
+               text && <span key={i} className="mx-12 font-black uppercase text-[10px] tracking-[0.2em] italic">{text}</span>
+             ))}
+             {/* Repeat for seamless infinite loop */}
+             {profile.promo_texts.map((text: string, i: number) => (
+               text && <span key={`rep-${i}`} className="mx-12 font-black uppercase text-[10px] tracking-[0.2em] italic">{text}</span>
+             ))}
+           </div>
         </div>
       )}
+
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-12 relative z-10">
+
+        {/* 4. High-Impact 3D Hero Section */}
+        {/* Dynamically switches between image banners or text promotions */}
+        <HeroSlideshow 
+          isLoading={isLoading}
+          bannerType={profile?.banner_type}
+          banners={profile?.banner_urls}
+          promoTexts={profile?.promo_texts}
+          themeColor={profile?.theme_color}
+        />
+
+        {/* 5. Main Showroom Product Grid */}
+        <ShowroomMain 
+          isSkeleton={isLoading} 
+          products={vendorProducts} 
+          vendorName={profile?.business_name || vendor_slug}
+          aboutText={profile?.about_text}
+        />
+
+        {/* 6. Empty State / Coming Soon */}
+        {!isLoading && vendorProducts.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+            <div 
+              className="w-20 h-20 rounded-[24px] flex items-center justify-center mb-6 border transition-all duration-500 shadow-lg"
+              style={{ 
+                backgroundColor: `${profile?.theme_color || '#f97316'}1a`,
+                borderColor: `${profile?.theme_color || '#f97316'}33` 
+              }}
+            >
+               <span 
+                className="font-black text-3xl italic"
+                style={{ color: profile?.theme_color || '#f97316' }}
+               >
+                !
+               </span>
+            </div>
+            <h2 className="text-3xl font-black uppercase italic dark:text-white tracking-tighter">
+              Storefront <span style={{ color: profile?.theme_color || '#f97316' }}>Coming Soon</span>
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-3 font-bold max-w-xs uppercase tracking-wide">
+              The vendor <span className="text-slate-900 dark:text-white">@{vendor_slug}</span> is currently setting up their showroom catalog.
+            </p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
