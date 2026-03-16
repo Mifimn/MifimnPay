@@ -9,6 +9,9 @@
   --card-bg: #f8fafc;
   --border-color: #e2e8f0;
 
+  /* NEW: Dynamic Storefront Accent Color (Defaults to your orange) */
+  --brand-orange: #ff7d1a; 
+
   /* Tailwind Config Brand Colors (Light Mode) */
   --primary: #09090b;    /* brand-black */
   --secondary: #71717a;  /* brand-gray */
@@ -16,24 +19,21 @@
   --accent: #e4e4e7;     /* brand-border */
 }
 
-/* Global Dark Mode (Activated by ThemeContext) */
+/* Global Dark Mode */
 .dark {
-  /* Base Colors */
-  --background: #09090b;   /* Deep dark background */
-  --foreground: #fafafa;   /* Light text */
-  --card-bg: #18181b;      /* Slightly elevated dark color for cards */
-  --border-color: #27272a; /* Subtle dark borders */
+  --background: #09090b;   
+  --foreground: #fafafa;   
+  --card-bg: #18181b;      
+  --border-color: #27272a; 
 
-  /* Tailwind Config Brand Colors (Dark Mode) */
-  --primary: #ffffff;      /* Inverted: brand-black acts as white in dark mode */
-  --secondary: #a1a1aa;    /* Lighter gray for better text readability */
-  --paper: #18181b;        /* Dark paper to match cards */
-  --accent: #27272a;       /* Dark accent for borders/dividers */
+  --primary: #ffffff;      
+  --secondary: #a1a1aa;    
+  --paper: #18181b;        
+  --accent: #27272a;       
 }
 
-/* This class will be applied to the Admin Layout container */
 .admin-dark {
-  --background: #0f172a; /* Deep Slate */
+  --background: #0f172a; 
   --foreground: #f8fafc;
   --card-bg: #1e293b;
   --border-color: #334155;

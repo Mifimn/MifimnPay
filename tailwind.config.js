@@ -5,7 +5,7 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx}", // ADD THIS LINE
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -16,11 +16,13 @@ module.exports = {
           bg: 'var(--background)',
           paper: 'var(--paper)',
           border: 'var(--accent)',
-          orange: "#ff7d1a", 
+          // Updated to use dynamic variable
+          orange: "var(--brand-orange)", 
         }
       },
       boxShadow: {
-        'glow-orange': '0 0 20px rgba(255, 125, 26, 0.35)', 
+        // Updated to use dynamic variable for the glow effect
+        'glow-orange': '0 0 20px var(--brand-orange)', 
       },
       fontFamily: {
         mono: ['monospace'], 
