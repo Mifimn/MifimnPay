@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Store, Save, Mail, Phone, MapPin, FileText, Loader2, 
-  Link as LinkIcon, AlertTriangle, Palette, AlignLeft, Image as ImageIcon, Type, Info
+  Link as LinkIcon, AlertTriangle, Palette, AlignLeft, Image as ImageIcon, Type, Info, X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 const themePalettes = [
   { id: 'orange', name: 'Orange', shades: ['#fdba74', '#f97316', '#ea580c', '#c2410c'] },
@@ -22,6 +23,7 @@ const MAX_SOCIAL_IMAGE_SIZE = 300 * 1024;
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { setThemeColor } = useThemeStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -72,6 +74,10 @@ export default function SettingsPage() {
             bannerType: data.banner_type || 'image',
             promoTexts: data.promo_texts?.length === 4 ? data.promo_texts : ['', '', '', '']
           });
+
+          // Sync global theme store with fetched color
+          setThemeColor(data.theme_color || '#f97316');
+
           setLogoPreview(data.logo_url);
           if (data.banner_urls) {
             setBannerPreviews([data.banner_urls[0] || null, data.banner_urls[1] || null]);
@@ -80,7 +86,7 @@ export default function SettingsPage() {
       };
       fetchProfile();
     }
-  }, [user]);
+  }, [user, setThemeColor]);
 
   // IMAGE COMPRESSION HELPER
   const compressImage = (file: File, maxSize: number): Promise<File> => {
@@ -95,7 +101,6 @@ export default function SettingsPage() {
           let width = img.width;
           let height = img.height;
 
-          // Resize if too massive to speed up compression
           const MAX_DIM = 1200;
           if (width > MAX_DIM || height > MAX_DIM) {
             if (width > height) {
@@ -179,6 +184,10 @@ export default function SettingsPage() {
         .eq('id', user?.id);
 
       if (error) throw error;
+
+      // Update global store color immediately
+      setThemeColor(formData.themeColor);
+
       alert("Settings saved successfully!");
     } catch (err: any) {
       alert(err.message);
