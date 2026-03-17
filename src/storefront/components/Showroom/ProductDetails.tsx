@@ -28,10 +28,9 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
   const { themeColor } = useThemeStore();
   const [copied, setCopied] = useState(false);
 
-  // Database Mapping
+  // Database Mapping - Reverted to strictly use productData.id (UUID)
   const product = productData ? {
     id: productData.id,
-    short_id: productData.short_id,
     name: productData.name,
     price: productData.price,
     moq: productData.moq || 1,
@@ -51,11 +50,15 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     window.scrollTo(0, 0);
   }, [product?.id]);
 
+  // SMART COPY TOOL (Strictly using UUID as requested)
   const handleCopyLink = () => {
     if (!product) return;
+    
     const baseUrl = window.location.origin;
-    const shortUrl = `${baseUrl}/${vendor_slug}/product/${product.short_id || product.id}`;
-    const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n\nView on ${vendorName || vendor_slug}:\n${shortUrl}`;
+    // Using Full UUID link for stability
+    const fullUrl = `${baseUrl}/${vendor_slug}/product/${product.id}`;
+    
+    const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n\nView on ${vendorName || vendor_slug}:\n${fullUrl}`;
     
     navigator.clipboard.writeText(shareText);
     setCopied(true);
@@ -78,18 +81,18 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     >
       {/* Header Controls */}
       <div className="flex items-center justify-between">
-        {/* FIXED: Changed size(14) to size={14} */}
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-slate-400 hover:opacity-70 font-black uppercase text-[10px] tracking-widest transition-all">
           <ChevronLeft size={14} /> Back to Showroom
         </button>
 
         <div className="flex items-center gap-3">
+          {/* STABLE UUID COPY BUTTON */}
           <button 
             onClick={handleCopyLink}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-brand-orange transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10"
           >
             {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
-            {copied ? "Link Copied!" : "Copy Short Link"}
+            {copied ? "Details Copied!" : "Copy Product Link"}
           </button>
 
           <button className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400">
@@ -99,6 +102,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
+        {/* Product Visual Frame */}
         <div className="w-full lg:flex-1">
           <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
             <img 
@@ -112,6 +116,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
           </div>
         </div>
 
+        {/* Action Center */}
         <div className="w-full lg:flex-1 space-y-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2" style={{ color: themeColor }}>
@@ -129,6 +134,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             </div>
           </div>
 
+          {/* Sourcing Intelligence Widget */}
           <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] border border-slate-200 dark:border-white/10 space-y-6">
             <div className="flex justify-between items-end">
               <div>
@@ -141,6 +147,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
               </div>
             </div>
 
+            {/* Smart Add Options */}
             <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={() => addToBasket({ ...productData, img: productData.image_url }, 1)}
@@ -173,6 +180,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             </div>
           </div>
 
+          {/* Pricing Display */}
           <div className="grid grid-cols-3 gap-2">
             {[ 
                { label: "Retail Price", value: `₦${Number(product.price).toLocaleString()}` }, 
@@ -188,6 +196,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
         </div>
       </div>
 
+      {/* RELATED PRODUCTS SECTION */}
       {relatedProducts.length > 0 && (
         <section className="pt-10 border-t border-slate-200 dark:border-white/10">
           <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-8 dark:text-white">
@@ -197,7 +206,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             {relatedProducts.map((item: any) => (
               <div 
                 key={item.id} 
-                onClick={() => router.push(`/${vendor_slug}/product/${item.short_id || item.id}`)}
+                onClick={() => router.push(`/${vendor_slug}/product/${item.id}`)}
                 className="bg-white dark:bg-[#0f0f0f] rounded-[28px] border border-slate-200 dark:border-white/10 p-4 group cursor-pointer hover:scale-[1.02] transition-all"
               >
                 <div className="aspect-square bg-slate-50 dark:bg-white/5 rounded-2xl mb-4 flex items-center justify-center p-4">
