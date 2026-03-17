@@ -6,76 +6,75 @@ interface Props {
   params: { vendor_slug: string; id: string };
 }
 
+/**
+ * SOCIAL PREVIEW METADATA
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // Fetch by short_id OR id to support both formats
   const { data: product } = await supabase
     .from('menu_items')
     .select('name, description, image_url, price')
-    .or(`short_id.eq.${params.id},id.eq.${params.id}`)
-    .single();
-
-  const { data: vendor } = await supabase
-    .from('profiles')
-    .select('business_name, logo_url')
-    .eq('slug', params.vendor_slug)
-    .single();
+    .or(`short_id.eq.${params.id},id.eq.${params.id}`) // Checks both long and short IDs
+    .maybeSingle();
 
   if (!product) return { title: 'Product Not Found' };
 
-  const displayTitle = `${product.name} | ${vendor?.business_name || params.vendor_slug}`;
-
   return {
-    title: displayTitle,
+    title: `${product.name} | Sourcing`,
     description: product.description,
     openGraph: {
-      title: displayTitle,
-      description: `₦${Number(product.price).toLocaleString()} - View details on ${vendor?.business_name}`,
+      title: product.name,
+      description: `₦${Number(product.price).toLocaleString()} - View details on our showroom.`,
       images: [product.image_url || ''],
-      type: 'website',
     },
-    // This removes MifimnPay from the social card and uses the Vendor Business Name
-    twitter: {
-      card: 'summary_large_image',
-      title: displayTitle,
-      images: [product.image_url || ''],
-    }
   };
 }
 
+/**
+ * MAIN SERVER COMPONENT
+ */
 export default async function ProductPage({ params }: Props) {
-  const { data: product } = await supabase
+  // 1. Fetch Product by short_id OR standard uuid
+  const { data: product, error } = await supabase
     .from('menu_items')
     .select('*')
     .or(`short_id.eq.${params.id},id.eq.${params.id}`)
-    .single();
+    .maybeSingle();
 
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
+        <div className="text-center">
+          <h2 className="text-2xl font-black uppercase italic dark:text-white">Asset Not Found</h2>
+          <p className="text-slate-500 text-xs font-bold mt-2 uppercase">The link may be broken or expired.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Fetch Related Items
   const { data: related } = await supabase
     .from('menu_items')
     .select('*')
-    .eq('user_id', product?.user_id)
+    .eq('user_id', product.user_id)
     .eq('is_active', true)
-    .neq('id', product?.id)
+    .neq('id', product.id)
     .limit(4);
 
+  // 3. Fetch Vendor Profile (to get Business Name for the share tool)
   const { data: vendor } = await supabase
     .from('profiles')
-    .select('logo_url, business_name')
-    .eq('slug', params.vendor_slug)
+    .select('business_name')
+    .eq('id', product.user_id)
     .single();
 
   return (
-    <>
-      {/* Tab Icon: Uses the Vendor's Logo instead of MifimnPay */}
-      {vendor?.logo_url && <link rel="icon" href={vendor.logo_url} />}
-
-      <main className="min-h-screen bg-white dark:bg-[#050505]">
-        <ProductDetails 
-          isLoading={false} 
-          productData={product} 
-          relatedProducts={related || []} 
-          vendorName={vendor?.business_name}
-        />
-      </main>
-    </>
+    <main className="min-h-screen bg-white dark:bg-[#050505]">
+      <ProductDetails 
+        isLoading={false} 
+        productData={product} 
+        relatedProducts={related || []} 
+        vendorName={vendor?.business_name || params.vendor_slug}
+      />
+    </main>
   );
 }
