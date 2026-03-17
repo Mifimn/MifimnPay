@@ -3,6 +3,7 @@
   "short_name": "MifimnPay",
   "description": "Professional Receipt Generator & Digital Storefront",
   "start_url": "/dashboard",
+  "scope": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#09090b",

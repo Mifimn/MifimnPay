@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutGrid, History, Settings, LogOut, Menu, X, Package, Sun, Moon, ShoppingCart, Users,
-  ExternalLink, FilePlus, Wrench 
+  ExternalLink, FilePlus, Wrench, Globe 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -51,7 +51,6 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  // Corrected icon from 'Tool' to 'Wrench' to fix the Undefined error
   const navLinks = [
     { name: 'Overview', href: '/dashboard', icon: LayoutGrid },
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
@@ -82,7 +81,7 @@ export default function Sidebar() {
         <div className="mb-6 px-2">
           <Link 
             href="/generate" 
-            onClick={() => setIsMobileOpen?.(false)}
+            onClick={() => onClose?.()}
             className="w-full flex items-center justify-center gap-3 py-4 bg-brand-orange text-white rounded-[20px] font-black text-[10px] uppercase tracking-[0.2em] shadow-glow-orange hover:scale-[1.02] active:scale-95 transition-all"
           >
             <FilePlus size={16} />
@@ -98,7 +97,7 @@ export default function Sidebar() {
             <Link 
               key={link.name} 
               href={link.href} 
-              onClick={() => setIsMobileOpen?.(false)}
+              onClick={() => onClose?.()}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
                 isActive 
                   ? 'bg-white dark:bg-white/10 text-brand-orange shadow-sm border border-brand-orange/20' 
@@ -111,20 +110,28 @@ export default function Sidebar() {
           )
         })}
 
-        {/* View Storefront Link */}
+        {/* View Storefront Link - UPDATED FOR BROWSER DIRECT */}
         {profile?.slug && (
           <div className="pt-4 mt-4 border-t border-white/20 dark:border-white/5">
-             <Link 
+             <a 
               href={`/${profile.slug}`} 
               target="_blank"
+              rel="external noreferrer"
+              onClick={(e) => {
+                onClose?.();
+                // Force break out of PWA frame if in standalone mode
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                   window.open(`/${profile.slug}`, '_system'); 
+                }
+              }}
               className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-white/5 border border-transparent hover:border-brand-orange/30 hover:text-brand-orange transition-all"
             >
               <div className="flex items-center gap-3">
-                <ExternalLink size={16} />
-                Visit Storefront
+                <Globe size={16} />
+                Visit Store
               </div>
-              <span className="text-[8px] bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded-md">LIVE</span>
-            </Link>
+              <span className="text-[8px] bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded-md">WEB</span>
+            </a>
           </div>
         )}
       </div>

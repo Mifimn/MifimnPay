@@ -14,11 +14,12 @@ import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 interface ProductDetailsProps {
   isLoading: boolean;
-  productData?: any; // Data from Supabase
-  relatedProducts?: any[]; // Array of related products
+  productData?: any; 
+  relatedProducts?: any[]; 
+  vendorName?: string; // Business name from profile
 }
 
-export default function ProductDetails({ isLoading, productData, relatedProducts = [] }: ProductDetailsProps) {
+export default function ProductDetails({ isLoading, productData, relatedProducts = [], vendorName }: ProductDetailsProps) {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
@@ -26,11 +27,11 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
   const { basket, addToBasket } = useCartStore();
   const { themeColor } = useThemeStore();
   const [copied, setCopied] = useState(false);
-  const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
   // Database Mapping
   const product = productData ? {
     id: productData.id,
+    short_id: productData.short_id, // Branded Short ID
     name: productData.name,
     price: productData.price,
     moq: productData.moq || 1,
@@ -50,10 +51,16 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     window.scrollTo(0, 0);
   }, [product?.id]);
 
-  // SMART COPY FOR WHATSAPP
+  // SMART SHORT-LINK COPY FOR WHATSAPP
   const handleCopyLink = () => {
     if (!product) return;
-    const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n📝 ${product.description || ''}\n\nView on MifimnPay: ${window.location.href}`;
+
+    // Generates a short, branded URL: domain/vendor/product/short_id
+    const baseUrl = window.location.origin;
+    const shortUrl = `${baseUrl}/${vendor_slug}/product/${product.short_id || product.id}`;
+
+    const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n\nView on ${vendorName || vendor_slug}:\n${shortUrl}`;
+
     navigator.clipboard.writeText(shareText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -76,17 +83,17 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
       {/* Header Controls */}
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-slate-400 hover:opacity-70 font-black uppercase text-[10px] tracking-widest transition-all">
-          <ChevronLeft size={14} /> Back to Showroom
+          <ChevronLeft size(14) /> Back to Showroom
         </button>
 
         <div className="flex items-center gap-3">
-          {/* SMART WHATSAPP SHARING BUTTON */}
+          {/* BRANDED SHORT-LINK BUTTON */}
           <button 
             onClick={handleCopyLink}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-brand-orange transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10"
           >
             {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
-            {copied ? "Details Copied!" : "Copy for WhatsApp"}
+            {copied ? "Link Copied!" : "Copy Short Link"}
           </button>
 
           <button className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400">
@@ -147,7 +154,11 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
                 onClick={() => addToBasket({ ...productData, img: productData.image_url }, 1)}
                 disabled={currentQty >= maxStock}
                 className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}33` }}
+                style={{ 
+                    backgroundColor: themeColor, 
+                    boxShadow: `0 10px 20px ${themeColor}33`,
+                    color: '#FFFFFF' // FIX: Hardcoded white for visibility
+                }}
               >
                 <Plus size={16} /> Add Full Unit
               </button>
@@ -160,7 +171,10 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
                   ? 'bg-white dark:bg-white/10 border shadow-sm active:scale-95' 
                   : 'bg-slate-200 dark:bg-white/5 text-slate-400 cursor-not-allowed'
                 }`}
-                style={{ borderColor: currentQty >= 1 ? themeColor : 'transparent', color: currentQty >= 1 ? themeColor : undefined }}
+                style={{ 
+                    borderColor: currentQty >= 1 ? themeColor : 'transparent', 
+                    color: currentQty >= 1 ? themeColor : undefined 
+                }}
               >
                 <Box size={16} /> Add Half (0.5)
               </button>
@@ -204,7 +218,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             {relatedProducts.map((item: any) => (
               <div 
                 key={item.id} 
-                onClick={() => router.push(`/${vendor_slug}/product/${item.id}`)}
+                onClick={() => router.push(`/${vendor_slug}/product/${item.short_id || item.id}`)}
                 className="bg-white dark:bg-[#0f0f0f] rounded-[28px] border border-slate-200 dark:border-white/10 p-4 group cursor-pointer hover:scale-[1.02] transition-all"
               >
                 <div className="aspect-square bg-slate-50 dark:bg-white/5 rounded-2xl mb-4 flex items-center justify-center p-4">
