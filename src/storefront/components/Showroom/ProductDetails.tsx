@@ -20,7 +20,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
-
+  
   const { basket, addToBasket } = useCartStore();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
@@ -124,7 +124,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
               >
                 <Plus size={16} /> Add to Cart
               </button>
-
+              
               <div className="flex items-center gap-2 px-2">
                 <AlertTriangle size={14} className="text-slate-400" />
                 <span className="text-[9px] font-black text-slate-400 uppercase">Min Order: {product.moq} Unit(s)</span>
