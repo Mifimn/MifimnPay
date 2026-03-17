@@ -9,59 +9,52 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { DetailsSkeleton } from './SkeletonLoader';
-import { useCartStore } from '@/storefront/store/useCartStore';
+import { useCartStore } from '@/src/storefront/store/useCartStore';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 interface ProductDetailsProps {
   isLoading: boolean;
-  productData?: any; // Connected to Supabase data
+  productData?: any; // Data from Supabase
 }
 
-/**
- * ProductDetails Component
- * Path: src/storefront/components/Showroom/ProductDetails.tsx
- * Updated with Supabase integration and dynamic theme support.
- */
 export default function ProductDetails({ isLoading, productData }: ProductDetailsProps) {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
 
-  const { themeColor } = useThemeStore();
   const { basket, addToBasket } = useCartStore();
+  const { themeColor } = useThemeStore();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
-  // Map Supabase 'menu_items' data to the component structure
+  // Database Mapping
   const product = productData ? {
     id: productData.id,
     name: productData.name,
     price: productData.price,
-    wholesale_price: productData.wholesale_price,
     moq: productData.moq || 1,
-    img: productData.image_url || "https://picsum.photos/seed/mifimn/600",
-    stock: productData.stock,
-    description: productData.description
+    img: productData.image_url,
+    stock: productData.stock || 0,
+    wholesale_price: productData.wholesale_price
   } : null;
 
-  // Use product image and mock gallery additions
-  const images = product ? [
-    product.img, 
-    "https://picsum.photos/seed/detail1/600", 
-    "https://picsum.photos/seed/detail2/600"
-  ] : [];
+  // Gallery Logic
+  const images = product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"];
 
   const existingItem = basket.find(item => item.id === product?.id);
   const currentQty = existingItem ? Number(existingItem.quantity) : 0;
-  const maxStock = product?.stock || 9999;
+  const maxStock = product?.stock || 500;
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [product?.id]);
 
-  if (isLoading || !product) return <DetailsSkeleton />;
-
-  const nextImg = () => setCurrentImgIndex((prev) => (prev + 1) % images.length);
-  const prevImg = () => setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length);
+  if (isLoading) return <DetailsSkeleton />;
+  if (!product) return (
+    <div className="p-20 text-center space-y-4">
+      <h2 className="text-xl font-black uppercase italic dark:text-white">Product Not Found</h2>
+      <button onClick={() => router.push(`/${vendor_slug}`)} className="font-bold uppercase text-[10px] tracking-widest" style={{ color: themeColor }}>Return to Showroom</button>
+    </div>
+  );
 
   return (
     <motion.div 
@@ -80,29 +73,14 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
-        {/* Sliding Product Gallery */}
-        <div className="w-full lg:flex-1 relative group">
-          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center relative overflow-hidden shadow-sm">
-            <AnimatePresence mode="wait">
-              <motion.img 
-                key={currentImgIndex}
-                src={images[currentImgIndex]} 
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full object-contain p-8" 
-                alt={product.name} 
-              />
-            </AnimatePresence>
-
-            <button onClick={prevImg} className="absolute left-4 p-3 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChevronLeft size={20} style={{ color: themeColor }} />
-            </button>
-            <button onClick={nextImg} className="absolute right-4 p-3 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChevronRight size={20} style={{ color: themeColor }} />
-            </button>
-
+        {/* Product Visual Frame */}
+        <div className="w-full lg:flex-1">
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] lg:rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
+            <img 
+              src={images[0]} 
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
+              alt={product.name} 
+            />
             <div className="absolute top-6 left-6 text-white px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg" style={{ backgroundColor: themeColor }}>
               VERIFIED STOCK
             </div>
@@ -114,16 +92,16 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
           <div className="space-y-4">
             <div className="flex items-center gap-2" style={{ color: themeColor }}>
               <ShieldCheck size={18} />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Authentic Supplier</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Verified Store Asset</span>
             </div>
             <h1 className="text-3xl lg:text-6xl font-black uppercase italic tracking-tighter dark:text-white leading-[0.9]">
               {product.name}
             </h1>
             <div className="flex items-center gap-3 pt-2">
               <div className="flex gap-0.5" style={{ color: themeColor }}>
-                  {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
               </div>
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Premium Quality</span>
+              <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Sourcing Approved</span>
             </div>
           </div>
 
@@ -131,27 +109,28 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
           <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] border border-slate-200 dark:border-white/10 space-y-6">
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Items in Cart</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Your Current Inquiry</p>
                 <p className="text-4xl font-black italic" style={{ color: themeColor }}>{currentQty} <span className="text-xs">Units</span></p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Availability</p>
-                <p className="text-sm font-black dark:text-white">{product.stock ?? '∞'} In Stock</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Available Stock</p>
+                <p className="text-sm font-black dark:text-white">{product.stock} Units</p>
               </div>
             </div>
 
+            {/* Smart Add Options */}
             <div className="grid grid-cols-2 gap-3">
               <button 
-                onClick={() => addToBasket({ ...productData, quantity: 1 }, 1)}
+                onClick={() => addToBasket({ ...productData, img: productData.image_url }, 1)}
                 disabled={currentQty >= maxStock}
-                className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}33` }}
               >
-                <Plus size={16} /> Add 1.0 Unit
+                <Plus size={16} /> Add Full Unit
               </button>
 
               <button 
-                onClick={() => addToBasket({ ...productData, quantity: 0.5 }, 0.5)}
+                onClick={() => addToBasket({ ...productData, img: productData.image_url }, 0.5)}
                 disabled={currentQty < 1 || currentQty + 0.5 > maxStock}
                 className={`py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
                   currentQty >= 1 
@@ -160,7 +139,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
                 }`}
                 style={{ borderColor: currentQty >= 1 ? themeColor : 'transparent', color: currentQty >= 1 ? themeColor : undefined }}
               >
-                <Box size={16} /> Add 0.5 Unit
+                <Box size={16} /> Add Half (0.5)
               </button>
             </div>
 
@@ -169,18 +148,19 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-2 text-slate-400">
                   <Info size={14} className="mt-0.5 shrink-0" />
                   <p className="text-[9px] font-bold uppercase italic leading-tight">
-                    Add at least 1 unit to unlock fractional adjustments.
+                    Minimum 1.0 unit required to unlock fractional sourcing. precision project scaling enabled.
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
+          {/* Pricing Display */}
           <div className="grid grid-cols-3 gap-2">
             {[ 
-               { label: "Unit Price", value: `₦${Number(product.price).toLocaleString()}` }, 
-               { label: "Min. Order", value: `${product.moq} Units` }, 
-               { label: "Status", value: "Verified" } 
+               { label: "Retail Price", value: `₦${Number(product.price).toLocaleString()}` }, 
+               { label: "Wholesale", value: product.wholesale_price ? `₦${Number(product.wholesale_price).toLocaleString()}` : 'N/A' }, 
+               { label: "MOQ", value: `${product.moq} Units` } 
             ].map((tier, i) => (
               <div key={i} className="bg-white dark:bg-[#0a0a0a] py-4 px-2 rounded-[24px] text-center border border-slate-100 dark:border-white/5">
                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{tier.label}</p>
