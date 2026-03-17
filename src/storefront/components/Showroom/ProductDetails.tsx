@@ -13,18 +13,23 @@ import { useCartStore, Product } from '@/storefront/store/useCartStore';
 
 interface ProductDetailsProps {
   isLoading: boolean;
-  productData?: any; // Connected to real DB data
+  productData?: any; // Now receives real data from the [id] parent page
+  themeColor?: string; // Received from vendor profile
 }
 
-export default function ProductDetails({ isLoading, productData }: ProductDetailsProps) {
+/**
+ * ProductDetails Component
+ * Path: src/storefront/components/Showroom/ProductDetails.tsx
+ */
+export default function ProductDetails({ isLoading, productData, themeColor = "#f97316" }: ProductDetailsProps) {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
-  
+
   const { basket, addToBasket } = useCartStore();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
-  // Map Supabase data to frontend structure
+  // DB mapping to ensure the component uses the correct Supabase columns
   const product = productData ? {
     id: productData.id,
     name: productData.name,
@@ -36,6 +41,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
     description: productData.description
   } : null;
 
+  // Uses the database image_url as the primary image
   const images = product ? [product.img] : [];
 
   const existingItem = basket.find(item => item.id === product?.id);
@@ -57,6 +63,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
       animate={{ opacity: 1, y: 0 }} 
       className="max-w-[1440px] mx-auto p-4 lg:p-10 space-y-10"
     >
+      {/* Header Controls */}
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-slate-400 hover:text-brand-orange font-black uppercase text-[10px] tracking-widest transition-all">
           <ChevronLeft size={14} /> Back to Showroom
@@ -67,6 +74,7 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
+        {/* Sliding Product Gallery */}
         <div className="w-full lg:flex-1 relative group">
           <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center relative overflow-hidden shadow-sm">
             <AnimatePresence mode="wait">
@@ -78,15 +86,16 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
               />
             </AnimatePresence>
 
-            <div className="absolute top-6 left-6 bg-brand-orange text-white px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg">
+            <div className="absolute top-6 left-6 bg-brand-orange text-white px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg" style={{ backgroundColor: themeColor }}>
               {product.stock && product.stock > 0 ? 'VERIFIED STOCK' : 'PRE-ORDER AVAILABLE'}
             </div>
           </div>
         </div>
 
+        {/* Action Center */}
         <div className="w-full lg:flex-1 space-y-8">
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-brand-orange">
+            <div className="flex items-center gap-2" style={{ color: themeColor }}>
               <ShieldCheck size={18} />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Authentic Supplier</span>
             </div>
@@ -96,11 +105,12 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
             <p className="text-slate-500 font-medium text-sm leading-relaxed">{product.description}</p>
           </div>
 
+          {/* Sourcing Intelligence Widget */}
           <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] border border-slate-200 dark:border-white/10 space-y-6">
             <div className="flex justify-between items-end">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Standard Price</p>
-                <p className="text-4xl font-black text-brand-orange italic">₦{Number(product.price).toLocaleString()}</p>
+                <p className="text-4xl font-black italic" style={{ color: themeColor }}>₦{Number(product.price).toLocaleString()}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Inventory</p>
@@ -108,9 +118,10 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
               </div>
             </div>
 
+            {/* Wholesale Display Logic */}
             {product.wholesale_price && (
-              <div className="p-4 bg-brand-orange/5 border border-brand-orange/20 rounded-2xl">
-                 <p className="text-[9px] font-black text-brand-orange uppercase mb-1 tracking-widest">Wholesale Privilege</p>
+              <div className="p-4 bg-white dark:bg-black/20 border-2 border-dashed rounded-2xl" style={{ borderColor: themeColor }}>
+                 <p className="text-[9px] font-black uppercase mb-1 tracking-widest" style={{ color: themeColor }}>Wholesale Privilege</p>
                  <p className="text-xl font-black dark:text-white">₦{Number(product.wholesale_price).toLocaleString()} <span className="text-[10px] text-slate-400">/ unit</span></p>
                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-1 italic">Applies when ordering {product.moq}+ units</p>
               </div>
@@ -118,13 +129,14 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
 
             <div className="space-y-3">
               <button 
-                onClick={() => addToBasket({ ...productData, quantity: 1 })}
+                onClick={() => addToBasket({ ...productData, img: productData.image_url, quantity: 1 })}
                 disabled={product.stock !== null && product.stock <= 0}
-                className="w-full py-5 bg-brand-orange text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-glow-orange active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                className="w-full py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                style={{ backgroundColor: themeColor }}
               >
                 <Plus size={16} /> Add to Cart
               </button>
-              
+
               <div className="flex items-center gap-2 px-2">
                 <AlertTriangle size={14} className="text-slate-400" />
                 <span className="text-[9px] font-black text-slate-400 uppercase">Min Order: {product.moq} Unit(s)</span>
