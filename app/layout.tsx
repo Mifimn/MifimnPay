@@ -1,37 +1,42 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { useThemeStore } from "@/src/storefront/store/useThemeStore";
 import Script from "next/script";
-
-// Metadata must be in a separate file if using "use client" in layout, 
-// but for the sake of this update, ensure your providers handle the theme.
+import { usePathname } from "next/navigation";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const { themeColor, isDark, initTheme } = useThemeStore();
+  const pathname = usePathname();
 
   useEffect(() => {
     initTheme();
   }, [initTheme]);
 
   useEffect(() => {
-    // Inject the vendor's chosen hex code into the --brand-orange variable
     if (typeof window !== 'undefined') {
       document.documentElement.style.setProperty('--brand-orange', themeColor);
     }
   }, [themeColor]);
 
+  // Determine if we are on a storefront route (e.g., /[vendor_slug])
+  const isStorefront = pathname !== '/' && 
+                       !pathname.startsWith('/dashboard') && 
+                       !pathname.startsWith('/admin') && 
+                       !pathname.startsWith('/login');
+
   return (
     <html lang="en" className={isDark ? 'dark' : ''} suppressHydrationWarning>
+      <head>
+        {/* Only attach the PWA manifest if NOT on a storefront page */}
+        {!isStorefront && <link rel="manifest" href="/manifest.json" />}
+        <meta name="theme-color" content={themeColor} />
+      </head>
       <body 
         className="antialiased bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white transition-colors duration-300"
-        style={{ 
-          // Inline style backup to ensure variable is available immediately
-          ['--brand-orange' as any]: themeColor 
-        }}
+        style={{ ['--brand-orange' as any]: themeColor }}
       >
         <AppProviders>
           {children}

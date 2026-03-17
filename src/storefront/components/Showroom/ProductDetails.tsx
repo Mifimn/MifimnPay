@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { 
   ShieldCheck, ChevronLeft, Star, 
   Plus, Box, Share2, Info, AlertTriangle,
-  ChevronRight
+  ChevronRight, Copy, CheckCircle2
 } from 'lucide-react';
 import { DetailsSkeleton } from './SkeletonLoader';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
@@ -15,15 +15,17 @@ import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 interface ProductDetailsProps {
   isLoading: boolean;
   productData?: any; // Data from Supabase
+  relatedProducts?: any[]; // Array of related products
 }
 
-export default function ProductDetails({ isLoading, productData }: ProductDetailsProps) {
+export default function ProductDetails({ isLoading, productData, relatedProducts = [] }: ProductDetailsProps) {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
 
   const { basket, addToBasket } = useCartStore();
   const { themeColor } = useThemeStore();
+  const [copied, setCopied] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
   // Database Mapping
@@ -34,10 +36,10 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
     moq: productData.moq || 1,
     img: productData.image_url,
     stock: productData.stock || 0,
-    wholesale_price: productData.wholesale_price
+    wholesale_price: productData.wholesale_price,
+    description: productData.description
   } : null;
 
-  // Gallery Logic
   const images = product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"];
 
   const existingItem = basket.find(item => item.id === product?.id);
@@ -47,6 +49,15 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [product?.id]);
+
+  // SMART COPY FOR WHATSAPP
+  const handleCopyLink = () => {
+    if (!product) return;
+    const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n📝 ${product.description || ''}\n\nView on MifimnPay: ${window.location.href}`;
+    navigator.clipboard.writeText(shareText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (isLoading) return <DetailsSkeleton />;
   if (!product) return (
@@ -67,15 +78,27 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-slate-400 hover:opacity-70 font-black uppercase text-[10px] tracking-widest transition-all">
           <ChevronLeft size={14} /> Back to Showroom
         </button>
-        <button className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400">
-          <Share2 size={16} />
-        </button>
+
+        <div className="flex items-center gap-3">
+          {/* SMART WHATSAPP SHARING BUTTON */}
+          <button 
+            onClick={handleCopyLink}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-brand-orange transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10"
+          >
+            {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+            {copied ? "Details Copied!" : "Copy for WhatsApp"}
+          </button>
+
+          <button className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400">
+            <Share2 size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
         {/* Product Visual Frame */}
         <div className="w-full lg:flex-1">
-          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] lg:rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
             <img 
               src={images[0]} 
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
@@ -170,6 +193,33 @@ export default function ProductDetails({ isLoading, productData }: ProductDetail
           </div>
         </div>
       </div>
+
+      {/* RELATED PRODUCTS SECTION */}
+      {relatedProducts.length > 0 && (
+        <section className="pt-10 border-t border-slate-200 dark:border-white/10">
+          <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-8 dark:text-white">
+            Related <span style={{ color: themeColor }}>Assets</span>
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {relatedProducts.map((item: any) => (
+              <div 
+                key={item.id} 
+                onClick={() => router.push(`/${vendor_slug}/product/${item.id}`)}
+                className="bg-white dark:bg-[#0f0f0f] rounded-[28px] border border-slate-200 dark:border-white/10 p-4 group cursor-pointer hover:scale-[1.02] transition-all"
+              >
+                <div className="aspect-square bg-slate-50 dark:bg-white/5 rounded-2xl mb-4 flex items-center justify-center p-4">
+                  <img src={item.image_url} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt="" />
+                </div>
+                <h4 className="text-[10px] font-black text-slate-500 uppercase h-8 line-clamp-2 leading-tight px-1">{item.name}</h4>
+                <div className="flex justify-between items-end mt-3 px-1">
+                  <p className="text-lg font-black" style={{ color: themeColor }}>₦{Number(item.price).toLocaleString()}</p>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase pb-1">MOQ: {item.moq}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </motion.div>
   );
 }

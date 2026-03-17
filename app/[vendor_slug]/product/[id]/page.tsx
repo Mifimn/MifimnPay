@@ -1,53 +1,96 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { Metadata } from 'next';
 import { supabase } from '@/lib/supabaseClient';
 import ProductDetails from '@/src/storefront/components/Showroom/ProductDetails';
+import ClientProductWrapper from './ClientProductWrapper'; // We'll create this below
+
+interface Props {
+  params: { vendor_slug: string; id: string };
+}
 
 /**
- * Single Product View Page
- * Path: app/[vendor_slug]/product/[id]/page.tsx
+ * 1. SERVER-SIDE METADATA
+ * This handles the "Instagram/TikTok/WhatsApp" style preview when the link is pasted.
  */
-export default function ProductPage() {
-  const params = useParams();
-  const product_id = params?.id as string;
-  const vendor_slug = params?.vendor_slug as string;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { data: product } = await supabase
+    .from('menu_items')
+    .select('name, description, image_url, price')
+    .eq('id', params.id)
+    .single();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [productData, setProductData] = useState<any>(null);
+  if (!product) return { title: 'Product Not Found' };
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!product_id) return;
-      setIsLoading(true);
+  const title = `${product.name} | MifimnPay`;
+  const description = product.description || `Sourcing price: ₦${Number(product.price).toLocaleString()}`;
 
-      try {
-        // Fetch only the specific product matching the ID from the URL
-        const { data, error } = await supabase
-          .from('menu_items')
-          .select('*')
-          .eq('id', product_id)
-          .single(); // Get one single item
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://mifimnpay.com.ng/${params.vendor_slug}/product/${params.id}`,
+      siteName: 'MifimnPay',
+      images: [
+        {
+          url: product.image_url || '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [product.image_url || '/og-image.png'],
+    },
+  };
+}
 
-        if (error) throw error;
-        setProductData(data);
-      } catch (error) {
-        console.error("Error fetching product details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+/**
+ * 2. DATA FETCHING (Server Component)
+ */
+export default async function ProductPage({ params }: Props) {
+  // Fetch main product
+  const { data: product } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('id', params.id)
+    .single();
 
-    fetchProduct();
-  }, [product_id]);
+  // Fetch related products (same vendor, excluding current product)
+  const { data: related } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('user_id', product?.user_id)
+    .eq('is_active', true)
+    .neq('id', params.id)
+    .limit(4);
+
+  // Fetch vendor profile for the logo
+  const { data: vendorProfile } = await supabase
+    .from('profiles')
+    .select('logo_url, business_name')
+    .eq('id', product?.user_id)
+    .single();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505]">
-      <ProductDetails 
-        isLoading={isLoading} 
-        productData={productData} 
-      />
-    </div>
+    <>
+      {/* Set the Browser Tab Icon to the Vendor's Logo */}
+      {vendorProfile?.logo_url && (
+        <link rel="icon" href={vendorProfile.logo_url} />
+      )}
+
+      <main className="min-h-screen bg-white dark:bg-[#050505]">
+        <ProductDetails 
+          isLoading={false} 
+          productData={product} 
+          relatedProducts={related || []} 
+        />
+      </main>
+    </>
   );
 }
