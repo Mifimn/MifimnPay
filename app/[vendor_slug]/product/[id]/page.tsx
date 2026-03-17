@@ -3,66 +3,80 @@ import { supabase } from '@/lib/supabaseClient';
 import ProductDetails from '@/src/storefront/components/Showroom/ProductDetails';
 
 interface Props {
-  // In Next.js 15, params MUST be a Promise
   params: Promise<{ vendor_slug: string; id: string }>;
 }
 
 /**
- * 1. WHATSAPP/SOCIAL PREVIEW METADATA
+ * SOCIAL PREVIEW METADATA
+ * Uses Vendor Slug/Name for professional branding
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // You must AWAIT params before using the ID
-  const { id } = await params;
+  const { id, vendor_slug } = await params;
 
   const { data: product } = await supabase
     .from('menu_items')
     .select('name, description, image_url, price')
-    // Use double quotes around the ID variable for strict PostgREST string matching
-    .or(`short_id.eq."${id}",id.eq."${id}"`)
+    .eq('id', id)
     .maybeSingle();
 
   if (!product) return { title: 'Product Not Found' };
 
+  // Use the vendor slug for the title branding
+  const displayTitle = `${product.name} | ${vendor_slug.toUpperCase()}`;
+
   return {
-    title: `${product.name} | Sourcing`,
-    description: product.description,
+    title: displayTitle,
+    description: product.description || `View ${product.name} on our showroom.`,
     openGraph: {
-      title: product.name,
-      description: `₦${Number(product.price).toLocaleString()} - View details on our showroom.`,
+      title: displayTitle,
+      description: `₦${Number(product.price).toLocaleString()} - Available now.`,
+      url: `https://mifimnpay.com.ng/${vendor_slug}/product/${id}`,
+      siteName: vendor_slug.toUpperCase(),
+      images: [
+        {
+          url: product.image_url || '',
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: displayTitle,
       images: [product.image_url || ''],
     },
   };
 }
 
 /**
- * 2. MAIN SERVER COMPONENT
+ * MAIN SERVER COMPONENT
  */
 export default async function ProductPage({ params }: Props) {
-  // You must AWAIT params here too
   const { id, vendor_slug } = await params;
 
-  // Fetch Product by short_id OR standard uuid
+  // 1. Fetch Product by standard UUID
   const { data: product } = await supabase
     .from('menu_items')
     .select('*')
-    .or(`short_id.eq."${id}",id.eq."${id}"`)
+    .eq('id', id)
     .maybeSingle();
 
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
         <div className="text-center">
-          <h2 className="text-2xl font-black uppercase italic dark:text-white leading-none">Asset Not Found</h2>
-          <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase tracking-widest">The link may be broken or expired.</p>
-          <a href={`/${vendor_slug}`} className="mt-8 inline-block text-brand-orange text-[10px] font-black uppercase border-b-2 border-brand-orange pb-1">
-            Return to Showroom
+          <h2 className="text-2xl font-black uppercase italic dark:text-white">Product Not Found</h2>
+          <a href={`/${vendor_slug}`} className="mt-6 inline-block text-brand-orange text-[10px] font-black uppercase border-b-2 border-brand-orange pb-1">
+            Back to Showroom
           </a>
         </div>
       </div>
     );
   }
 
-  // Fetch Related Items from same vendor
+  // 2. Fetch Related Items from same vendor
   const { data: related } = await supabase
     .from('menu_items')
     .select('*')
@@ -71,7 +85,7 @@ export default async function ProductPage({ params }: Props) {
     .neq('id', product.id)
     .limit(4);
 
-  // Fetch Vendor Profile for the copy tool
+  // 3. Fetch Vendor Profile for Business Name
   const { data: vendor } = await supabase
     .from('profiles')
     .select('business_name')
