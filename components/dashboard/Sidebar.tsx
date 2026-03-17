@@ -62,7 +62,10 @@ export default function Sidebar() {
   ];
 
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
-    <div className="flex flex-col h-full bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+    <div 
+      className="flex flex-col h-full bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-r border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]"
+      style={{ '--brand-orange': '#ff7d1a' } as any} // FORCES LOCAL SCOPE TO DEFAULT ORANGE
+    >
       {/* Brand Header */}
       <div className="p-6 flex items-center justify-between border-b border-white/40 dark:border-white/10">
         <div className="flex items-center gap-3">
@@ -82,7 +85,7 @@ export default function Sidebar() {
           <Link 
             href="/generate" 
             onClick={() => onClose?.()}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-brand-orange text-white rounded-[20px] font-black text-[10px] uppercase tracking-[0.2em] shadow-glow-orange hover:scale-[1.02] active:scale-95 transition-all"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-[#ff7d1a] text-white rounded-[20px] font-black text-[10px] uppercase tracking-[0.2em] shadow-glow-orange hover:scale-[1.02] active:scale-95 transition-all"
           >
             <FilePlus size={16} />
             Generate Receipt
@@ -100,17 +103,17 @@ export default function Sidebar() {
               onClick={() => onClose?.()}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
                 isActive 
-                  ? 'bg-white dark:bg-white/10 text-brand-orange shadow-sm border border-brand-orange/20' 
+                  ? 'bg-white dark:bg-white/10 text-[#ff7d1a] shadow-sm border border-[#ff7d1a]/20' 
                   : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5'
               }`}
             >
-              <Icon size={18} className={isActive ? 'text-brand-orange' : ''} />
+              <Icon size={18} className={isActive ? 'text-[#ff7d1a]' : ''} />
               {link.name}
             </Link>
           )
         })}
 
-        {/* View Storefront Link - UPDATED FOR BROWSER DIRECT */}
+        {/* View Storefront Link */}
         {profile?.slug && (
           <div className="pt-4 mt-4 border-t border-white/20 dark:border-white/5">
              <a 
@@ -119,12 +122,11 @@ export default function Sidebar() {
               rel="external noreferrer"
               onClick={(e) => {
                 onClose?.();
-                // Force break out of PWA frame if in standalone mode
                 if (window.matchMedia('(display-mode: standalone)').matches) {
                    window.open(`/${profile.slug}`, '_system'); 
                 }
               }}
-              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-white/5 border border-transparent hover:border-brand-orange/30 hover:text-brand-orange transition-all"
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-white/5 border border-transparent hover:border-[#ff7d1a]/30 hover:text-[#ff7d1a] transition-all"
             >
               <div className="flex items-center gap-3">
                 <Globe size={16} />
@@ -159,7 +161,10 @@ export default function Sidebar() {
       `}} />
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/10 z-40 flex items-center justify-between px-4">
+      <div 
+        className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/10 z-40 flex items-center justify-between px-4"
+        style={{ '--brand-orange': '#ff7d1a' } as any} // FORCES LOCAL SCOPE TO DEFAULT ORANGE
+      >
         <div className="flex items-center gap-3">
           <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
           <span className="font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">MifimnPay</span>
