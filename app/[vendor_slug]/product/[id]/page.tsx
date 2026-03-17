@@ -35,14 +35,23 @@ export default function VendorShowroomPage() {
         if (profileData) {
           setProfile(profileData);
 
-          // 2. Fetch Products specifically for this vendor
-          const { data: products } = await supabase
-            .from('products')
+          // 2. Fetch Products specifically for this vendor from 'menu_items' table
+          const { data: products, error: prodError } = await supabase
+            .from('menu_items') // FIXED: Corrected table name from 'products'
             .select('*')
             .eq('user_id', profileData.id)
+            .eq('is_active', true) // Only show active products
             .order('created_at', { ascending: false });
 
-          setVendorProducts(products || []);
+          if (prodError) throw prodError;
+
+          // 3. Map database image_url to the 'img' property expected by ShowroomMain
+          const mappedProducts = (products || []).map(p => ({
+            ...p,
+            img: p.image_url // Mapping database column to component prop
+          }));
+
+          setVendorProducts(mappedProducts);
         }
       } catch (error) {
         console.error("Storefront fetch error:", error);
@@ -54,17 +63,21 @@ export default function VendorShowroomPage() {
     fetchVendorData();
   }, [vendor_slug]);
 
+  const onAddInquiry = (product: any) => {
+    // Placeholder for cart logic
+    console.log("Added to cart:", product.name);
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] transition-colors duration-500">
 
-      {/* 3. Scrolling Promotion Marquee (Top-bar style) */}
+      {/* Scrolling Promotion Marquee */}
       {profile?.banner_type === 'text' && profile?.promo_texts?.some((t: string) => t.length > 0) && (
         <div className="bg-slate-900 dark:bg-black text-white py-3 overflow-hidden whitespace-nowrap border-b border-white/10 relative z-20">
            <div className="inline-block animate-marquee">
              {profile.promo_texts.map((text: string, i: number) => (
                text && <span key={i} className="mx-12 font-black uppercase text-[10px] tracking-[0.2em] italic">{text}</span>
              ))}
-             {/* Repeat for seamless infinite loop */}
              {profile.promo_texts.map((text: string, i: number) => (
                text && <span key={`rep-${i}`} className="mx-12 font-black uppercase text-[10px] tracking-[0.2em] italic">{text}</span>
              ))}
@@ -74,8 +87,7 @@ export default function VendorShowroomPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-12 relative z-10">
 
-        {/* 4. High-Impact 3D Hero Section */}
-        {/* Dynamically switches between image banners or text promotions */}
+        {/* Hero Section */}
         <HeroSlideshow 
           isLoading={isLoading}
           bannerType={profile?.banner_type}
@@ -84,15 +96,17 @@ export default function VendorShowroomPage() {
           themeColor={profile?.theme_color}
         />
 
-        {/* 5. Main Showroom Product Grid */}
+        {/* Main Showroom Product Grid */}
         <ShowroomMain 
           isSkeleton={isLoading} 
           products={vendorProducts} 
           vendorName={profile?.business_name || vendor_slug}
           aboutText={profile?.about_text}
+          onAddInquiry={onAddInquiry}
+          themeColor={profile?.theme_color || '#f97316'} // Pass dynamic theme
         />
 
-        {/* 6. Empty State / Coming Soon */}
+        {/* Empty State */}
         {!isLoading && vendorProducts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
             <div 

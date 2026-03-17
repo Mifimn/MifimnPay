@@ -6,31 +6,29 @@ import { useRouter, useParams } from 'next/navigation';
 import { ChevronRight, Box, Tag } from 'lucide-react';
 import HeroSlideshow from './HeroSlideshow';
 import { FeedSkeleton } from './SkeletonLoader';
-import { Product } from '@/storefront/store/useCartStore';
 
 interface ShowroomMainProps {
   onAddInquiry: (product: any) => void;
   isSkeleton: boolean;
   products: any[];
   vendorName?: string;
+  themeColor?: string; // Added to match brand
 }
 
-export default function ShowroomMain({ onAddInquiry, isSkeleton, products, vendorName }: ShowroomMainProps) {
+export default function ShowroomMain({ onAddInquiry, isSkeleton, products, vendorName, themeColor = "#f97316" }: ShowroomMainProps) {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
 
   return (
     <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row gap-6 p-4 lg:p-10">
-      {/* ... Sidebar remains the same ... */}
-
       <div className="flex-1 space-y-6">
         <HeroSlideshow isLoading={isSkeleton} />
 
         <section className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <h3 className="font-black text-xl lg:text-2xl uppercase tracking-tighter dark:text-white">
-              {vendorName ? <span className="text-brand-orange">{vendorName}'s</span> : 'Official'} Catalog
+              {vendorName ? <span style={{ color: themeColor }}>{vendorName}'s</span> : 'Official'} Catalog
             </h3>
           </div>
 
@@ -45,10 +43,10 @@ export default function ShowroomMain({ onAddInquiry, isSkeleton, products, vendo
                   className="relative bg-white dark:bg-[#0f0f0f] rounded-[24px] overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm transition-all group flex flex-col h-full cursor-pointer"
                   onClick={() => router.push(`/${vendor_slug}/product/${prod.id}`)}
                 >
-                  <div className="h-48 bg-slate-50 dark:bg-white/5 flex items-center justify-center p-4 relative overflow-hidden">
+                  <div className="h-48 bg-slate-50 dark:bg-black/20 flex items-center justify-center p-4 relative overflow-hidden">
                     <img src={prod.image_url || prod.img} alt={prod.name} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                     {prod.wholesale_price && (
-                      <div className="absolute top-3 right-3 bg-brand-orange/90 backdrop-blur-md text-white p-1.5 rounded-lg shadow-lg">
+                      <div className="absolute top-3 right-3 text-white p-1.5 rounded-lg shadow-lg" style={{ backgroundColor: themeColor }}>
                         <Tag size={12} />
                       </div>
                     )}
@@ -62,9 +60,14 @@ export default function ShowroomMain({ onAddInquiry, isSkeleton, products, vendo
                         {prod.moq > 1 && <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">MOQ: {prod.moq} Units</span>}
                       </div>
                     </div>
+                    
+                    {/* UPDATED BUTTON: Fixed text colors for Dark Theme */}
                     <button 
                       onClick={(e) => { e.stopPropagation(); onAddInquiry(prod); }}
-                      className="w-full mt-3 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-brand-orange hover:text-white transition-all"
+                      className="w-full mt-3 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:text-white group-hover:bg-brand-orange transition-all"
+                      style={{ 
+                        '--hover-bg': themeColor 
+                      } as any}
                     >
                       Quick Add
                     </button>
