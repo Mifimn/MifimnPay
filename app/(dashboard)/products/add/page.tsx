@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, UploadCloud, Tag, Package, Save, Loader2, Layers, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, UploadCloud, Tag, Package, Save, Loader2, Layers, X, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -15,8 +15,11 @@ function AddProductForm() {
   const editId = searchParams.get('id');
 
   const [isSaving, setIsSaving] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Multi-image state
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -42,7 +45,13 @@ function AddProductForm() {
             stock: data.stock?.toString() || '',
             is_active: data.is_active,
           });
-          setImagePreview(data.image_url);
+
+          // Load existing images array, fallback to single image_url if upgrading from old version
+          const loadedImages = data.image_urls && data.image_urls.length > 0 
+            ? data.image_urls 
+            : (data.image_url ? [data.image_url] : []);
+
+          setExistingImages(loadedImages);
         }
       };
       fetchProduct();
@@ -50,11 +59,22 @@ function AddProductForm() {
   }, [editId, user]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setNewImageFiles((prev) => [...prev, ...filesArray]);
+
+      const previewsArray = filesArray.map(file => URL.createObjectURL(file));
+      setNewImagePreviews((prev) => [...prev, ...previewsArray]);
     }
+  };
+
+  const removeExistingImage = (indexToRemove: number) => {
+    setExistingImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const removeNewImage = (indexToRemove: number) => {
+    setNewImageFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+    setNewImagePreviews((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -63,17 +83,17 @@ function AddProductForm() {
     setIsSaving(true);
 
     try {
-      let finalImageUrl = imagePreview;
+      const uploadedUrls: string[] = [];
 
-      // 1. Upload Image if a new one is selected
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+      // 1. Upload all NEW images
+      for (const file of newImageFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(filePath, imageFile);
+          .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
@@ -81,8 +101,11 @@ function AddProductForm() {
           .from('product-images')
           .getPublicUrl(filePath);
 
-        finalImageUrl = urlData.publicUrl;
+        uploadedUrls.push(urlData.publicUrl);
       }
+
+      // Combine old images kept by user with newly uploaded images
+      const finalImageUrls = [...existingImages, ...uploadedUrls];
 
       // 2. Prepare Payload
       const payload = {
@@ -93,7 +116,10 @@ function AddProductForm() {
         wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price) : null,
         moq: parseInt(formData.moq),
         stock: formData.stock ? parseInt(formData.stock) : null,
-        image_url: finalImageUrl,
+        // Save first image as main image for backward compatibility
+        image_url: finalImageUrls.length > 0 ? finalImageUrls[0] : null, 
+        // Save the full array of images
+        image_urls: finalImageUrls, 
         is_active: formData.is_active,
         updated_at: new Date(),
       };
@@ -106,7 +132,7 @@ function AddProductForm() {
       if (dbError) throw dbError;
 
       router.push('/products');
-      router.refresh(); // Force refresh to show new data
+      router.refresh(); 
     } catch (err: any) {
       console.error(err);
       alert(err.message || "An error occurred while saving");
@@ -114,6 +140,8 @@ function AddProductForm() {
       setIsSaving(false);
     }
   };
+
+  const totalImages = existingImages.length + newImagePreviews.length;
 
   return (
     <form onSubmit={handleSave} className="max-w-5xl mx-auto pb-12 space-y-6 px-4 md:px-0">
@@ -146,29 +174,51 @@ function AddProductForm() {
             </div>
           </section>
 
-          {/* Image Upload Logic */}
-          <section className="bg-white dark:bg-[#0a0a0a] p-8 rounded-[32px] border border-slate-200 dark:border-white/10 relative group min-h-[250px] flex flex-col items-center justify-center overflow-hidden">
-            {imagePreview ? (
-              <div className="relative w-full h-full">
-                <img src={imagePreview} className="w-full h-64 object-contain rounded-xl" alt="Preview" />
-                <button 
-                  type="button" 
-                  onClick={() => {setImagePreview(null); setImageFile(null);}}
-                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-lg"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer space-y-3">
-                <UploadCloud size={40} className="text-slate-300 group-hover:text-brand-orange transition-colors" />
-                <div className="text-center">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Upload Visual Asset</p>
-                   <p className="text-[8px] text-slate-500 uppercase mt-1">PNG, JPG or JPEG</p>
-                </div>
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              </label>
-            )}
+          {/* Multi-Image Upload Section */}
+          <section className="bg-white dark:bg-[#0a0a0a] p-8 rounded-[32px] border border-slate-200 dark:border-white/10 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Visual Assets Gallery</h2>
+              <span className="text-[9px] font-bold text-slate-500 uppercase">{totalImages} / 5 Images</span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <AnimatePresence>
+                {/* Render Existing Images from DB */}
+                {existingImages.map((url, index) => (
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} key={`existing-${index}`} className="relative aspect-square rounded-2xl overflow-hidden group border border-slate-200 dark:border-white/10">
+                    <img src={url} className="w-full h-full object-cover" alt={`Existing ${index}`} />
+                    <button type="button" onClick={() => removeExistingImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10">
+                      <X size={14} />
+                    </button>
+                    {index === 0 && <div className="absolute bottom-0 left-0 right-0 bg-brand-orange text-white text-[8px] font-black uppercase tracking-widest text-center py-1">Main Image</div>}
+                  </motion.div>
+                ))}
+
+                {/* Render Newly Selected Previews */}
+                {newImagePreviews.map((preview, index) => (
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} key={`new-${index}`} className="relative aspect-square rounded-2xl overflow-hidden group border border-brand-orange/50 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                    <img src={preview} className="w-full h-full object-cover" alt={`Preview ${index}`} />
+                    <button type="button" onClick={() => removeNewImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10">
+                      <X size={14} />
+                    </button>
+                    <div className="absolute inset-0 bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="text-brand-orange font-black text-[10px] uppercase bg-white dark:bg-black px-2 py-1 rounded-lg">New</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {/* Upload Button */}
+              {totalImages < 5 && (
+                <label className="aspect-square flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-slate-300 dark:border-white/20 rounded-2xl hover:border-brand-orange hover:bg-brand-orange/5 transition-all group">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-brand-orange group-hover:text-white transition-colors text-slate-400 mb-3">
+                    <Plus size={20} />
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-orange transition-colors">Add Image</p>
+                  <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+                </label>
+              )}
+            </div>
           </section>
         </div>
 
