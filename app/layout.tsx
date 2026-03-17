@@ -17,11 +17,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      document.documentElement.style.setProperty('--brand-orange', themeColor);
-    }
-  }, [themeColor]);
+      // Logic: If path starts with dashboard/admin/login, use default Mifimn Orange
+      const isPlatform = pathname.startsWith('/dashboard') || 
+                         pathname.startsWith('/admin') || 
+                         pathname.startsWith('/login') || 
+                         pathname === '/';
 
-  // Determine if we are on a storefront route (e.g., /[vendor_slug])
+      const finalColor = isPlatform ? "#ff7d1a" : themeColor;
+      document.documentElement.style.setProperty('--brand-orange', finalColor);
+    }
+  }, [themeColor, pathname]);
+
   const isStorefront = pathname !== '/' && 
                        !pathname.startsWith('/dashboard') && 
                        !pathname.startsWith('/admin') && 
@@ -30,14 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={isDark ? 'dark' : ''} suppressHydrationWarning>
       <head>
-        {/* Only attach the PWA manifest if NOT on a storefront page */}
         {!isStorefront && <link rel="manifest" href="/manifest.json" />}
-        <meta name="theme-color" content={themeColor} />
       </head>
-      <body 
-        className="antialiased bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white transition-colors duration-300"
-        style={{ ['--brand-orange' as any]: themeColor }}
-      >
+      <body className="antialiased bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white transition-colors duration-300">
         <AppProviders>
           {children}
         </AppProviders>
