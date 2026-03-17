@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Package, MoreHorizontal, Image as ImageIcon, ArrowUpRight, Loader2, Tag } from 'lucide-react';
+import { Search, Plus, Package, Edit, Trash2, Image as ImageIcon, Loader2, Tag } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import Link from 'next/link'; // ADDED THIS IMPORT
+import Link from 'next/link';
 
-// Product Type supporting both Normal and Wholesale operations
 type Product = {
   id: string;
   name: string;
@@ -46,6 +45,28 @@ export default function ProductsPage() {
     fetchProducts();
   }, [user]);
 
+  // DELETE FUNCTIONALITY
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update UI immediately after successful deletion
+      setProducts(prev => prev.filter(product => product.id !== id));
+    } catch (error: any) {
+      console.error("Error deleting product:", error);
+      alert(error.message || "Failed to delete product");
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -66,7 +87,6 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        {/* FIXED: Wrapped button with Link */}
         <Link href="/products/add">
           <button className="bg-brand-black text-brand-paper px-6 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-black/10">
             <Plus size={18} />
@@ -176,9 +196,23 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td className="px-8 py-4 text-right">
-                        <button className="p-2 text-brand-gray hover:text-brand-black hover:bg-brand-paper rounded-xl transition-all border border-transparent hover:border-brand-border shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100">
-                          <MoreHorizontal size={18} />
-                        </button>
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+
+                          {/* EDIT BUTTON */}
+                          <Link href={`/products/add?id=${product.id}`}>
+                            <button className="p-2 text-brand-gray hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800 shadow-sm" title="Edit">
+                              <Edit size={16} />
+                            </button>
+                          </Link>
+
+                          {/* DELETE BUTTON */}
+                          <button 
+                            onClick={() => handleDelete(product.id)}
+                            className="p-2 text-brand-gray hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all border border-transparent hover:border-red-200 dark:hover:border-red-800 shadow-sm" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+
+                        </div>
                       </td>
                     </motion.tr>
                   ))}

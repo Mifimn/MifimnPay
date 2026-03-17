@@ -23,24 +23,29 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
-  
+
   const { basket, addToBasket } = useCartStore();
   const { themeColor } = useThemeStore();
   const [copied, setCopied] = useState(false);
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
-  // Database Mapping - Reverted to strictly use productData.id (UUID)
+  // Database Mapping
   const product = productData ? {
     id: productData.id,
     name: productData.name,
     price: productData.price,
     moq: productData.moq || 1,
     img: productData.image_url,
+    image_urls: productData.image_urls || [], // Array of multiple images
     stock: productData.stock || 0,
     wholesale_price: productData.wholesale_price,
     description: productData.description
   } : null;
 
-  const images = product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"];
+  // Multi-image logic fallback
+  const images = product?.image_urls?.length > 0 
+    ? product.image_urls 
+    : (product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"]);
 
   const existingItem = basket.find(item => item.id === product?.id);
   const currentQty = existingItem ? Number(existingItem.quantity) : 0;
@@ -50,20 +55,19 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     window.scrollTo(0, 0);
   }, [product?.id]);
 
-  // SMART COPY TOOL (Strictly using UUID as requested)
   const handleCopyLink = () => {
     if (!product) return;
-    
     const baseUrl = window.location.origin;
-    // Using Full UUID link for stability
     const fullUrl = `${baseUrl}/${vendor_slug}/product/${product.id}`;
-    
     const shareText = `*${product.name}*\n\n💰 Price: ₦${Number(product.price).toLocaleString()}\n📦 MOQ: ${product.moq} Units\n\nView on ${vendorName || vendor_slug}:\n${fullUrl}`;
-    
+
     navigator.clipboard.writeText(shareText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const nextImage = () => setCurrentImgIndex((prev) => (prev + 1) % images.length);
+  const prevImage = () => setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length);
 
   if (isLoading) return <DetailsSkeleton />;
   if (!product) return (
@@ -79,14 +83,12 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
       animate={{ opacity: 1, y: 0 }} 
       className="max-w-[1440px] mx-auto p-4 lg:p-10 space-y-10"
     >
-      {/* Header Controls */}
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-slate-400 hover:opacity-70 font-black uppercase text-[10px] tracking-widest transition-all">
           <ChevronLeft size={14} /> Back to Showroom
         </button>
 
         <div className="flex items-center gap-3">
-          {/* STABLE UUID COPY BUTTON */}
           <button 
             onClick={handleCopyLink}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-brand-orange transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10"
@@ -102,21 +104,49 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
-        {/* Product Visual Frame */}
+        {/* IMAGE SLIDER FRAME */}
         <div className="w-full lg:flex-1">
           <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
-            <img 
-              src={images[0]} 
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
-              alt={product.name} 
-            />
-            <div className="absolute top-6 left-6 text-white px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg" style={{ backgroundColor: themeColor }}>
+            <AnimatePresence mode="wait">
+              <motion.img 
+                key={currentImgIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                src={images[currentImgIndex]} 
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
+                alt={product.name} 
+              />
+            </AnimatePresence>
+
+            {/* Slider Controls (Only show if multiple images) */}
+            {images.length > 1 && (
+              <>
+                <button onClick={prevImage} className="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-white/80 dark:bg-black/50 text-slate-900 dark:text-white rounded-full shadow-lg backdrop-blur-md hover:scale-110 transition-all z-10">
+                  <ChevronLeft size={20} />
+                </button>
+                <button onClick={nextImage} className="absolute right-6 top-1/2 -translate-y-1/2 p-3 bg-white/80 dark:bg-black/50 text-slate-900 dark:text-white rounded-full shadow-lg backdrop-blur-md hover:scale-110 transition-all z-10">
+                  <ChevronRight size={20} />
+                </button>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 bg-black/20 dark:bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full">
+                  {images.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`h-1.5 rounded-full transition-all duration-300 ${currentImgIndex === idx ? 'w-4' : 'w-1.5 bg-white/50'}`}
+                      style={{ backgroundColor: currentImgIndex === idx ? themeColor : undefined }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="absolute top-6 left-6 text-white px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg z-10" style={{ backgroundColor: themeColor }}>
               VERIFIED STOCK
             </div>
           </div>
         </div>
 
-        {/* Action Center */}
         <div className="w-full lg:flex-1 space-y-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2" style={{ color: themeColor }}>
@@ -134,7 +164,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             </div>
           </div>
 
-          {/* Sourcing Intelligence Widget */}
           <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] border border-slate-200 dark:border-white/10 space-y-6">
             <div className="flex justify-between items-end">
               <div>
@@ -147,40 +176,43 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
               </div>
             </div>
 
-            {/* Smart Add Options */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* RETAIL vs WHOLESALE BUTTONS */}
+            <div className={`grid gap-3 ${product.wholesale_price ? 'grid-cols-2' : 'grid-cols-1'}`}>
+
+              {/* Add Retail (1 Unit) */}
               <button 
-                onClick={() => addToBasket({ ...productData, img: productData.image_url }, 1)}
+                onClick={() => addToBasket({ ...productData, img: productData.image_url, price: productData.price }, 1)}
                 disabled={currentQty >= maxStock}
                 className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                style={{ 
-                    backgroundColor: themeColor, 
-                    boxShadow: `0 10px 20px ${themeColor}33`,
-                    color: '#FFFFFF' 
-                }}
+                style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}33`, color: '#FFFFFF' }}
               >
-                <Plus size={16} /> Add Full Unit
+                <Plus size={16} /> Add Retail
               </button>
 
-              <button 
-                onClick={() => addToBasket({ ...productData, img: productData.image_url }, 0.5)}
-                disabled={currentQty < 1 || currentQty + 0.5 > maxStock}
-                className={`py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                  currentQty >= 1 
-                  ? 'bg-white dark:bg-white/10 border shadow-sm active:scale-95' 
-                  : 'bg-slate-200 dark:bg-white/5 text-slate-400 cursor-not-allowed'
-                }`}
-                style={{ 
-                    borderColor: currentQty >= 1 ? themeColor : 'transparent', 
-                    color: currentQty >= 1 ? themeColor : undefined 
-                }}
-              >
-                <Box size={16} /> Add Half (0.5)
-              </button>
+              {/* Add Wholesale (1 Unit) - Overrides price with wholesale price */}
+              {product.wholesale_price && (
+                <button 
+                  onClick={() => addToBasket({ ...productData, img: productData.image_url, price: productData.wholesale_price }, 1)}
+                  disabled={currentQty >= maxStock}
+                  className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                >
+                  <Box size={16} /> Add Wholesale
+                </button>
+              )}
             </div>
+
+            <AnimatePresence>
+              {product.wholesale_price && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-2 text-slate-400">
+                  <Info size={14} className="mt-0.5 shrink-0" />
+                  <p className="text-[9px] font-bold uppercase italic leading-tight">
+                    Wholesale option is available. Ensure you meet the MOQ ({product.moq} Units) if required by the vendor before checking out.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Pricing Display */}
           <div className="grid grid-cols-3 gap-2">
             {[ 
                { label: "Retail Price", value: `₦${Number(product.price).toLocaleString()}` }, 
@@ -196,7 +228,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
         </div>
       </div>
 
-      {/* RELATED PRODUCTS SECTION */}
+      {/* RELATED PRODUCTS */}
       {relatedProducts.length > 0 && (
         <section className="pt-10 border-t border-slate-200 dark:border-white/10">
           <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-8 dark:text-white">
