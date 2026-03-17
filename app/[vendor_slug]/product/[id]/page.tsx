@@ -3,17 +3,19 @@ import { supabase } from '@/lib/supabaseClient';
 import ProductDetails from '@/src/storefront/components/Showroom/ProductDetails';
 
 interface Props {
-  params: { vendor_slug: string; id: string };
+  params: Promise<{ vendor_slug: string; id: string }>;
 }
 
 /**
  * SOCIAL PREVIEW METADATA
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id, vendor_slug } = await params;
+
   const { data: product } = await supabase
     .from('menu_items')
     .select('name, description, image_url, price')
-    .or(`short_id.eq.${params.id},id.eq.${params.id}`) // Checks both long and short IDs
+    .or(`short_id.eq."${id}",id.eq."${id}"`)
     .maybeSingle();
 
   if (!product) return { title: 'Product Not Found' };
@@ -33,11 +35,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * MAIN SERVER COMPONENT
  */
 export default async function ProductPage({ params }: Props) {
+  // Await params to get the ID and Slug
+  const { id, vendor_slug } = await params;
+
   // 1. Fetch Product by short_id OR standard uuid
-  const { data: product, error } = await supabase
+  const { data: product } = await supabase
     .from('menu_items')
     .select('*')
-    .or(`short_id.eq.${params.id},id.eq.${params.id}`)
+    .or(`short_id.eq."${id}",id.eq."${id}"`)
     .maybeSingle();
 
   if (!product) {
@@ -45,7 +50,8 @@ export default async function ProductPage({ params }: Props) {
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
         <div className="text-center">
           <h2 className="text-2xl font-black uppercase italic dark:text-white">Asset Not Found</h2>
-          <p className="text-slate-500 text-xs font-bold mt-2 uppercase">The link may be broken or expired.</p>
+          <p className="text-slate-500 text-xs font-bold mt-2 uppercase tracking-widest">The link may be broken or expired.</p>
+          <a href={`/${vendor_slug}`} className="mt-6 inline-block text-brand-orange text-[10px] font-black uppercase border-b-2 border-brand-orange">Return to Showroom</a>
         </div>
       </div>
     );
@@ -60,7 +66,7 @@ export default async function ProductPage({ params }: Props) {
     .neq('id', product.id)
     .limit(4);
 
-  // 3. Fetch Vendor Profile (to get Business Name for the share tool)
+  // 3. Fetch Vendor Profile
   const { data: vendor } = await supabase
     .from('profiles')
     .select('business_name')
@@ -73,7 +79,7 @@ export default async function ProductPage({ params }: Props) {
         isLoading={false} 
         productData={product} 
         relatedProducts={related || []} 
-        vendorName={vendor?.business_name || params.vendor_slug}
+        vendorName={vendor?.business_name || vendor_slug}
       />
     </main>
   );
