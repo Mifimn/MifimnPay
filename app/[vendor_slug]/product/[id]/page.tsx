@@ -3,18 +3,21 @@ import { supabase } from '@/lib/supabaseClient';
 import ProductDetails from '@/src/storefront/components/Showroom/ProductDetails';
 
 interface Props {
+  // In Next.js 15, params MUST be a Promise
   params: Promise<{ vendor_slug: string; id: string }>;
 }
 
 /**
- * SOCIAL PREVIEW METADATA
+ * 1. WHATSAPP/SOCIAL PREVIEW METADATA
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id, vendor_slug } = await params;
+  // You must AWAIT params before using the ID
+  const { id } = await params;
 
   const { data: product } = await supabase
     .from('menu_items')
     .select('name, description, image_url, price')
+    // Use double quotes around the ID variable for strict PostgREST string matching
     .or(`short_id.eq."${id}",id.eq."${id}"`)
     .maybeSingle();
 
@@ -32,13 +35,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * MAIN SERVER COMPONENT
+ * 2. MAIN SERVER COMPONENT
  */
 export default async function ProductPage({ params }: Props) {
-  // Await params to get the ID and Slug
+  // You must AWAIT params here too
   const { id, vendor_slug } = await params;
 
-  // 1. Fetch Product by short_id OR standard uuid
+  // Fetch Product by short_id OR standard uuid
   const { data: product } = await supabase
     .from('menu_items')
     .select('*')
@@ -49,15 +52,17 @@ export default async function ProductPage({ params }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
         <div className="text-center">
-          <h2 className="text-2xl font-black uppercase italic dark:text-white">Asset Not Found</h2>
-          <p className="text-slate-500 text-xs font-bold mt-2 uppercase tracking-widest">The link may be broken or expired.</p>
-          <a href={`/${vendor_slug}`} className="mt-6 inline-block text-brand-orange text-[10px] font-black uppercase border-b-2 border-brand-orange">Return to Showroom</a>
+          <h2 className="text-2xl font-black uppercase italic dark:text-white leading-none">Asset Not Found</h2>
+          <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase tracking-widest">The link may be broken or expired.</p>
+          <a href={`/${vendor_slug}`} className="mt-8 inline-block text-brand-orange text-[10px] font-black uppercase border-b-2 border-brand-orange pb-1">
+            Return to Showroom
+          </a>
         </div>
       </div>
     );
   }
 
-  // 2. Fetch Related Items
+  // Fetch Related Items from same vendor
   const { data: related } = await supabase
     .from('menu_items')
     .select('*')
@@ -66,7 +71,7 @@ export default async function ProductPage({ params }: Props) {
     .neq('id', product.id)
     .limit(4);
 
-  // 3. Fetch Vendor Profile
+  // Fetch Vendor Profile for the copy tool
   const { data: vendor } = await supabase
     .from('profiles')
     .select('business_name')
