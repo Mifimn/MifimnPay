@@ -3,11 +3,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, X, Send } from 'lucide-react';
+import { useCartStore } from '@/src/storefront/store/useCartStore';
 
-/**
- * Interface for Product Item in the Basket
- *
- */
 interface BasketItem {
   id: string | number;
   img: string;
@@ -19,14 +16,8 @@ interface InquiryBasketProps {
   onRemove: (id: string | number) => void;
 }
 
-/**
- * InquiryBasket Component
- * Path: src/storefront/components/Showroom/InquiryBasket.tsx
- * * Provides a floating, 3D-styled quick access sidebar for the shopping basket.
- * Optimized for Next.js and TypeScript.
- */
 export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
-  // Calculate total units (including decimals like 0.5)
+  const { toggleCart } = useCartStore(); // Pulling toggle function directly
   const totalUnits = items.reduce((acc, item) => acc + Number(item.quantity || 0), 0);
 
   return (
@@ -48,16 +39,12 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
         "
         style={{ transformStyle: 'preserve-3d', transformOrigin: 'right center' }}
       >
-        {/* --- 3D FLOATING EDGE --- */}
         <div 
           className="absolute top-0 right-0 w-[6px] h-full bg-slate-200 dark:bg-orange-600/40 rounded-r-md" 
           style={{ transform: 'rotateY(90deg) translateZ(3px)', transformOrigin: 'right' }}
         />
-
-        {/* --- INNER GLOW --- */}
         <div className="absolute inset-0 rounded-l-[28px] border-r-4 border-brand-orange/10 pointer-events-none" />
 
-        {/* Basket Header */}
         <div className="relative group">
           <motion.div 
             whileTap={{ scale: 0.9 }}
@@ -65,8 +52,7 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
           >
             <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
           </motion.div>
-          
-          {/* Badge: Displays total units */}
+
           {totalUnits > 0 && (
             <motion.span 
               key={totalUnits}
@@ -79,7 +65,6 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
           )}
         </div>
 
-        {/* Item Preview List */}
         <div className="flex flex-col gap-2 max-h-[200px] sm:max-h-[350px] overflow-y-auto no-scrollbar py-1">
           <AnimatePresence mode="popLayout">
             {items.map((item) => (
@@ -93,8 +78,6 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
               >
                 <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden bg-white shadow-sm flex items-center justify-center relative">
                   <img src={item.img} alt="" className="w-full h-full object-contain p-1" />
-                  
-                  {/* Fractional Indicator for 0.5 units */}
                   {item.quantity % 1 !== 0 && (
                     <div className="absolute inset-0 bg-brand-orange/10 flex items-center justify-center">
                       <div className="bg-white/90 dark:bg-black/90 px-1 rounded-[2px] border border-brand-orange/20 shadow-sm">
@@ -114,11 +97,12 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
           </AnimatePresence>
         </div>
 
-        {/* Action Button */}
+        {/* CLICKING THIS NOW OPENS THE CART DRAWER */}
         <motion.button 
+          onClick={toggleCart}
           whileHover={{ y: -2, backgroundColor: '#ff7d1a', color: '#fff' }}
           whileTap={{ scale: 0.9 }}
-          className="p-2 sm:p-3 bg-slate-100 dark:bg-white/5 rounded-lg sm:rounded-2xl text-brand-orange transition-all shadow-inner"
+          className="p-2 sm:p-3 bg-slate-100 dark:bg-white/5 rounded-lg sm:rounded-2xl text-brand-orange transition-all shadow-inner cursor-pointer pointer-events-auto"
         >
           <Send className="w-4 h-4 sm:w-5 sm:h-5" />
         </motion.button>

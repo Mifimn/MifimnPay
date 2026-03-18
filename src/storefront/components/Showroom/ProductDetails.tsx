@@ -179,24 +179,32 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             {/* RETAIL vs WHOLESALE BUTTONS */}
             <div className={`grid gap-3 ${product.wholesale_price ? 'grid-cols-2' : 'grid-cols-1'}`}>
 
-              {/* Add Retail (1 Unit) */}
+              {/* Add Retail (1 Unit increments) */}
               <button 
                 onClick={() => addToBasket({ ...productData, img: productData.image_url, price: productData.price }, 1)}
                 disabled={currentQty >= maxStock}
                 className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}33`, color: '#FFFFFF' }}
               >
-                <Plus size={16} /> Add Retail
+                <Plus size={16} /> {currentQty > 0 ? "Add Another (+1)" : "Add Retail"}
               </button>
 
-              {/* Add Wholesale (1 Unit) - Overrides price with wholesale price */}
+              {/* Add Wholesale (Smart MOQ scaling) */}
               {product.wholesale_price && (
                 <button 
-                  onClick={() => addToBasket({ ...productData, img: productData.image_url, price: productData.wholesale_price }, 1)}
+                  onClick={() => {
+                    // Smart Logic: First click adds the minimum required MOQ. Future clicks add 1 unit.
+                    const qtyToAdd = (currentQty === 0 && product.moq > 1) ? product.moq : 1;
+                    addToBasket({ ...productData, img: productData.image_url, price: productData.wholesale_price }, qtyToAdd);
+                  }}
                   disabled={currentQty >= maxStock}
-                  className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                  className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl px-2 text-center"
                 >
-                  <Box size={16} /> Add Wholesale
+                  <Box size={16} /> 
+                  {currentQty > 0 
+                    ? "Add Another (+1)" 
+                    : `Add Wholesale ${product.moq > 1 ? `(${product.moq} Min)` : ''}`
+                  }
                 </button>
               )}
             </div>

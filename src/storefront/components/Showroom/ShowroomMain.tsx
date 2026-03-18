@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useRouter, useParams } from 'next/navigation';
-import { Tag } from 'lucide-react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { Tag, SearchX } from 'lucide-react';
 import { FeedSkeleton } from './SkeletonLoader';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
 
@@ -24,26 +24,31 @@ export default function ShowroomMain({
 }: ShowroomMainProps) {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const vendor_slug = params?.vendor_slug as string;
 
-  // Directly use the cart store so "Quick Add" works flawlessly
   const { addToBasket } = useCartStore();
+
+  // READ SEARCH QUERY FROM URL
+  const searchQuery = searchParams.get('q')?.toLowerCase() || '';
+
+  // FILTER PRODUCTS
+  const filteredProducts = products.filter(prod => 
+    prod.name.toLowerCase().includes(searchQuery)
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Removed the duplicate <HeroSlideshow /> from here!
-        The banner is now handled completely by the parent page.tsx 
-      */}
-
       <section className="space-y-4">
         <div className="flex items-center justify-between px-2">
           <h3 className="font-black text-xl lg:text-2xl uppercase tracking-tighter dark:text-white">
-            {vendorName ? <span style={{ color: themeColor }}>{vendorName}'s</span> : 'Official'} Catalog
+            {searchQuery ? 'Search Results' : (
+              <>{vendorName ? <span style={{ color: themeColor }}>{vendorName}'s</span> : 'Official'} Catalog</>
+            )}
           </h3>
         </div>
 
-        {/* Display the vendor's About text if they wrote one */}
-        {aboutText && (
+        {aboutText && !searchQuery && (
           <p className="px-2 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed max-w-3xl">
             {aboutText}
           </p>
@@ -51,9 +56,9 @@ export default function ShowroomMain({
 
         {isSkeleton ? (
           <FeedSkeleton />
-        ) : products.length > 0 ? (
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {products.map(prod => (
+            {filteredProducts.map(prod => (
               <motion.div 
                 whileHover={{ y: -5 }} 
                 key={prod.id} 
@@ -90,18 +95,15 @@ export default function ShowroomMain({
                     </div>
                   </div>
 
-                  {/* QUICK ADD BUTTON */}
                   <button 
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      // Add to cart with proper mapping and respect MOQ
                       addToBasket(
                         { ...prod, img: prod.image_url || prod.img }, 
                         prod.moq > 0 ? prod.moq : 1
                       ); 
                     }}
                     className="w-full mt-3 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-900 dark:text-white transition-all duration-300"
-                    // Inline Javascript styles for dynamic hover color syncing
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = themeColor;
                       e.currentTarget.style.borderColor = themeColor;
@@ -119,7 +121,13 @@ export default function ShowroomMain({
               </motion.div>
             ))}
           </div>
-        ) : null}
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <SearchX size={48} className="text-slate-300 dark:text-white/20 mb-4" />
+            <h4 className="text-lg font-black uppercase italic dark:text-white">No items found</h4>
+            <p className="text-xs font-bold text-slate-400 mt-2 uppercase">Try adjusting your search term.</p>
+          </div>
+        )}
       </section>
     </div>
   );

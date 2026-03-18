@@ -14,6 +14,7 @@ type Product = {
   wholesale_price: number | null;
   stock: number | null;
   image_url: string | null;
+  image_urls: string[] | null; // Added to support multi-image cleanup
   is_active: boolean;
 };
 
@@ -45,22 +46,54 @@ export default function ProductsPage() {
     fetchProducts();
   }, [user]);
 
-  // DELETE FUNCTIONALITY
+  // COMPLETE DELETE FUNCTIONALITY WITH STORAGE CLEANUP
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
       return;
     }
 
     try {
-      const { error } = await supabase
+      // 1. Find the product in state to get its image URLs
+      const productToDelete = products.find(p => p.id === id);
+
+      if (productToDelete) {
+        // Collect all unique images (fallback image_url + new image_urls array)
+        const urlsToDelete = new Set<string>();
+        if (productToDelete.image_url) urlsToDelete.add(productToDelete.image_url);
+        if (productToDelete.image_urls) {
+          productToDelete.image_urls.forEach(url => urlsToDelete.add(url));
+        }
+
+        // Extract the exact storage paths from the public URLs
+        // e.g. https://.../public/product-images/USER_ID/filename.jpg -> USER_ID/filename.jpg
+        const pathsToDelete = Array.from(urlsToDelete).map(url => {
+          return url.split('/public/product-images/')[1];
+        }).filter(Boolean); // Removes any undefined/invalid splits
+
+        // 2. Delete the actual image files from Supabase Storage
+        if (pathsToDelete.length > 0) {
+          const { error: storageError } = await supabase.storage
+            .from('product-images')
+            .remove(pathsToDelete);
+
+          if (storageError) {
+            console.error("Storage cleanup warning:", storageError);
+            // We log the warning, but proceed to delete the DB record so the user isn't stuck.
+          }
+        }
+      }
+
+      // 3. Delete the product record from the database
+      const { error: dbError } = await supabase
         .from('menu_items')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
-      // Update UI immediately after successful deletion
+      // 4. Instantly remove the product from the UI
       setProducts(prev => prev.filter(product => product.id !== id));
+
     } catch (error: any) {
       console.error("Error deleting product:", error);
       alert(error.message || "Failed to delete product");
@@ -198,14 +231,12 @@ export default function ProductsPage() {
                       <td className="px-8 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
 
-                          {/* EDIT BUTTON */}
                           <Link href={`/products/add?id=${product.id}`}>
                             <button className="p-2 text-brand-gray hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800 shadow-sm" title="Edit">
                               <Edit size={16} />
                             </button>
                           </Link>
 
-                          {/* DELETE BUTTON */}
                           <button 
                             onClick={() => handleDelete(product.id)}
                             className="p-2 text-brand-gray hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all border border-transparent hover:border-red-200 dark:hover:border-red-800 shadow-sm" title="Delete">
