@@ -29,22 +29,46 @@ function LoginContent() {
     if (error) setError(error.message);
   };
 
-  // STEP 1: Request OTP Code
+  // STEP 1: Request OTP Code (NOW WITH VENDOR STORE NAME)
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
+      // 1. Identify which store they are trying to log into
+      let storeName = "MifimnPay"; // Default fallback
+      
+      if (redirectUrl) {
+        // Extract slug from redirect URL (e.g., "/dripkicks/checkout" -> "dripkicks")
+        const slugMatch = redirectUrl.split('/')[1]; 
+        if (slugMatch && slugMatch !== 'dashboard' && slugMatch !== 'admin') {
+          // Fetch the actual business name from the database
+          const { data } = await supabase
+            .from('profiles')
+            .select('business_name')
+            .eq('slug', slugMatch)
+            .single();
+            
+          if (data?.business_name) {
+            storeName = data.business_name;
+          }
+        }
+      }
+
+      // 2. Send the OTP with the store name attached as metadata
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true, // Auto-signs them up if they don't exist
+          shouldCreateUser: true,
+          data: {
+            store_name: storeName // This passes the data to the email template!
+          }
         }
       });
 
       if (error) throw error;
-      setAuthStep('otp'); // Move to step 2
+      setAuthStep('otp'); 
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -74,7 +98,7 @@ function LoginContent() {
         .eq('id', data.user?.id)
         .single();
 
-      // If they came from checkout, send them right back
+      // Route them based on who they are and where they came from
       if (redirectUrl) {
         router.push(redirectUrl);
       } else if (profile?.is_admin) {
@@ -105,7 +129,7 @@ function LoginContent() {
       {/* Right Auth Side */}
       <div className="flex items-center justify-center p-6 md:p-12 pt-32 md:pt-12 relative"> 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-10">
-
+          
           <div className="text-center md:text-left space-y-2">
             <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
               {authStep === 'email' ? 'Welcome' : 'Check Email'}
