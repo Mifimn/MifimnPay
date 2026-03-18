@@ -5,24 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ShoppingBag, Filter, MoreHorizontal, ArrowUpRight, 
   Loader2, Clock, CheckCircle, XCircle, Truck, MapPin, 
-  Bus, CreditCard, Eye, Trash2, ExternalLink, X 
+  Bus, CreditCard, Eye, Trash2, ExternalLink, X, MessageCircle 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
+// 1. UPDATED TYPE DEFINITION TO MATCH NEW SQL SCHEMA
 type Order = {
   id: string;
   customer_name: string;
   customer_phone: string;
+  customer_address: string | null;
   total_amount: number;
   shipping_fee: number;
+  shipping_state: string;
+  shipping_lga: string;
+  shipping_location: string | null;
   status: 'pending' | 'completed' | 'cancelled';
   payment_status: 'awaiting_confirmation' | 'paid' | 'failed';
   payment_method: 'paystack' | 'manual';
-  delivery_method: 'landmark' | 'park' | 'whatsapp';
-  delivery_location: string;
-  lga: string;
-  state: string;
   receipt_url: string | null;
   created_at: string;
   items: any[];
@@ -42,7 +43,7 @@ export default function OrdersPage() {
         const { data, error } = await supabase
           .from('orders')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('vendor_id', user.id) // FIXED: Uses vendor_id instead of user_id
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -56,7 +57,7 @@ export default function OrdersPage() {
     fetchOrders();
   }, [user]);
 
-  const handleUpdateStatus = async (orderId: string, newStatus: string, receiptPath?: string | null) => {
+  const handleUpdateStatus = async (orderId: string, newStatus: string, receiptUrl?: string | null) => {
     try {
       const updates: any = { status: newStatus };
       if (newStatus === 'completed') updates.payment_status = 'paid';
@@ -64,9 +65,12 @@ export default function OrdersPage() {
       const { error } = await supabase.from('orders').update(updates).eq('id', orderId);
       if (error) throw error;
 
-      // If manual payment confirmed, delete the receipt to save storage
-      if (newStatus === 'completed' && receiptPath) {
-        await supabase.storage.from('payment-proofs').remove([receiptPath]);
+      // 2. FIXED STORAGE CLEANUP: Extract path from the full URL to delete the file
+      if (newStatus === 'completed' && receiptUrl) {
+        const filePath = receiptUrl.split('/public/receipts/')[1];
+        if (filePath) {
+          await supabase.storage.from('receipts').remove([filePath]);
+        }
       }
 
       setOrders(orders.map(o => o.id === orderId ? { ...o, ...updates, receipt_url: newStatus === 'completed' ? null : o.receipt_url } : o));
@@ -149,10 +153,20 @@ export default function OrdersPage() {
                     <td className="px-8 py-6">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                          {order.delivery_method === 'park' ? <Bus size={14} className="text-brand-orange" /> : <MapPin size={14} className="text-brand-orange" />}
-                          <span className="text-[10px] font-black uppercase tracking-tight">{order.delivery_location}</span>
+                          {/* 3. DYNAMIC LOGISTICS ICON */}
+                          {order.shipping_location ? (
+                            <>
+                              <MapPin size={14} className="text-brand-orange" />
+                              <span className="text-[10px] font-black uppercase tracking-tight">{order.shipping_location}</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageCircle size={14} className="text-brand-orange" />
+                              <span className="text-[10px] font-black uppercase tracking-tight">WhatsApp Manual</span>
+                            </>
+                          )}
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase italic">{order.lga}, {order.state}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase italic">{order.shipping_lga}, {order.shipping_state}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -218,14 +232,19 @@ export default function OrdersPage() {
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sourcing Agent</h4>
                       <p className="font-black text-lg text-slate-900 dark:text-white">{selectedOrder.customer_name}</p>
                       <p className="text-sm font-bold text-slate-500">{selectedOrder.customer_phone}</p>
+                      {selectedOrder.customer_address && (
+                        <p className="text-xs font-medium text-slate-500 mt-1">{selectedOrder.customer_address}</p>
+                      )}
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Logistics Info</h4>
                       <div className="flex items-center gap-2 mb-1">
-                        <Truck size={14} className="text-brand-orange" />
-                        <span className="text-sm font-black uppercase text-slate-900 dark:text-white">{selectedOrder.delivery_method}</span>
+                        {selectedOrder.shipping_location ? <Truck size={14} className="text-brand-orange" /> : <MessageCircle size={14} className="text-brand-orange" />}
+                        <span className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                          {selectedOrder.shipping_location || "WhatsApp Negotiated"}
+                        </span>
                       </div>
-                      <p className="text-sm font-bold text-slate-500 italic">{selectedOrder.delivery_location}, {selectedOrder.lga}, {selectedOrder.state}</p>
+                      <p className="text-sm font-bold text-slate-500 italic">{selectedOrder.shipping_lga}, {selectedOrder.shipping_state}</p>
                     </div>
                   </div>
 
@@ -233,9 +252,9 @@ export default function OrdersPage() {
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Verification Asset</h4>
                     {selectedOrder.receipt_url ? (
-                      <div className="relative group aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black">
-                        <img src={selectedOrder.receipt_url} alt="Receipt" className="w-full h-full object-cover opacity-80" />
-                        <a href={selectedOrder.receipt_url} target="_blank" className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-all">
+                      <div className="relative group aspect-square rounded-3xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black">
+                        <img src={selectedOrder.receipt_url} alt="Receipt" className="w-full h-full object-cover" />
+                        <a href={selectedOrder.receipt_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-all">
                           <ExternalLink className="text-white" size={24} />
                         </a>
                       </div>
@@ -243,7 +262,7 @@ export default function OrdersPage() {
                       <div className="aspect-square rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 dark:bg-white/5">
                         <CreditCard size={24} className="text-slate-300 mb-2" />
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                          {selectedOrder.payment_method === 'paystack' ? 'Automated Verified' : 'Receipt Deleted / Not Uploaded'}
+                          {selectedOrder.payment_method === 'paystack' ? 'Automated Verified' : 'No Receipt Uploaded'}
                         </p>
                       </div>
                     )}
@@ -254,15 +273,28 @@ export default function OrdersPage() {
                 <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 mb-8 border border-slate-100 dark:border-white/5">
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Assets Requested</h4>
                    <div className="space-y-4">
-                     {selectedOrder.items.map((item: any, i: number) => (
-                       <div key={i} className="flex items-center justify-between">
-                         <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 bg-white rounded-xl p-1 border border-white/10"><img src={item.img} className="w-full h-full object-contain" /></div>
-                           <span className="text-xs font-black uppercase text-slate-900 dark:text-white">{item.name} <span className="text-slate-400 text-[10px]">x{item.quantity}</span></span>
+                     {selectedOrder.items.map((item: any, i: number) => {
+                       const price = item.wholesale_price && item.quantity >= (item.moq || 0) ? item.wholesale_price : item.price;
+                       return (
+                         <div key={i} className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 bg-white rounded-xl p-1 border border-slate-200 dark:border-white/10">
+                               <img src={item.img || item.image_url} className="w-full h-full object-contain" alt="" />
+                             </div>
+                             <span className="text-xs font-black uppercase text-slate-900 dark:text-white">
+                               {item.name} <span className="text-slate-400 text-[10px]">x{item.quantity}</span>
+                             </span>
+                           </div>
+                           <span className="text-xs font-bold text-brand-orange">₦{(price * item.quantity).toLocaleString()}</span>
                          </div>
-                         <span className="text-xs font-bold text-brand-orange">₦{(item.price * item.quantity).toLocaleString()}</span>
-                       </div>
-                     ))}
+                       );
+                     })}
+                   </div>
+
+                   {/* Summary Totals inside items list */}
+                   <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10 flex flex-col gap-1 items-end">
+                      <p className="text-[10px] font-black uppercase text-slate-400">Shipping: ₦{(selectedOrder.shipping_fee || 0).toLocaleString()}</p>
+                      <p className="text-sm font-black uppercase italic dark:text-white">Total: <span className="text-brand-orange">₦{(selectedOrder.total_amount).toLocaleString()}</span></p>
                    </div>
                 </div>
               </div>

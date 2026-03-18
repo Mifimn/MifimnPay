@@ -204,7 +204,8 @@ export default function BrandHeader({ businessName }: BrandHeaderProps) {
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Navigation</h4>
                   {[
                     { name: 'Storefront Home', icon: Home, path: '/' },
-                    { name: 'My Inquiries', icon: Grid, path: '/checkout' },
+                    // POINTING TO THE NEW ORDERS PAGE!
+                    { name: 'My Orders', icon: Grid, path: '/my-orders' },
                   ].map((item) => (
                     <div key={item.name} onClick={() => handleNav(item.path)} className="flex items-center justify-between p-5 rounded-[24px] bg-slate-50 dark:bg-white/5 border border-transparent active:scale-[0.98] transition-all cursor-pointer group">
                       <div className="flex items-center gap-4">

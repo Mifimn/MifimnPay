@@ -5,88 +5,185 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ChevronLeft, Send, ShieldCheck, MapPin, Phone, 
-  User, CreditCard, Truck, MessageCircle, Loader2, 
-  ChevronDown, Image as ImageIcon, Banknote, CheckCircle
+  User, CreditCard, Loader2, ChevronDown, Image as ImageIcon, CheckCircle, MessageCircle
 } from 'lucide-react';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
-import { useModalStore } from '@/src/storefront/store/useModalStore';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
-
-// UI PREVIEW DATA
-const MOCK_LOGISTICS: any = {
-  "Kwara": {
-    "Offa": { method: 'landmark', price: 1000, options: ["Olofa Palace", "A-One Hotel", "Avalon Hotel"] },
-    "Ilorin South": { method: 'landmark', price: 1500, options: ["Post Office", "Challenge", "Tanke Junction"] },
-    "Ijagbo": { method: 'park', price: 1200, options: ["Ijagbo Junction Park", "First Bold Park"] }
-  },
-  "Lagos": {
-    "Ikeja": { method: 'park', price: 5000, options: ["GIGM Ikeja", "Young Shall Grow", "Peace Mass"] }
-  }
-};
+import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import { NIGERIA_STATES_LGA } from '@/lib/nigeria-data'; 
 
 export default function CheckoutPage() {
   const router = useRouter();
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
   const { themeColor } = useThemeStore();
-  const { 
-    basket, clearCart, shippingFee, deliveryDetails, 
-    setLogistics, paymentMethod, setPaymentMethod 
-  } = useCartStore();
-  const { openModal } = useModalStore();
+  const { user } = useAuth();
+  const { basket, clearCart } = useCartStore();
 
+  const [vendor, setVendor] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
-  // Sync pricing and method whenever location changes
-  useEffect(() => {
-    const data = MOCK_LOGISTICS[deliveryDetails.state]?.[deliveryDetails.lga];
-    if (data) {
-      setLogistics({ method: data.method, location: '' }, data.price);
-    } else {
-      setLogistics({ method: 'whatsapp', location: '' }, 0);
-    }
-  }, [deliveryDetails.state, deliveryDetails.lga, setLogistics]);
+  // Form State
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '' });
+  const [shipping, setShipping] = useState({ state: '', lga: '', location: '', method: 'whatsapp', fee: 0 });
+  const [availableOptions, setAvailableOptions] = useState<string[]>([]);
 
-  const subtotal = basket.reduce((acc, item) => acc + (Number(item.price) * (item.quantity || 1)), 0);
-  const totalPrice = subtotal + shippingFee;
+  // 1. Fetch Vendor Details & Config
+  useEffect(() => {
+    const fetchVendor = async () => {
+      if (!vendor_slug) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, business_name, phone, bank_name, account_number, account_name, whatsapp_only, logistics_config')
+        .eq('slug', vendor_slug)
+        .single();
+      if (data) setVendor(data);
+    };
+    fetchVendor();
+  }, [vendor_slug]);
+
+  // 2. Dynamic Logistics Engine
+  useEffect(() => {
+    if (!vendor || !shipping.state || !shipping.lga) {
+      setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
+      setAvailableOptions([]);
+      return;
+    }
+
+    if (vendor.whatsapp_only) {
+      setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
+      return;
+    }
+
+    // Check if the selected State & LGA match the vendor's setup
+    const config = vendor.logistics_config || [];
+    const matchedZone = config.find((z: any) => z.state === shipping.state && z.lga === shipping.lga);
+
+    if (matchedZone) {
+      setShipping(prev => ({ 
+        ...prev, 
+        method: matchedZone.method, 
+        fee: Number(matchedZone.price) || 0,
+        location: '' // Reset location until they pick one from the new options
+      }));
+      // Convert comma-separated string to array
+      setAvailableOptions(matchedZone.options ? matchedZone.options.split(',').map((o:string) => o.trim()) : []);
+    } else {
+      // Fallback to WhatsApp if outside delivery zone
+      setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
+      setAvailableOptions([]);
+    }
+  }, [shipping.state, shipping.lga, vendor]);
+
+  const subtotal = basket.reduce((acc, item) => {
+    const activePrice = (item.wholesale_price && item.quantity >= (item.moq || 0)) ? item.wholesale_price : item.price;
+    return acc + (activePrice * item.quantity);
+  }, 0);
+  const totalPrice = subtotal + shipping.fee;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setReceiptFile(file);
       setReceiptPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleProcessOrder = async () => {
-    if (basket.length === 0) return;
-    if (paymentMethod === 'manual' && !receiptPreview && deliveryDetails.method !== 'whatsapp') {
-      alert("Please upload your payment receipt to proceed.");
-      return;
+  const handleProcessOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (basket.length === 0) return alert("Your cart is empty.");
+    if (!customerInfo.name || !customerInfo.phone || !shipping.state || !shipping.lga) {
+      return alert("Please fill in all contact and shipping details.");
+    }
+    if (!receiptFile && shipping.method !== 'whatsapp') {
+      return alert("Please upload your payment receipt to confirm the order.");
     }
 
     setIsSubmitting(true);
-    // Simulation of payment processing or upload
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    setIsSubmitting(false);
+    try {
+      let uploadedReceiptUrl = null;
 
-    openModal({
-      title: paymentMethod === 'paystack' ? "Payment Successful!" : "Inquiry Received!",
-      message: paymentMethod === 'paystack' 
-        ? "Your order has been confirmed. The vendor will process it shortly."
-        : "Your receipt has been uploaded. The vendor will confirm the transfer within 72 hours.",
-      type: "success",
-      onConfirm: () => {
-        clearCart();
-        router.push(`/${vendor_slug}`);
+      // 1. Upload Receipt to Supabase Storage (if provided)
+      if (receiptFile) {
+        const fileExt = receiptFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${vendor.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(filePath, receiptFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('receipts').getPublicUrl(filePath);
+        uploadedReceiptUrl = publicUrlData.publicUrl;
       }
-    });
+
+      // 2. Save Order to Database
+      const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
+        vendor_id: vendor.id,
+        customer_id: user?.id, // <--- ADDED THIS LINE TO LINK ORDER TO CUSTOMER!
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        customer_address: customerInfo.address,
+        shipping_state: shipping.state,
+        shipping_lga: shipping.lga,
+        shipping_location: shipping.location,
+        shipping_fee: shipping.fee,
+        total_amount: totalPrice,
+        payment_method: 'manual',
+        receipt_url: uploadedReceiptUrl,
+        items: basket
+      }]).select().single();
+
+      if (dbError) throw dbError;
+
+      // 3. Generate WhatsApp Message
+      let message = `*NEW ORDER - #${orderData.short_id}*%0A%0A`;
+      message += `*Customer:* ${customerInfo.name}%0A`;
+      message += `*Phone:* ${customerInfo.phone}%0A`;
+      if (customerInfo.address) message += `*Address:* ${customerInfo.address}%0A`;
+      message += `*Location:* ${shipping.location || 'N/A'} (${shipping.lga}, ${shipping.state})%0A`;
+
+      message += `%0A*ORDER DETAILS:*%0A`;
+      basket.forEach((item, index) => {
+        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 0);
+        const activePrice = isWholesale ? item.wholesale_price : item.price;
+        message += `${index + 1}. *${item.name}* (x${item.quantity}) - ₦${Number(activePrice).toLocaleString()}%0A`;
+      });
+
+      message += `%0A*Subtotal:* ₦${subtotal.toLocaleString()}%0A`;
+      message += `*Shipping Fee:* ${shipping.fee > 0 ? `₦${shipping.fee.toLocaleString()}` : 'Negotiable'}%0A`;
+      message += `*TOTAL PAID:* ₦${totalPrice.toLocaleString()}%0A`;
+
+      if (uploadedReceiptUrl) {
+        message += `%0A_Payment receipt has been uploaded and attached to your dashboard._`;
+      }
+
+      // 4. Redirect & Clean up
+      const whatsappUrl = `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${message}`;
+      window.open(whatsappUrl, '_blank');
+
+      clearCart();
+      router.push(`/${vendor_slug}/my-orders`); // Redirects straight to their new dashboard!
+
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || "Failed to process order.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (!vendor) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-slate-400" /></div>;
 
   return (
     <div className="max-w-[1200px] mx-auto p-4 lg:p-10 pb-32">
       <div className="flex items-center gap-4 mb-10">
-        <button onClick={() => router.back()} className="p-3 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 text-slate-500">
+        <button onClick={() => router.back()} className="p-3 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -95,148 +192,164 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Section 1: Logistics */}
-          <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] p-8 space-y-6">
+          {/* Contact Details */}
+          <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
             <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
-              <MapPin size={18} style={{ color: themeColor }} /> 1. Shipping Details
+              <User size={18} style={{ color: themeColor }} /> 1. Logistics Contact Info
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Receiver's Name</label>
+                <input required type="text" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 px-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-brand-orange transition-colors" placeholder="e.g. John Doe" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Receiver's Phone</label>
+                <input required type="tel" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 px-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-brand-orange transition-colors" placeholder="e.g. +234..." />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Street Address (Optional)</label>
+              <textarea value={customerInfo.address} onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full p-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-brand-orange transition-colors resize-none h-20" placeholder="Full house address..." />
+            </div>
+          </section>
+
+          {/* Shipping Details */}
+          <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
+            <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
+              <MapPin size={18} style={{ color: themeColor }} /> 2. Delivery Zone
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="relative">
                 <select 
-                  value={deliveryDetails.state} 
-                  onChange={(e) => setLogistics({ state: e.target.value, lga: '' }, 0)}
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-xs font-bold outline-none appearance-none dark:text-white"
+                  required
+                  value={shipping.state} 
+                  onChange={(e) => setShipping({ ...shipping, state: e.target.value, lga: '' })}
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-xs font-bold outline-none appearance-none dark:text-white text-slate-900"
                 >
                   <option value="">Select State</option>
-                  <option value="Kwara">Kwara</option>
-                  <option value="Lagos">Lagos</option>
+                  {Object.keys(NIGERIA_STATES_LGA).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
               </div>
 
               <div className="relative">
                 <select 
-                  disabled={!deliveryDetails.state}
-                  value={deliveryDetails.lga} 
-                  onChange={(e) => setLogistics({ lga: e.target.value }, 0)}
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-xs font-bold outline-none appearance-none dark:text-white disabled:opacity-30"
+                  required
+                  disabled={!shipping.state}
+                  value={shipping.lga} 
+                  onChange={(e) => setShipping({ ...shipping, lga: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-xs font-bold outline-none appearance-none dark:text-white disabled:opacity-30 text-slate-900"
                 >
                   <option value="">Select LGA</option>
-                  {deliveryDetails.state === "Kwara" && ["Offa", "Ilorin South", "Ijagbo"].map(lga => <option key={lga} value={lga}>{lga}</option>)}
-                  {deliveryDetails.state === "Lagos" && ["Ikeja", "Lekki"].map(lga => <option key={lga} value={lga}>{lga}</option>)}
+                  {shipping.state && NIGERIA_STATES_LGA[shipping.state].map((lga: string) => <option key={lga} value={lga}>{lga}</option>)}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
               </div>
             </div>
 
-            {deliveryDetails.lga && deliveryDetails.method !== 'whatsapp' && (
-              <div className="relative animate-in fade-in slide-in-from-top-2">
-                <select 
-                  value={deliveryDetails.location}
-                  onChange={(e) => setLogistics({ location: e.target.value }, shippingFee)}
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl py-4 px-6 text-xs font-bold dark:text-white outline-none appearance-none"
-                >
-                  <option value="">Select {deliveryDetails.method === 'landmark' ? 'Nearest Landmark' : 'Pickup Park'}</option>
-                  {MOCK_LOGISTICS[deliveryDetails.state]?.[deliveryDetails.lga]?.options.map((opt: string) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            {shipping.lga && (
+              <AnimatePresence mode="wait">
+                {shipping.method === 'whatsapp' ? (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-4 bg-orange-50 dark:bg-brand-orange/10 border border-orange-200 dark:border-brand-orange/20 rounded-xl">
+                    <p className="text-[10px] font-black text-brand-orange uppercase tracking-widest leading-relaxed">
+                      Delivery to this area requires manual calculation. The vendor will negotiate the delivery fee with you on WhatsApp.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative">
+                    <select 
+                      required
+                      value={shipping.location}
+                      onChange={(e) => setShipping({ ...shipping, location: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-xs font-bold dark:text-white text-slate-900 outline-none appearance-none"
+                    >
+                      <option value="">Select {shipping.method === 'landmark' ? 'Nearest Landmark' : 'Pickup Park'}</option>
+                      {availableOptions.map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+          </section>
+
+          {/* Payment Method */}
+          <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
+            <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
+              <CreditCard size={18} style={{ color: themeColor }} /> 3. Secure Payment
+            </h3>
+
+            {shipping.method === 'whatsapp' ? (
+              <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 text-center space-y-2">
+                <MessageCircle size={32} className="mx-auto text-slate-300 dark:text-white/20 mb-4" />
+                <h4 className="text-sm font-black uppercase italic dark:text-white">Payment Deferred</h4>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                  Because shipping needs to be negotiated, you will pay the vendor directly on WhatsApp once the final total is confirmed.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 space-y-3">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-2">Direct Transfer Details</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-black dark:text-white uppercase">{vendor.bank_name || 'Bank Not Set'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-black italic tracking-widest" style={{ color: themeColor }}>{vendor.account_number || '0000000000'}</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-right max-w-[150px] truncate">
+                      {vendor.account_name || 'Account Name'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative h-48 group border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center hover:border-brand-orange/40 transition-all cursor-pointer bg-slate-50/50 dark:bg-white/5 overflow-hidden">
+                  {receiptPreview ? (
+                    <img src={receiptPreview} alt="Receipt" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <ImageIcon className="text-slate-300 dark:text-slate-500 mb-3" size={32} />
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Upload Receipt Screenshot</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                </div>
               </div>
             )}
           </section>
 
-          {/* Section 2: Payment Method */}
-          <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] p-8 space-y-6">
-            <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
-              <CreditCard size={18} style={{ color: themeColor }} /> 2. Payment Method
-            </h3>
-
-            <div className="flex p-1.5 bg-slate-100 dark:bg-black/40 rounded-2xl border border-slate-200 dark:border-white/10">
-              <button 
-                onClick={() => setPaymentMethod('paystack')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${paymentMethod === 'paystack' ? 'bg-white dark:bg-white/10 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
-              >
-                Paystack (Secure)
-              </button>
-              <button 
-                onClick={() => setPaymentMethod('manual')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${paymentMethod === 'manual' ? 'bg-white dark:bg-white/10 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
-              >
-                Direct Transfer
-              </button>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {paymentMethod === 'manual' ? (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
-                  <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 space-y-2">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Bank Details</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-black dark:text-white italic">Opay / 9012345678</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{vendor_slug.toUpperCase()} STORE</span>
-                    </div>
-                  </div>
-
-                  <div className="relative h-40 group border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center hover:border-brand-orange/40 transition-all cursor-pointer bg-slate-50/50 dark:bg-white/5">
-                    {receiptPreview ? (
-                      <img src={receiptPreview} alt="Receipt" className="w-full h-full object-cover rounded-2xl" />
-                    ) : (
-                      <>
-                        <ImageIcon className="text-slate-400 mb-2" size={24} />
-                        <span className="text-[10px] font-black uppercase text-slate-500">Upload Receipt Screenshot</span>
-                      </>
-                    )}
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-2xl flex items-center gap-4"
-                >
-                  <ShieldCheck className="text-brand-orange" size={24} />
-                  <p className="text-[10px] font-black uppercase text-brand-orange tracking-widest leading-relaxed">
-                    Automated bank transfer via Paystack. Your payment is verified instantly.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </section>
         </div>
 
         {/* Summary Side Panel */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-[40px] p-8 shadow-2xl">
+          <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-6 lg:p-8 shadow-2xl">
             <div className="space-y-4 mb-8">
               <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
                 <span>Items Subtotal</span>
-                <span className="text-white">₦{subtotal.toLocaleString()}</span>
+                <span className="text-slate-900 dark:text-white">₦{subtotal.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 pb-4 border-b border-white/5">
-                <span>Shipping Fee ({deliveryDetails.lga || 'N/A'})</span>
-                <span className="text-white">{shippingFee > 0 ? `₦${shippingFee.toLocaleString()}` : 'Negotiable'}</span>
+              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 pb-4 border-b border-slate-200 dark:border-white/5">
+                <span>Shipping Fee</span>
+                <span className="text-slate-900 dark:text-white">{shipping.fee > 0 ? `₦${shipping.fee.toLocaleString()}` : 'Negotiable'}</span>
               </div>
               <div className="pt-2 flex justify-between items-end">
-                <span className="font-black uppercase italic text-xs dark:text-white">Total</span>
+                <span className="font-black uppercase italic text-xs text-slate-900 dark:text-white">Total</span>
                 <span className="text-3xl font-black tracking-tighter" style={{ color: themeColor }}>₦{totalPrice.toLocaleString()}</span>
               </div>
             </div>
 
             <button 
-              onClick={handleProcessOrder}
+              type="submit"
               disabled={isSubmitting}
               className="w-full py-6 text-white rounded-[24px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
               style={{ backgroundColor: themeColor }}
             >
               {isSubmitting ? <Loader2 className="animate-spin" /> : (
-                deliveryDetails.method === 'whatsapp' ? <>Chat to Order <MessageCircle size={18}/></> : <>Confirm Order <Send size={18}/></>
+                shipping.method === 'whatsapp' ? <>Chat to Order <MessageCircle size={18}/></> : <>Confirm Order <Send size={18}/></>
               )}
             </button>
 
@@ -246,7 +359,7 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
