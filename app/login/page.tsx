@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation'; // Updated for App Router
 import { motion, AnimatePresence } from 'framer-motion';
