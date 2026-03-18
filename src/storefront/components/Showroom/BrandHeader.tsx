@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, Search, ShoppingBag, User, 
-  ChevronRight, Home, Grid, Sun, Moon, LogIn
+  ChevronRight, Home, Grid, Sun, Moon, LogIn, LogOut
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabaseClient'; // Needed for logout
 
 interface BrandHeaderProps {
   businessName?: string;
@@ -36,23 +37,29 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
     router.push(`/${vendor_slug}${path}`);
   };
 
-  // STRICTLY LOGIN ROUTING
-  // Always directs to the login page first so they can authenticate explicitly
-  const handleUserClick = () => {
+  // LOGIN / LOGOUT TOGGLE
+  const handleAuthAction = async () => {
     setIsMenuOpen(false);
-    router.push(`/login?redirect=/${vendor_slug}`);
+    if (user) {
+      // If logged in, log them out
+      await supabase.auth.signOut();
+      router.refresh();
+    } else {
+      // If logged out, send to login page
+      router.push(`/login?redirect=/${vendor_slug}`);
+    }
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
-    
+
     if (term) {
       currentParams.set('q', term);
     } else {
       currentParams.delete('q');
     }
-    
+
     if (pathname !== `/${vendor_slug}`) {
       router.push(`/${vendor_slug}?${currentParams.toString()}`);
     } else {
@@ -107,12 +114,13 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
+            {/* DYNAMIC LOGIN / LOGOUT ICON */}
             <button 
-              onClick={handleUserClick} 
-              title="Customer Login"
-              className="p-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10"
+              onClick={handleAuthAction} 
+              title={user ? "Sign Out" : "Sign In"}
+              className="p-2.5 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-all bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10"
             >
-              <User size={18} />
+              {user ? <LogOut size={18} /> : <User size={18} />}
             </button>
 
             <button onClick={toggleCart} className="p-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all relative bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10">
@@ -134,19 +142,26 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
             </button>
           </div>
 
-          {/* MOBILE MENU TOGGLE */}
-          <div className="flex lg:hidden items-center shrink-0">
+          {/* MOBILE ICONS (Cart is now visible!) */}
+          <div className="flex lg:hidden items-center gap-2 shrink-0">
+            <button onClick={toggleCart} className="p-2.5 text-slate-500 dark:text-slate-300 relative transition-transform active:scale-95">
+              <ShoppingBag size={20} />
+              {basket.length > 0 && (
+                <span 
+                  className="absolute -top-1 -right-1 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full shadow-lg"
+                  style={{ backgroundColor: themeColor || '#f97316' }}
+                >
+                  {basket.length}
+                </span>
+              )}
+            </button>
+
             <button 
               onClick={() => setIsMenuOpen(true)} 
               className="p-2.5 text-white rounded-xl shadow-lg active:scale-90 transition-transform relative"
               style={{ backgroundColor: themeColor || '#f97316' }}
             >
               <Menu size={18} />
-              {basket.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-black text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white/20">
-                  {basket.length}
-                </span>
-              )}
             </button>
           </div>
 
@@ -159,35 +174,31 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="fixed inset-0 z-[190] bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed inset-y-0 right-0 w-full max-w-sm z-[200] bg-white/90 dark:bg-[#050505]/90 backdrop-blur-3xl shadow-2xl flex flex-col border-l border-white/20">
-              
+
               <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/5">
                 <span className="font-black uppercase italic dark:text-white tracking-[0.2em] text-[10px]">Menu</span>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors"><X size={20} className="dark:text-white" /></button>
               </div>
-              
+
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                
-                <div className="grid grid-cols-2 gap-3 sm:hidden">
+
+                <div className="grid grid-cols-1 gap-3 sm:hidden">
                   <button onClick={() => { toggleTheme(); setIsMenuOpen(false); }} className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent dark:text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all">
-                    {isDark ? <Sun size={16} /> : <Moon size={16} />} Theme
-                  </button>
-                  <button onClick={() => { toggleCart(); setIsMenuOpen(false); }} className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent dark:text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all relative">
-                    <ShoppingBag size={16} /> Cart
-                    {basket.length > 0 && <span className="text-brand-orange ml-1">({basket.length})</span>}
+                    {isDark ? <Sun size={16} /> : <Moon size={16} />} Toggle Theme
                   </button>
                 </div>
 
-                {/* Mobile Customer Authentication Button */}
+                {/* Mobile Auth Button (Changes based on login status) */}
                 <div 
-                  onClick={handleUserClick}
-                  className="flex items-center justify-between p-5 rounded-[24px] bg-slate-900 dark:bg-white text-white dark:text-black active:scale-[0.98] transition-all cursor-pointer shadow-lg sm:hidden"
+                  onClick={handleAuthAction}
+                  className={`flex items-center justify-between p-5 rounded-[24px] ${user ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-slate-900 dark:bg-white text-white dark:text-black'} active:scale-[0.98] transition-all cursor-pointer shadow-lg sm:hidden`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/10 dark:bg-black/5 rounded-2xl">
-                       <LogIn size={20} />
+                      {user ? <LogOut size={20} /> : <LogIn size={20} />}
                     </div>
                     <span className="text-sm font-black uppercase italic tracking-tight">
-                      Customer Login
+                      {user ? 'Sign Out' : 'Customer Login'}
                     </span>
                   </div>
                 </div>
@@ -197,7 +208,6 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
                   {[
                     { name: 'Storefront Home', icon: Home, path: '/' },
                     { name: 'My Inquiries', icon: Grid, path: '/checkout' },
-                    { name: 'Contact Vendor', icon: User, path: '#contact' },
                   ].map((item) => (
                     <div key={item.name} onClick={() => handleNav(item.path)} className="flex items-center justify-between p-5 rounded-[24px] bg-slate-50 dark:bg-white/5 border border-transparent active:scale-[0.98] transition-all cursor-pointer group">
                       <div className="flex items-center gap-4">
