@@ -36,17 +36,11 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
     router.push(`/${vendor_slug}${path}`);
   };
 
-  // STRICTLY CUSTOMER ROUTING
-  // This ensures the storefront never bleeds into the admin dashboard
+  // STRICTLY LOGIN ROUTING
+  // Always directs to the login page first so they can authenticate explicitly
   const handleUserClick = () => {
     setIsMenuOpen(false);
-    if (user) {
-      // Act as a customer: route to their inquiries/checkout
-      router.push(`/${vendor_slug}/checkout`);
-    } else {
-      // Prompt customer login and redirect right back to this store
-      router.push(`/login?redirect=/${vendor_slug}`);
-    }
+    router.push(`/login?redirect=/${vendor_slug}`);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +77,6 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
                 <span className="text-white font-black text-xl italic drop-shadow-md">{displayInitial}</span>
               )}
             </div>
-            {/* Hide text on mobile to give Search Bar maximum space */}
             <div className="hidden sm:flex flex-col">
               <span className="font-black text-sm tracking-tight dark:text-white uppercase italic leading-none truncate max-w-[120px]">
                 {businessName || vendor_slug}
@@ -94,7 +87,7 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
             </div>
           </Link>
 
-          {/* SEARCH BAR - Visible on all devices now */}
+          {/* SEARCH BAR */}
           <div className="flex-1 relative group max-w-xl">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Search size={14} className="text-slate-400 group-focus-within:text-brand-orange transition-colors" />
@@ -108,7 +101,7 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
             />
           </div>
 
-          {/* DESKTOP ICONS - Hidden on mobile */}
+          {/* DESKTOP ICONS */}
           <div className="hidden lg:flex items-center gap-2">
             <button onClick={toggleTheme} className="p-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
@@ -141,7 +134,7 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
             </button>
           </div>
 
-          {/* MOBILE MENU TOGGLE - Visible only on mobile */}
+          {/* MOBILE MENU TOGGLE */}
           <div className="flex lg:hidden items-center shrink-0">
             <button 
               onClick={() => setIsMenuOpen(true)} 
@@ -174,7 +167,6 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
               
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                 
-                {/* Mobile Quick Actions (Cart & Theme) */}
                 <div className="grid grid-cols-2 gap-3 sm:hidden">
                   <button onClick={() => { toggleTheme(); setIsMenuOpen(false); }} className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent dark:text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all">
                     {isDark ? <Sun size={16} /> : <Moon size={16} />} Theme
@@ -192,10 +184,10 @@ export default function BrandHeader({ businessName, logoUrl }: BrandHeaderProps)
                 >
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/10 dark:bg-black/5 rounded-2xl">
-                      <User size={20} />
+                       <LogIn size={20} />
                     </div>
                     <span className="text-sm font-black uppercase italic tracking-tight">
-                      {user ? 'My Profile' : 'Customer Login'}
+                      Customer Login
                     </span>
                   </div>
                 </div>
