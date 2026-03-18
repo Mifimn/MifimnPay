@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 interface BrandHeaderProps {
   businessName?: string;
-  logoUrl?: string | null; // Kept in props so parent component doesn't break, but we won't use it
+  logoUrl?: string | null; 
 }
 
 export default function BrandHeader({ businessName }: BrandHeaderProps) {
@@ -38,26 +38,27 @@ export default function BrandHeader({ businessName }: BrandHeaderProps) {
     router.push(`/${vendor_slug}${path}`);
   };
 
+  // FIXED: Routes to the dynamic vendor login page, NOT the global admin login!
   const handleAuthAction = async () => {
     setIsMenuOpen(false);
     if (user) {
       await supabase.auth.signOut();
       router.refresh();
     } else {
-      router.push(`/login?redirect=/${vendor_slug}`);
+      router.push(`/${vendor_slug}/login?redirect=/${vendor_slug}`);
     }
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
-    
+
     if (term) {
       currentParams.set('q', term);
     } else {
       currentParams.delete('q');
     }
-    
+
     if (pathname !== `/${vendor_slug}`) {
       router.push(`/${vendor_slug}?${currentParams.toString()}`);
     } else {
@@ -170,14 +171,14 @@ export default function BrandHeader({ businessName }: BrandHeaderProps) {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="fixed inset-0 z-[190] bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="fixed inset-y-0 right-0 w-full max-w-sm z-[200] bg-white/90 dark:bg-[#050505]/90 backdrop-blur-3xl shadow-2xl flex flex-col border-l border-white/20">
-              
+
               <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/5">
                 <span className="font-black uppercase italic dark:text-white tracking-[0.2em] text-[10px]">Menu</span>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors"><X size={20} className="dark:text-white" /></button>
               </div>
-              
+
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                
+
                 <div className="grid grid-cols-1 gap-3 sm:hidden">
                   <button onClick={() => { toggleTheme(); setIsMenuOpen(false); }} className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent dark:text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all">
                     {isDark ? <Sun size={16} /> : <Moon size={16} />} Toggle Theme
