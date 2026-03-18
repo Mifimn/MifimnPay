@@ -8,6 +8,33 @@ import Footer from '@/components/landing/Footer';
 export const metadata = {
   title: 'MifimnPay | Free Digital Storefront & Receipt Generator for Nigerian Vendors',
   description: 'Launch your digital storefront, automate professional business receipts, and track real-time sales analytics. The ultimate business engine for modern entrepreneurs.',
+  metadataBase: new URL('https://mifimnpay.com.ng'),
+  openGraph: {
+    title: 'MifimnPay | Free Digital Storefront & Receipt Generator',
+    description: 'Launch your digital storefront, automate professional business receipts, and track real-time sales analytics.',
+    url: 'https://mifimnpay.com.ng',
+    siteName: 'MifimnPay',
+    images: [
+      {
+        url: '/og-image.png', // Ensure this file is inside your /public folder
+        width: 1200,
+        height: 630,
+        alt: 'MifimnPay The Ultimate Business Engine',
+      },
+    ],
+    locale: 'en_NG',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MifimnPay | Free Digital Storefront',
+    description: 'Launch your digital storefront, automate professional business receipts, and track real-time sales analytics.',
+    images: ['/og-image.png'], // Ensure this file is inside your /public folder
+  },
+  icons: {
+    icon: '/favicon.ico', // Replace the default Next.js favicon in /app with your own
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function HomePage() {
