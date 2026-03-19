@@ -25,7 +25,7 @@ export default function CustomerOrdersPage() {
   const [customerRecord, setCustomerRecord] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Fetch Vendor Details
+  // 1. Fetch Vendor Details to get the internal ID
   useEffect(() => {
     const fetchVendor = async () => {
       const { data } = await supabase
@@ -38,7 +38,7 @@ export default function CustomerOrdersPage() {
     if (vendor_slug) fetchVendor();
   }, [vendor_slug]);
 
-  // 2. Fetch Customer Specific Data & Orders
+  // 2. Fetch Customer Specific Data & Orders using Double-Link logic
   useEffect(() => {
     if (authLoading || !vendor) return;
 
@@ -47,24 +47,25 @@ export default function CustomerOrdersPage() {
       return;
     }
 
-    const fetchCustomerData = async () => {
+    const fetchCustomerPortalData = async () => {
       try {
-        // Fetch the CRM record for this customer under this vendor
+        // Find the CRM record for this user in this store context
         const { data: customer } = await supabase
           .from('customers')
           .select('*')
           .eq('auth_id', user.id)
           .eq('vendor_id', vendor.id)
-          .single();
+          .maybeSingle();
 
         if (customer) setCustomerRecord(customer);
 
-        // Fetch Orders
+        // Fetch Orders using BOTH customer_id (Auth) and customer_crm_id (CRM link)
+        // This ensures orders appear immediately even if triggers are still processing
         const { data: ordersData, error } = await supabase
           .from('orders')
           .select('*')
           .eq('vendor_id', vendor.id)
-          .eq('customer_id', user.id)
+          .or(`customer_id.eq.${user.id}${customer ? `,customer_crm_id.eq.${customer.id}` : ''}`)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -76,7 +77,7 @@ export default function CustomerOrdersPage() {
       }
     };
 
-    fetchCustomerData();
+    fetchCustomerPortalData();
   }, [user, authLoading, vendor, router, vendor_slug]);
 
   const getStatusDisplay = (status: string) => {
@@ -111,7 +112,7 @@ export default function CustomerOrdersPage() {
         </div>
       </div>
 
-      {/* NEW: Customer Profile Dashboard Card */}
+      {/* Customer Profile Header Section */}
       <section className="mb-12">
         <div className="bg-slate-900 dark:bg-brand-orange/5 border border-white/10 rounded-[32px] p-8 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/10 blur-[60px] rounded-full" />
@@ -168,7 +169,7 @@ export default function CustomerOrdersPage() {
                 key={order.id} 
                 className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-sm"
               >
-                {/* Order Meta Header */}
+                {/* Order Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex flex-wrap gap-6 items-center justify-between">
                   <div className="flex gap-6">
                     <div>
@@ -180,7 +181,7 @@ export default function CustomerOrdersPage() {
                       <p className="font-bold text-sm dark:text-white">{dayjs(order.created_at).format('DD/MM/YYYY')}</p>
                     </div>
                     <div>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Investment</span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Paid</span>
                       <p className="font-black text-sm text-brand-orange">₦{(order.total_amount).toLocaleString()}</p>
                     </div>
                   </div>
@@ -190,7 +191,7 @@ export default function CustomerOrdersPage() {
                 </div>
 
                 <div className="p-8 grid md:grid-cols-2 gap-12">
-                  {/* Items Manifest */}
+                  {/* Items List */}
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 dark:border-white/5 pb-2">Line Items</h4>
                     <div className="space-y-4">
@@ -205,7 +206,7 @@ export default function CustomerOrdersPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-black uppercase dark:text-white truncate">{item.name}</p>
-                              <p className="text-[10px] font-bold text-slate-500">Unit: ₦{Number(unitPrice).toLocaleString()} <span className="mx-1 text-slate-300">|</span> Qty: {item.quantity}</p>
+                              <p className="text-[10px] font-bold text-slate-500">₦{Number(unitPrice).toLocaleString()} x {item.quantity}</p>
                             </div>
                             <p className="text-xs font-black dark:text-white">₦{(unitPrice * item.quantity).toLocaleString()}</p>
                           </div>
@@ -214,7 +215,7 @@ export default function CustomerOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Fulfillment Logic */}
+                  {/* Delivery Info */}
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Logistics Details</h4>
@@ -224,30 +225,27 @@ export default function CustomerOrdersPage() {
                             {order.shipping_location ? <Truck size={16} className="text-brand-orange" /> : <MessageCircle size={16} className="text-brand-orange" />}
                           </div>
                           <span className="text-xs font-black uppercase dark:text-white">
-                            {order.shipping_location || 'WhatsApp Negotiation Required'}
+                            {order.shipping_location || 'WhatsApp Negotiation'}
                           </span>
                         </div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter ml-11 italic">{order.shipping_lga}, {order.shipping_state}</p>
                       </div>
                     </div>
 
-                    {/* DYNAMIC SECURE PIN BLOCK */}
+                    {/* SECURE DELIVERY PIN BLOCK */}
                     {order.status !== 'cancelled' && (
-                      <div className={`p-6 rounded-[28px] border-2 flex items-center justify-between transition-all ${order.status === 'completed' ? 'bg-green-500/5 border-green-500/20 shadow-[0_0_40px_rgba(34,197,94,0.05)]' : 'bg-blue-500/5 border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.05)]'}`}>
+                      <div className={`p-6 rounded-[28px] border-2 flex items-center justify-between transition-all ${order.status === 'completed' ? 'bg-green-500/5 border-green-500/20' : 'bg-blue-500/5 border-blue-500/20'}`}>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                             <div className={`w-2 h-2 rounded-full animate-pulse ${order.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`} />
-                             <p className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`}>
-                                {order.status === 'completed' ? 'Verification Closed' : 'Secure Delivery PIN'}
-                             </p>
-                          </div>
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`}>
+                             {order.status === 'completed' ? 'Fulfillment Closed' : 'Secure Delivery PIN'}
+                          </p>
                           <p className="text-[9px] font-bold text-slate-500 uppercase leading-tight max-w-[160px]">
                             {order.status === 'completed' 
-                              ? 'Item successfully received and confirmed.' 
-                              : 'Provide this code to the logistics rider only when items are in your hands.'}
+                              ? 'Verification successful.' 
+                              : 'Provide this code to the rider to confirm your delivery.'}
                           </p>
                         </div>
-                        <div className={`px-5 py-3 rounded-2xl shadow-sm text-xl font-mono font-black tracking-[0.25em] border-2 ${order.status === 'completed' ? 'bg-green-500 text-white border-green-600 shadow-glow-green' : 'bg-white dark:bg-black text-slate-900 dark:text-white border-blue-200 dark:border-blue-500/30'}`}>
+                        <div className={`px-5 py-3 rounded-2xl shadow-sm text-xl font-mono font-black tracking-[0.25em] border-2 ${order.status === 'completed' ? 'bg-green-500 text-white border-green-600' : 'bg-white dark:bg-black text-slate-900 dark:text-white border-blue-200 dark:border-blue-500/30'}`}>
                           {order.short_id}
                         </div>
                       </div>
