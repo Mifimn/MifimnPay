@@ -26,12 +26,10 @@ export default function CheckoutPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
-  // Form State
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '' });
   const [shipping, setShipping] = useState({ state: '', lga: '', location: '', method: 'whatsapp', fee: 0 });
   const [availableOptions, setAvailableOptions] = useState<string[]>([]);
 
-  // 1. Fetch Vendor Details & Config
   useEffect(() => {
     const fetchVendor = async () => {
       if (!vendor_slug) return;
@@ -45,7 +43,6 @@ export default function CheckoutPage() {
     fetchVendor();
   }, [vendor_slug]);
 
-  // 2. Dynamic Logistics Engine
   useEffect(() => {
     if (!vendor || !shipping.state || !shipping.lga) {
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
@@ -58,7 +55,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check if the selected State & LGA match the vendor's setup
     const config = vendor.logistics_config || [];
     const matchedZone = config.find((z: any) => z.state === shipping.state && z.lga === shipping.lga);
 
@@ -67,21 +63,22 @@ export default function CheckoutPage() {
         ...prev, 
         method: matchedZone.method, 
         fee: Number(matchedZone.price) || 0,
-        location: '' // Reset location until they pick one from the new options
+        location: '' 
       }));
-      // Convert comma-separated string to array
       setAvailableOptions(matchedZone.options ? matchedZone.options.split(',').map((o:string) => o.trim()) : []);
     } else {
-      // Fallback to WhatsApp if outside delivery zone
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
       setAvailableOptions([]);
     }
   }, [shipping.state, shipping.lga, vendor]);
 
+  // SMART PACK MATH: Divides pack price by MOQ to get true unit price
   const subtotal = basket.reduce((acc, item) => {
-    const activePrice = (item.wholesale_price && item.quantity >= (item.moq || 0)) ? item.wholesale_price : item.price;
-    return acc + (activePrice * item.quantity);
+    const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
+    const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
+    return acc + (unitPrice * item.quantity);
   }, 0);
+
   const totalPrice = subtotal + shipping.fee;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,7 +103,6 @@ export default function CheckoutPage() {
     try {
       let uploadedReceiptUrl = null;
 
-      // 1. Upload Receipt to Supabase Storage (if provided)
       if (receiptFile) {
         const fileExt = receiptFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -122,10 +118,9 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
-      // 2. Save Order to Database
       const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
         vendor_id: vendor.id,
-        customer_id: user?.id, // <--- ADDED THIS LINE TO LINK ORDER TO CUSTOMER!
+        customer_id: user?.id,
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone,
         customer_address: customerInfo.address,
@@ -141,7 +136,6 @@ export default function CheckoutPage() {
 
       if (dbError) throw dbError;
 
-      // 3. Generate WhatsApp Message
       let message = `*NEW ORDER - #${orderData.short_id}*%0A%0A`;
       message += `*Customer:* ${customerInfo.name}%0A`;
       message += `*Phone:* ${customerInfo.phone}%0A`;
@@ -149,26 +143,28 @@ export default function CheckoutPage() {
       message += `*Location:* ${shipping.location || 'N/A'} (${shipping.lga}, ${shipping.state})%0A`;
 
       message += `%0A*ORDER DETAILS:*%0A`;
+
+      // Smart Pack Math for WhatsApp Message
       basket.forEach((item, index) => {
-        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 0);
-        const activePrice = isWholesale ? item.wholesale_price : item.price;
-        message += `${index + 1}. *${item.name}* (x${item.quantity}) - ₦${Number(activePrice).toLocaleString()}%0A`;
+        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
+        const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
+        const itemTotal = unitPrice * item.quantity;
+        message += `${index + 1}. *${item.name}* (x${item.quantity}) - ₦${Math.round(itemTotal).toLocaleString()}%0A`;
       });
 
-      message += `%0A*Subtotal:* ₦${subtotal.toLocaleString()}%0A`;
+      message += `%0A*Subtotal:* ₦${Math.round(subtotal).toLocaleString()}%0A`;
       message += `*Shipping Fee:* ${shipping.fee > 0 ? `₦${shipping.fee.toLocaleString()}` : 'Negotiable'}%0A`;
-      message += `*TOTAL PAID:* ₦${totalPrice.toLocaleString()}%0A`;
+      message += `*TOTAL PAID:* ₦${Math.round(totalPrice).toLocaleString()}%0A`;
 
       if (uploadedReceiptUrl) {
         message += `%0A_Payment receipt has been uploaded and attached to your dashboard._`;
       }
 
-      // 4. Redirect & Clean up
       const whatsappUrl = `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${message}`;
       window.open(whatsappUrl, '_blank');
 
       clearCart();
-      router.push(`/${vendor_slug}/my-orders`); // Redirects straight to their new dashboard!
+      router.push(`/${vendor_slug}/my-orders`);
 
     } catch (error: any) {
       console.error(error);
@@ -194,8 +190,6 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-
-          {/* Contact Details */}
           <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
             <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
               <User size={18} style={{ color: themeColor }} /> 1. Logistics Contact Info
@@ -216,7 +210,6 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* Shipping Details */}
           <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
             <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
               <MapPin size={18} style={{ color: themeColor }} /> 2. Delivery Zone
@@ -278,7 +271,6 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Payment Method */}
           <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
             <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
               <CreditCard size={18} style={{ color: themeColor }} /> 3. Secure Payment
@@ -321,16 +313,14 @@ export default function CheckoutPage() {
               </div>
             )}
           </section>
-
         </div>
 
-        {/* Summary Side Panel */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-6 lg:p-8 shadow-2xl">
             <div className="space-y-4 mb-8">
               <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
                 <span>Items Subtotal</span>
-                <span className="text-slate-900 dark:text-white">₦{subtotal.toLocaleString()}</span>
+                <span className="text-slate-900 dark:text-white">₦{Math.round(subtotal).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 pb-4 border-b border-slate-200 dark:border-white/5">
                 <span>Shipping Fee</span>
@@ -338,7 +328,7 @@ export default function CheckoutPage() {
               </div>
               <div className="pt-2 flex justify-between items-end">
                 <span className="font-black uppercase italic text-xs text-slate-900 dark:text-white">Total</span>
-                <span className="text-3xl font-black tracking-tighter" style={{ color: themeColor }}>₦{totalPrice.toLocaleString()}</span>
+                <span className="text-3xl font-black tracking-tighter" style={{ color: themeColor }}>₦{Math.round(totalPrice).toLocaleString()}</span>
               </div>
             </div>
 

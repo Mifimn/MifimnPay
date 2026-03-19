@@ -30,7 +30,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
   const [copied, setCopied] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
-  // Dedicated explicit quantity counters
   const [retailQty, setRetailQty] = useState(1);
   const [wholesalePacks, setWholesalePacks] = useState(1);
 
@@ -69,28 +68,25 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
   const nextImage = () => setCurrentImgIndex((prev) => (prev + 1) % images.length);
   const prevImage = () => setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length);
 
-  // --- STRICT QUANTITY INJECTION ---
   const handleAddRetail = () => {
     if (!product) return;
-    // Ensures they can't add more than available stock
     const safeQtyToAdd = Math.min(retailQty, maxStock - currentQtyInCart);
     if (safeQtyToAdd > 0) {
-      addToBasket({ ...product }, safeQtyToAdd); // Forces cart store to add exact number
-      setRetailQty(1); // Reset back to 1
-      toggleCart(); // Auto open cart
+      addToBasket({ ...product }, safeQtyToAdd); 
+      setRetailQty(1); 
+      toggleCart(); 
     }
   };
 
   const handleAddWholesale = () => {
     if (!product) return;
-    // Multiplies the packs selected by the actual MOQ required per pack
     const totalUnitsToAdd = wholesalePacks * product.moq;
     const safeQtyToAdd = Math.min(totalUnitsToAdd, maxStock - currentQtyInCart);
 
     if (safeQtyToAdd > 0) {
-      addToBasket({ ...product }, safeQtyToAdd); // Forces cart to jump directly by MOQ increments
-      setWholesalePacks(1); // Reset back to 1
-      toggleCart(); // Auto open cart
+      addToBasket({ ...product }, safeQtyToAdd); 
+      setWholesalePacks(1); 
+      toggleCart(); 
     }
   };
 
@@ -114,7 +110,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
-        {/* IMAGE SLIDER */}
         <div className="w-full lg:flex-1">
           <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[40px] aspect-square flex items-center justify-center p-8 relative overflow-hidden shadow-sm group">
             <AnimatePresence mode="wait">
@@ -130,7 +125,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
           </div>
         </div>
 
-        {/* DETAILS & ACTIONS */}
         <div className="w-full lg:flex-1 space-y-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2" style={{ color: themeColor }}>
@@ -176,7 +170,8 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
                     <span className="text-[10px] font-black uppercase tracking-widest text-brand-orange block">Wholesale Order</span>
                     <span className="text-[9px] font-bold text-brand-orange/70 uppercase">1 Pack = {product.moq} Units</span>
                   </div>
-                  <span className="font-black text-lg text-brand-orange">₦{Number(product.wholesale_price).toLocaleString()} <span className="text-[10px]">/ unit</span></span>
+                  {/* DISPLAYED AS PACK PRICE */}
+                  <span className="font-black text-lg text-brand-orange">₦{Number(product.wholesale_price).toLocaleString()} <span className="text-[10px]">/ pack</span></span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center bg-white dark:bg-black rounded-xl border border-brand-orange/20 p-1">
@@ -189,7 +184,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
                     disabled={currentQtyInCart + (wholesalePacks * product.moq) > maxStock}
                     className="flex-1 h-12 bg-brand-orange text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-glow-orange flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    <Box size={16} /> Add {wholesalePacks * product.moq} Units
+                    <Box size={16} /> Add {wholesalePacks * product.moq} Units (₦{(product.wholesale_price * wholesalePacks).toLocaleString()})
                   </button>
                 </div>
               </div>
@@ -199,8 +194,8 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
           <div className="grid grid-cols-3 gap-2">
             {[ 
                { label: "Retail Price", value: `₦${Number(product.price).toLocaleString()}` }, 
-               { label: "Wholesale", value: product.wholesale_price ? `₦${Number(product.wholesale_price).toLocaleString()}` : 'N/A' }, 
-               { label: "MOQ", value: `${product.moq} Units` } 
+               { label: "Wholesale Pack", value: product.wholesale_price ? `₦${Number(product.wholesale_price).toLocaleString()}` : 'N/A' }, 
+               { label: "Pack MOQ", value: `${product.moq} Units` } 
             ].map((tier, i) => (
               <div key={i} className="bg-white dark:bg-[#0a0a0a] py-4 px-2 rounded-[24px] text-center border border-slate-100 dark:border-white/5">
                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{tier.label}</p>
@@ -210,33 +205,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
           </div>
         </div>
       </div>
-
-      {/* RELATED PRODUCTS */}
-      {relatedProducts.length > 0 && (
-        <section className="pt-10 border-t border-slate-200 dark:border-white/10">
-          <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-8 dark:text-white">
-            Related <span style={{ color: themeColor }}>Assets</span>
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {relatedProducts.map((item: any) => (
-              <div 
-                key={item.id} 
-                onClick={() => router.push(`/${vendor_slug}/product/${item.id}`)}
-                className="bg-white dark:bg-[#0f0f0f] rounded-[28px] border border-slate-200 dark:border-white/10 p-4 group cursor-pointer hover:scale-[1.02] transition-all"
-              >
-                <div className="aspect-square bg-slate-50 dark:bg-white/5 rounded-2xl mb-4 flex items-center justify-center p-4">
-                  <img src={item.image_url} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt="" />
-                </div>
-                <h4 className="text-[10px] font-black text-slate-500 uppercase h-8 line-clamp-2 leading-tight px-1">{item.name}</h4>
-                <div className="flex justify-between items-end mt-3 px-1">
-                  <p className="text-lg font-black" style={{ color: themeColor }}>₦{Number(item.price).toLocaleString()}</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase pb-1">MOQ: {item.moq}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </motion.div>
   );
 }
