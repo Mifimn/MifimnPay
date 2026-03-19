@@ -39,11 +39,16 @@ function StorefrontLoginContent() {
 
     try {
       const storeName = vendor?.business_name || vendor_slug;
+
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          data: { store_name: storeName }
+          // CRITICAL: Metadata for the DB trigger to identify this as a Customer
+          data: { 
+            store_name: storeName,
+            is_vendor: false 
+          }
         }
       });
 
@@ -74,11 +79,11 @@ function StorefrontLoginContent() {
       if (verifyError) throw verifyError;
 
       if (user) {
-        // NEW: Mark this session as a Customer session to prevent Dashboard takeover
+        // Mark session as Customer to protect Vendor Dashboard
         localStorage.setItem('mifimn_user_role', 'customer');
 
         if (vendor) {
-          // 2. IDENTITY SYNC: Check if this user exists in this VENDOR'S specific CRM
+          // 2. CRM SYNC: Ensure customer is registered under THIS specific vendor
           const { data: existingCustomer } = await supabase
             .from('customers')
             .select('id')
@@ -86,7 +91,6 @@ function StorefrontLoginContent() {
             .eq('vendor_id', vendor.id)
             .single();
 
-          // 3. AUTO-REGISTER: If they are a new customer for this specific vendor, add them
           if (!existingCustomer) {
             await supabase.from('customers').insert([{
               auth_id: user.id,

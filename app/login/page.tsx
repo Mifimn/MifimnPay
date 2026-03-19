@@ -26,7 +26,12 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { 
-        redirectTo: `${window.location.origin}/auth-callback` 
+        redirectTo: `${window.location.origin}/auth-callback`,
+        // Pass metadata for Google signups as well
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account'
+        }
       },
     });
     if (error) setError(error.message);
@@ -45,7 +50,15 @@ export default function LoginPage() {
 
     try {
       if (authMode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password });
+        // SIGNUP: Explicitly tell the DB trigger this IS a vendor
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            data: { is_vendor: true } 
+          }
+        });
+
         if (error) throw error;
 
         setShowEmailModal(true);
@@ -57,22 +70,22 @@ export default function LoginPage() {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) throw authError;
 
-        // 2. VENDOR VALIDATION: Check if a profile exists for this ID
+        // 2. VENDOR VALIDATION: Verify business profile exists
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('business_name, is_admin')
           .eq('id', data.user.id)
           .single();
 
-        // 3. LOGIC: If no profile exists, this is a Customer account (OTP user)
+        // 3. LOGIC: If no profile exists, this is a Customer account
         if (profileError || !profile) {
-          await supabase.auth.signOut(); // Terminate the session
+          await supabase.auth.signOut();
           localStorage.removeItem('mifimn_user_role');
-          setError("Access Denied: This portal is for Vendors. If you are a buyer, please use the store link provided by your vendor.");
+          setError("Access Denied: Business account not found. If you are a buyer, please use the store link provided by your vendor.");
           return;
         }
 
-        // NEW: Mark this session specifically as a Vendor session
+        // NEW: Mark this session specifically as a Vendor session to lock identity
         localStorage.setItem('mifimn_user_role', 'vendor');
 
         // 4. ROUTING
@@ -227,7 +240,7 @@ export default function LoginPage() {
 
               <button 
                 disabled={isLoading} 
-                className="w-full h-14 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-glow-orange active:scale-[0.98] disabled:opacity-70 flex items-center justify-center"
+                className="w-full h-14 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-glow-orange active:scale-[0.98] disabled:opacity-70 flex items-center justify-center"
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In as Vendor' : 'Create Vendor Account')}
               </button>
