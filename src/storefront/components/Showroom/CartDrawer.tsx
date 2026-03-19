@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, ArrowRight, Package, AlertCircle } from 'lucide-react';
-import { useCartStore } from '@/storefront/store/useCartStore';
+import { useCartStore } from '@/src/storefront/store/useCartStore';
 import { useRouter, useParams } from 'next/navigation';
 
 export default function CartDrawer() {
@@ -58,26 +58,32 @@ export default function CartDrawer() {
                   return (
                     <div key={item.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-brand-orange/20 transition-all">
                       <div className="flex gap-4">
-                        <div className="w-16 h-16 bg-white rounded-xl p-1 shrink-0 border border-slate-100">
+                        <div className="w-16 h-16 bg-white rounded-xl p-1 shrink-0 border border-slate-100 dark:border-white/10">
                           <img src={item.image_url || item.img} alt={item.name} className="w-full h-full object-contain" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-[11px] font-black uppercase dark:text-white truncate">{item.name}</h4>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-1">
                             <p className="text-brand-orange font-black text-sm">₦{Number(activePrice).toLocaleString()}</p>
                             {isWholesale && <span className="bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase">Wholesale</span>}
                           </div>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Qty: {item.quantity} Unit(s)</p>
+
+                          {/* Emphasized Quantity Display */}
+                          <div className="mt-2 inline-flex items-center gap-2 bg-slate-100 dark:bg-black/40 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Quantity:</span>
+                            <span className="text-xs font-black dark:text-white">{item.quantity}</span>
+                          </div>
+
                         </div>
-                        <button onClick={() => removeFromBasket(item.id)} className="text-slate-300 hover:text-red-500 p-2 h-fit">
+                        <button onClick={() => removeFromBasket(item.id)} className="text-slate-300 hover:text-red-500 p-2 h-fit transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </div>
 
                       {!moqMet && (
-                        <div className="mt-3 flex items-center gap-2 text-red-500">
-                           <AlertCircle size={12} />
-                           <p className="text-[8px] font-black uppercase italic">Below Min Order ({item.moq} Units)</p>
+                        <div className="mt-3 flex items-center gap-2 text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                           <AlertCircle size={12} className="shrink-0" />
+                           <p className="text-[8px] font-black uppercase italic tracking-widest">Below Wholesale Min ({item.moq} Units)</p>
                         </div>
                       )}
                     </div>
@@ -96,7 +102,7 @@ export default function CartDrawer() {
                   onClick={handleCheckout}
                   className="w-full py-5 bg-brand-orange text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-glow-orange flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
                 >
-                  Proceed to Payment <ArrowRight size={18} />
+                  Proceed to Checkout <ArrowRight size={18} />
                 </button>
               </div>
             )}

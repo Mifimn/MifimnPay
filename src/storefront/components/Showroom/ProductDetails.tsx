@@ -36,13 +36,12 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     price: productData.price,
     moq: productData.moq || 1,
     img: productData.image_url,
-    image_urls: productData.image_urls || [], // Array of multiple images
+    image_urls: productData.image_urls || [], 
     stock: productData.stock || 0,
     wholesale_price: productData.wholesale_price,
     description: productData.description
   } : null;
 
-  // Multi-image logic fallback
   const images = product?.image_urls?.length > 0 
     ? product.image_urls 
     : (product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"]);
@@ -68,6 +67,27 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
 
   const nextImage = () => setCurrentImgIndex((prev) => (prev + 1) % images.length);
   const prevImage = () => setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length);
+
+  // --- SMART ADD TO CART LOGIC ---
+  const handleAddRetail = () => {
+    if (!product) return;
+    const safeQtyToAdd = Math.min(1, maxStock - currentQty); // Prevents going over stock
+    if (safeQtyToAdd > 0) {
+      addToBasket({ ...product }, safeQtyToAdd);
+    }
+  };
+
+  const handleAddWholesale = () => {
+    if (!product) return;
+    // If they have less than MOQ, add the difference. If they already hit MOQ, just add 1.
+    const neededForMoq = product.moq - currentQty;
+    const targetAdd = neededForMoq > 0 ? neededForMoq : 1;
+
+    const safeQtyToAdd = Math.min(targetAdd, maxStock - currentQty); // Prevents going over stock
+    if (safeQtyToAdd > 0) {
+      addToBasket({ ...product }, safeQtyToAdd);
+    }
+  };
 
   if (isLoading) return <DetailsSkeleton />;
   if (!product) return (
@@ -120,7 +140,6 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
               />
             </AnimatePresence>
 
-            {/* Slider Controls (Only show if multiple images) */}
             {images.length > 1 && (
               <>
                 <button onClick={prevImage} className="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-white/80 dark:bg-black/50 text-slate-900 dark:text-white rounded-full shadow-lg backdrop-blur-md hover:scale-110 transition-all z-10">
@@ -179,31 +198,27 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
             {/* RETAIL vs WHOLESALE BUTTONS */}
             <div className={`grid gap-3 ${product.wholesale_price ? 'grid-cols-2' : 'grid-cols-1'}`}>
 
-              {/* Add Retail (1 Unit increments) */}
+              {/* ADD RETAIL */}
               <button 
-                onClick={() => addToBasket({ ...productData, img: productData.image_url, price: productData.price }, 1)}
+                onClick={handleAddRetail}
                 disabled={currentQty >= maxStock}
                 className="py-5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}33`, color: '#FFFFFF' }}
               >
-                <Plus size={16} /> {currentQty > 0 ? "Add Another (+1)" : "Add Retail"}
+                <Plus size={16} /> {currentQty > 0 ? "Add Retail (+1)" : "Add Retail (1 Unit)"}
               </button>
 
-              {/* Add Wholesale (Smart MOQ scaling) */}
+              {/* ADD WHOLESALE */}
               {product.wholesale_price && (
                 <button 
-                  onClick={() => {
-                    // Smart Logic: First click adds the minimum required MOQ. Future clicks add 1 unit.
-                    const qtyToAdd = (currentQty === 0 && product.moq > 1) ? product.moq : 1;
-                    addToBasket({ ...productData, img: productData.image_url, price: productData.wholesale_price }, qtyToAdd);
-                  }}
+                  onClick={handleAddWholesale}
                   disabled={currentQty >= maxStock}
                   className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl px-2 text-center"
                 >
                   <Box size={16} /> 
-                  {currentQty > 0 
-                    ? "Add Another (+1)" 
-                    : `Add Wholesale ${product.moq > 1 ? `(${product.moq} Min)` : ''}`
+                  {currentQty >= product.moq 
+                    ? "Add Wholesale (+1)" 
+                    : `Buy Wholesale (${product.moq} Min)`
                   }
                 </button>
               )}
