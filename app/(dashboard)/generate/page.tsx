@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // UPDATED for App Router
+import { useRouter } from 'next/navigation'; 
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
   Settings, Lock, AlertTriangle, User, Store, Edit3
@@ -9,7 +9,6 @@ import {
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
 
-// UPDATED: Using absolute paths to match your Next.js setup
 import { ReceiptData, ReceiptItem, ReceiptSettings } from '@/types';
 import ReceiptPreview from '@/components/generator/ReceiptPreview';
 import { supabase } from '@/lib/supabaseClient'; 
@@ -45,7 +44,7 @@ export default function Generator() {
     currency: '₦',
     items: [{ id: '1', name: '', qty: 1, price: '' }], 
     paymentMethod: 'Transfer',
-    status: 'paid', // UPDATED: Changed to lowercase 'paid'
+    status: 'paid',
     discount: '',
     shipping: '',
     businessName: 'My Business',
@@ -167,7 +166,7 @@ export default function Generator() {
       total_amount: numericTotal,
       shipping_fee: shipping,
       discount_amount: discount,
-      status: data.status.toLowerCase(), // Save as lowercase
+      status: data.status.toLowerCase(),
       payment_method: data.paymentMethod,
       items: data.items.map(i => ({
         ...i,
@@ -269,8 +268,8 @@ export default function Generator() {
   if (!isClient || authLoading) return null;
 
   return (
-    <div className="h-[100dvh] bg-brand-bg flex flex-col overflow-hidden transition-colors duration-300">
-      {/* Head tag removed because Next.js 15 uses Metadata in layout files instead! */}
+    // FIX APPLIED HERE: Added conditionally rendered "fixed inset-0 z-[100]" classes if !user
+    <div className={`h-[100dvh] bg-brand-bg flex flex-col overflow-hidden transition-colors duration-300 ${!user ? 'fixed inset-0 z-[100]' : ''}`}>
 
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
@@ -382,86 +381,86 @@ export default function Generator() {
                             className="w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none font-medium bg-brand-paper md:bg-brand-bg appearance-none text-brand-black transition-colors duration-300"
                           >
                             <option value="">Select from Price List</option>
-                                                        {availableProducts.map(p => (
-                                                          <option key={p.id} value={p.id}>{p.name} ({data.currency}{p.price})</option>
-                                                        ))}
-                                                      </select>
-                                                    ) : (
-                                                      <input placeholder="Item Name" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none font-medium bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300" />
-                                                    )}
-                                                  </div>
-                                                  <div className="flex gap-2">
-                                                    <div className="w-20">
-                                                      <label className="text-[10px] font-bold text-brand-gray mb-1 block md:hidden uppercase transition-colors duration-300">Qty</label>
-                                                      <input type="number" placeholder="1" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none text-center font-bold bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300" />
-                                                    </div>
-                                                    <div className="flex-1 md:w-32">
-                                                      <label className="text-[10px] font-bold text-brand-gray mb-1 block md:hidden uppercase transition-colors duration-300">Price</label>
-                                                      <input 
-                                                        type="number" 
-                                                        disabled={useStoreMode}
-                                                        placeholder="0" 
-                                                        value={item.price} 
-                                                        onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} 
-                                                        className={`w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none font-bold bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300 ${useStoreMode ? 'opacity-50 cursor-not-allowed' : ''}`} 
-                                                      />
-                                                    </div>
-                                                    <button onClick={() => removeItem(item.id)} className="p-3 text-brand-gray hover:text-red-500 self-end md:self-center transition-colors"><Trash2 size={20}/></button>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </section>
+                                                                                {availableProducts.map(p => (
+                                                                                  <option key={p.id} value={p.id}>{p.name} ({data.currency}{p.price})</option>
+                                                                                ))}
+                                                                              </select>
+                                                                            ) : (
+                                                                              <input placeholder="Item Name" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} className="w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none font-medium bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300" />
+                                                                            )}
+                                                                          </div>
+                                                                          <div className="flex gap-2">
+                                                                            <div className="w-20">
+                                                                              <label className="text-[10px] font-bold text-brand-gray mb-1 block md:hidden uppercase transition-colors duration-300">Qty</label>
+                                                                              <input type="number" placeholder="1" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none text-center font-bold bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300" />
+                                                                            </div>
+                                                                            <div className="flex-1 md:w-32">
+                                                                              <label className="text-[10px] font-bold text-brand-gray mb-1 block md:hidden uppercase transition-colors duration-300">Price</label>
+                                                                              <input 
+                                                                                type="number" 
+                                                                                disabled={useStoreMode}
+                                                                                placeholder="0" 
+                                                                                value={item.price} 
+                                                                                onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} 
+                                                                                className={`w-full p-3 text-base border-2 border-brand-border rounded-xl focus:border-brand-black outline-none font-bold bg-brand-paper md:bg-brand-bg text-brand-black transition-colors duration-300 ${useStoreMode ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                                                                              />
+                                                                            </div>
+                                                                            <button onClick={() => removeItem(item.id)} className="p-3 text-brand-gray hover:text-red-500 self-end md:self-center transition-colors"><Trash2 size={20}/></button>
+                                                                          </div>
+                                                                        </div>
+                                                                      </div>
+                                                                    ))}
+                                                                  </div>
+                                                                </section>
 
-                                        <section className="bg-brand-paper p-5 rounded-2xl border border-brand-border shadow-sm space-y-4 transition-colors duration-300">
-                                           <h3 className="font-bold text-xs text-brand-gray uppercase tracking-wider transition-colors duration-300">Fees & Method</h3>
-                                           <div className="grid grid-cols-2 gap-4">
-                                              <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-brand-gray ml-1 uppercase transition-colors duration-300">Discount (Amount)</label>
-                                                <input type="number" placeholder="0" value={data.discount} onChange={(e) => setData({...data, discount: e.target.value})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl outline-none focus:border-brand-black bg-brand-bg focus:bg-brand-paper text-base text-brand-black transition-colors duration-300" />
-                                              </div>
-                                              <div className="space-y-1">
-                                               <label className="text-[10px] font-bold text-brand-gray ml-1 uppercase transition-colors duration-300">Shipping (Amount)</label>
-                                                <input type="number" placeholder="0" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl outline-none focus:border-brand-black bg-brand-bg focus:bg-brand-paper text-base text-brand-black transition-colors duration-300" />
-                                              </div>
-                                              <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl bg-brand-paper outline-none focus:border-brand-black text-sm text-brand-black transition-colors duration-300">
-                                                 <option>Transfer</option><option>Cash</option><option>POS</option>
-                                              </select>
-                                              <select value={data.status} onChange={(e) => setData({...data, status: e.target.value.toLowerCase() as any})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl bg-brand-paper outline-none focus:border-brand-black text-sm text-brand-black transition-colors duration-300">
-                                                 <option value="paid">Paid</option>
-                                                 <option value="pending">Pending</option>
-                                              </select>
-                                           </div>
-                                        </section>
-                                      </div>
-                                    </div>
+                                                                <section className="bg-brand-paper p-5 rounded-2xl border border-brand-border shadow-sm space-y-4 transition-colors duration-300">
+                                                                   <h3 className="font-bold text-xs text-brand-gray uppercase tracking-wider transition-colors duration-300">Fees & Method</h3>
+                                                                   <div className="grid grid-cols-2 gap-4">
+                                                                      <div className="space-y-1">
+                                                                        <label className="text-[10px] font-bold text-brand-gray ml-1 uppercase transition-colors duration-300">Discount (Amount)</label>
+                                                                        <input type="number" placeholder="0" value={data.discount} onChange={(e) => setData({...data, discount: e.target.value})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl outline-none focus:border-brand-black bg-brand-bg focus:bg-brand-paper text-base text-brand-black transition-colors duration-300" />
+                                                                      </div>
+                                                                      <div className="space-y-1">
+                                                                       <label className="text-[10px] font-bold text-brand-gray ml-1 uppercase transition-colors duration-300">Shipping (Amount)</label>
+                                                                        <input type="number" placeholder="0" value={data.shipping} onChange={(e) => setData({...data, shipping: e.target.value})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl outline-none focus:border-brand-black bg-brand-bg focus:bg-brand-paper text-base text-brand-black transition-colors duration-300" />
+                                                                      </div>
+                                                                      <select value={data.paymentMethod} onChange={(e) => setData({...data, paymentMethod: e.target.value as any})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl bg-brand-paper outline-none focus:border-brand-black text-sm text-brand-black transition-colors duration-300">
+                                                                         <option>Transfer</option><option>Cash</option><option>POS</option>
+                                                                      </select>
+                                                                      <select value={data.status} onChange={(e) => setData({...data, status: e.target.value.toLowerCase() as any})} className="w-full h-12 px-4 border-2 border-brand-border rounded-xl bg-brand-paper outline-none focus:border-brand-black text-sm text-brand-black transition-colors duration-300">
+                                                                         <option value="paid">Paid</option>
+                                                                         <option value="pending">Pending</option>
+                                                                      </select>
+                                                                   </div>
+                                                                </section>
+                                                              </div>
+                                                            </div>
 
-                                    <div className={`flex-1 h-full bg-brand-bg flex flex-col relative transition-colors duration-300 ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
-                                      <div className="bg-brand-paper/80 backdrop-blur-md border-b border-brand-border p-3 flex justify-between items-center z-10 shadow-sm shrink-0 transition-colors duration-300">
-                                         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                                           {colors.map(c => (
-                                             <button key={c} onClick={() => setSettings({...settings, color: c})} className={`w-7 h-7 rounded-full border-2 transition-all ${settings.color === c ? 'border-brand-black scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`} style={{ backgroundColor: c }} />
-                                           ))}
-                                         </div>
-                                         <div className="flex gap-2">
-                                           <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-brand-black shadow-sm text-brand-paper' : 'text-brand-gray hover:bg-brand-bg'}`}>Logo</button>
-                                           <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-brand-bg shadow-sm border border-brand-border text-brand-black transition-colors duration-300">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
-                                         </div>
-                                      </div>
-                                      <div className="flex-1 overflow-auto flex items-center justify-center p-4 relative">
-                                         <div className="scale-[0.85] md:scale-100 origin-center transition-transform">
-                                           <ReceiptPreview data={data} settings={settings} receiptRef={receiptRef} />
-                                         </div>
-                                      </div>
-                                    </div>
+                                                            <div className={`flex-1 h-full bg-brand-bg flex flex-col relative transition-colors duration-300 ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
+                                                              <div className="bg-brand-paper/80 backdrop-blur-md border-b border-brand-border p-3 flex justify-between items-center z-10 shadow-sm shrink-0 transition-colors duration-300">
+                                                                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                                                                   {colors.map(c => (
+                                                                     <button key={c} onClick={() => setSettings({...settings, color: c})} className={`w-7 h-7 rounded-full border-2 transition-all ${settings.color === c ? 'border-brand-black scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`} style={{ backgroundColor: c }} />
+                                                                   ))}
+                                                                 </div>
+                                                                 <div className="flex gap-2">
+                                                                   <button onClick={() => setSettings({...settings, showLogo: !settings.showLogo})} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${settings.showLogo ? 'bg-brand-black shadow-sm text-brand-paper' : 'text-brand-gray hover:bg-brand-bg'}`}>Logo</button>
+                                                                   <button onClick={() => setSettings({...settings, template: settings.template === 'simple' ? 'detailed' : 'simple'})} className="px-3 py-1.5 rounded-full text-xs font-bold bg-brand-bg shadow-sm border border-brand-border text-brand-black transition-colors duration-300">{settings.template === 'simple' ? 'Simple' : 'Detailed'}</button>
+                                                                 </div>
+                                                              </div>
+                                                              <div className="flex-1 overflow-auto flex items-center justify-center p-4 relative">
+                                                                 <div className="scale-[0.85] md:scale-100 origin-center transition-transform">
+                                                                   <ReceiptPreview data={data} settings={settings} receiptRef={receiptRef} />
+                                                                 </div>
+                                                              </div>
+                                                            </div>
 
-                                    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-paper border-t border-brand-border flex z-40 pb-safe shadow-lg transition-colors duration-300">
-                                      <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold transition-colors duration-300 ${activeTab === 'edit' ? 'text-brand-black bg-brand-bg' : 'text-brand-gray'}`}>Edit Details</button>
-                                      <div className="w-[1px] bg-brand-border h-6 self-center transition-colors duration-300"></div>
-                                      <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold transition-colors duration-300 ${activeTab === 'preview' ? 'text-brand-black bg-brand-bg' : 'text-brand-gray'}`}>Live Preview</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
+                                                            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-paper border-t border-brand-border flex z-40 pb-safe shadow-lg transition-colors duration-300">
+                                                              <button onClick={() => setActiveTab('edit')} className={`flex-1 py-4 text-sm font-bold transition-colors duration-300 ${activeTab === 'edit' ? 'text-brand-black bg-brand-bg' : 'text-brand-gray'}`}>Edit Details</button>
+                                                              <div className="w-[1px] bg-brand-border h-6 self-center transition-colors duration-300"></div>
+                                                              <button onClick={() => setActiveTab('preview')} className={`flex-1 py-4 text-sm font-bold transition-colors duration-300 ${activeTab === 'preview' ? 'text-brand-black bg-brand-bg' : 'text-brand-gray'}`}>Live Preview</button>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      );
+                                                    }
