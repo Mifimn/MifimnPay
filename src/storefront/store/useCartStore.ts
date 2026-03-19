@@ -6,8 +6,12 @@ export interface Product {
   id: number | string;
   name: string;
   price: string | number;
-  img: string;
+  img?: string;
+  image_url?: string;
   quantity?: number;
+  wholesale_price?: number; 
+  moq?: number;             
+  stock?: number;           
 }
 
 interface CartState {
@@ -25,7 +29,7 @@ interface CartState {
 
   setProcessing: (val: boolean) => void;
   toggleCart: () => void;
-  addToBasket: (product: Product) => void;
+  addToBasket: (product: Product, quantityToAdd?: number) => void;
   removeFromBasket: (id: number | string) => void;
   clearCart: () => void;
   setPaymentMethod: (method: 'paystack' | 'manual') => void;
@@ -44,9 +48,25 @@ export const useCartStore = create<CartState>((set) => ({
   toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
 
-  addToBasket: (product) => set((state) => {
-    if (state.basket.find(item => item.id === product.id)) return state;
-    return { basket: [...state.basket, { ...product, quantity: 1 }] };
+  // --- THE FIXED LOGIC ---
+  addToBasket: (product, quantityToAdd = 1) => set((state) => {
+    const existingItem = state.basket.find(item => item.id === product.id);
+
+    if (existingItem) {
+      // If the item is already in the cart, update it by adding the new quantity
+      return {
+        basket: state.basket.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: (item.quantity || 0) + quantityToAdd }
+            : item
+        )
+      };
+    }
+
+    // If it's a completely new item, add it with the requested quantity
+    return { 
+      basket: [...state.basket, { ...product, quantity: quantityToAdd }] 
+    };
   }),
 
   removeFromBasket: (id) => set((state) => ({

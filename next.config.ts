@@ -6,6 +6,8 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development", // disable PWA in development to avoid caching issues
   register: true, // automatically register the service worker
   skipWaiting: true, // skip waiting for service worker activation
+  // THIS IS THE MAGIC FIX FOR THE PWA 404 BUILD ERROR:
+  buildExcludes: [/app-build-manifest\.json$/],
 });
 
 const nextConfig: NextConfig = {
