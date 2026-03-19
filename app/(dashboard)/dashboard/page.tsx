@@ -13,7 +13,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { useThemeStore } from '@/storefront/store/useThemeStore';
+import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -34,14 +34,12 @@ export default function DashboardPage() {
 
   const [isQrExpanded, setIsQrExpanded] = useState(false);
 
-  // Dynamic Year Logic: Starts at 2026, auto-expands to current year
   const actualCurrentYear = new Date().getFullYear();
   const displayYear = Math.max(actualCurrentYear, 2026);
   const [selectedYear, setSelectedYear] = useState(displayYear);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  // Generates array like [2026, 2027, 2028...] based on current year
   const years = Array.from({ length: Math.max(1, actualCurrentYear - 2026 + 1) }, (_, i) => 2026 + i).reverse();
 
   useEffect(() => {
@@ -83,19 +81,22 @@ export default function DashboardPage() {
 
   const fetchStorefrontStats = async () => {
     try {
+      // Changed 'products' to 'menu_items' to match your actual database schema
       const { count: productCount } = await supabase
-        .from('products')
+        .from('menu_items')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user?.id);
 
+      // FIXED: Switched .eq('user_id') to .eq('vendor_id') to sync with the new Orders schema!
       const { data: ordersData } = await supabase
         .from('orders')
         .select('total_amount, customer_name, created_at, status')
-        .eq('user_id', user?.id)
+        .eq('vendor_id', user?.id) 
         .order('created_at', { ascending: false });
 
       if (ordersData) {
-        const pending = ordersData.filter(o => o.status === 'pending' || o.status === 'processing').length;
+        // Any order that isn't completed or cancelled is technically still pending fulfillment
+        const pending = ordersData.filter(o => ['pending', 'processing', 'shipped'].includes(o.status)).length;
         setStorefrontStats({
           products: productCount || 0,
           totalOrders: ordersData.length,
@@ -167,10 +168,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-10 relative z-10">
-      {/* Background ambient light for liquid effect */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-orange/10 via-transparent to-transparent opacity-50 dark:opacity-20" />
 
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
@@ -191,21 +190,18 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main Stats Cards (Billing/Receipts) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard title="Total Revenue" value={`₦${stats.totalSales.toLocaleString()}`} icon={<TrendingUp size={20} />} color="text-brand-orange" bgGlow="bg-brand-orange/10" />
         <StatsCard title="Total Receipts" value={stats.count.toString()} icon={<FileText size={20} />} color="text-blue-500" bgGlow="bg-blue-500/10" />
         <StatsCard title="Active Clients" value={stats.customers.toString()} icon={<Users size={20} />} color="text-purple-500" bgGlow="bg-purple-500/10" />
       </div>
 
-      {/* Storefront Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard title="Active Products" value={storefrontStats.products.toString()} icon={<Package size={20} />} color="text-indigo-500" bgGlow="bg-indigo-500/10" />
         <StatsCard title="Storefront Orders" value={storefrontStats.totalOrders.toString()} icon={<ShoppingBag size={20} />} color="text-emerald-500" bgGlow="bg-emerald-500/10" />
         <StatsCard title="Pending Fulfillment" value={storefrontStats.pendingOrders.toString()} icon={<ShoppingCart size={20} />} color="text-amber-500" bgGlow="bg-amber-500/10" />
       </div>
 
-      {/* QR Storefront Tools (Glassmorphism + Swell Mimic) */}
       <section className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-[32px] overflow-hidden shadow-2xl relative">
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
         <button 
@@ -272,7 +268,6 @@ export default function DashboardPage() {
         </AnimatePresence>
       </section>
 
-      {/* Chart Section */}
       <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl p-8 rounded-[32px] border border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
         <div className="flex justify-between items-center mb-10">
           <div>
@@ -336,7 +331,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent History - Receipts vs Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Recent Receipts</h3>
@@ -358,7 +352,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Action Box for Receipts */}
         <div className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-2xl rounded-[32px] p-8 text-white h-fit shadow-2xl border border-white/10 dark:border-white/5 relative overflow-hidden">
            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/20 blur-[50px] rounded-full pointer-events-none" />
            <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-4 relative z-10">Billing</h4>
@@ -369,31 +362,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Store Orders vs Store Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         <div className="lg:col-span-2 space-y-6">
           <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Storefront Orders</h3>
           <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] divide-y divide-slate-100 dark:divide-white/5">
-            {recentStoreOrders.length > 0 ? recentStoreOrders.map((o, i) => (
-              <div key={i} className="p-6 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-slate-100/50 dark:bg-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase border border-white/20 dark:border-white/5">{o.customer_name?.[0] || 'O'}</div>
-                  <div>
-                    <p className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">{o.customer_name || 'Online Order'}</p>
-                    <p className="text-[9px] text-slate-500 font-black tracking-widest uppercase">
-                      Status: <span className={o.status === 'pending' ? 'text-amber-500' : 'text-emerald-500'}>{o.status || 'Received'}</span> • {new Date(o.created_at).toLocaleDateString()}
-                    </p>
+            {recentStoreOrders.length > 0 ? recentStoreOrders.map((o, i) => {
+
+              // Dynamic status colors!
+              let statusColor = 'text-slate-500';
+              if (o.status === 'pending' || o.status === 'processing') statusColor = 'text-amber-500';
+              if (o.status === 'shipped') statusColor = 'text-blue-500';
+              if (o.status === 'completed') statusColor = 'text-green-500';
+              if (o.status === 'cancelled') statusColor = 'text-red-500';
+
+              return (
+                <div key={i} className="p-6 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-100/50 dark:bg-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase border border-white/20 dark:border-white/5">{o.customer_name?.[0] || 'O'}</div>
+                    <div>
+                      <p className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">{o.customer_name || 'Online Order'}</p>
+                      <p className="text-[9px] text-slate-500 font-black tracking-widest uppercase">
+                        Status: <span className={statusColor}>{o.status || 'Received'}</span> • {new Date(o.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
+                  <span className="font-black text-brand-orange text-lg">₦{Number(o.total_amount || 0).toLocaleString()}</span>
                 </div>
-                <span className="font-black text-brand-orange text-lg">₦{Number(o.total_amount || 0).toLocaleString()}</span>
-              </div>
-            )) : (
+              );
+            }) : (
               <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">No recent store orders yet.</div>
             )}
           </div>
         </div>
 
-        {/* Quick Action Box for Storefront */}
         <div className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-2xl rounded-[32px] p-8 text-white h-fit shadow-2xl border border-white/10 dark:border-white/5 relative overflow-hidden">
            <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 blur-[50px] rounded-full pointer-events-none" />
            <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-4 relative z-10">Inventory</h4>

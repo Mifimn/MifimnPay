@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserPlus, MoreHorizontal, Mail, Phone, ArrowUpRight, Inbox, Loader2 } from 'lucide-react';
+import { Search, Mail, Phone, ArrowUpRight, Inbox, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -55,20 +55,13 @@ export default function CustomersPage() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-brand-black tracking-tight uppercase italic transition-colors duration-300">
-            Customers
-          </h1>
-          <p className="text-sm font-bold text-brand-gray tracking-wide uppercase transition-colors duration-300">
-            Manage your buyers and track their spending.
-          </p>
-        </div>
-        
-        <button className="bg-brand-black text-brand-paper px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg">
-          <UserPlus size={18} />
-          Add Customer
-        </button>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-black text-brand-black tracking-tight uppercase italic transition-colors duration-300">
+          Customers
+        </h1>
+        <p className="text-sm font-bold text-brand-gray tracking-wide uppercase transition-colors duration-300">
+          Manage your buyers and track their spending.
+        </p>
       </div>
 
       {/* Controls / Search Bar */}
@@ -180,14 +173,8 @@ export default function CustomersPage() {
             <p className="text-sm font-medium text-brand-gray max-w-sm mx-auto mb-8">
               {searchQuery 
                 ? "We couldn't find any customers matching your search." 
-                : "When customers buy from your storefront, they will automatically appear here."}
+                : "When customers buy from your storefront or you generate a receipt, they will automatically appear here."}
             </p>
-            {!searchQuery && (
-              <button className="bg-brand-black text-brand-paper px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg">
-                <UserPlus size={18} />
-                Add Your First Customer
-              </button>
-            )}
           </motion.div>
         )}
       </div>
