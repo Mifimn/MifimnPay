@@ -65,12 +65,15 @@ export default function LoginPage() {
           .single();
 
         // 3. LOGIC: If no profile exists, this is a Customer account (OTP user)
-        // We block them from the dashboard to keep the identities separate.
         if (profileError || !profile) {
           await supabase.auth.signOut(); // Terminate the session
-          setError("Access Denied: This portal is for Vendors. If you are a buyer, please use the store link provided by your vendor to login via OTP.");
+          localStorage.removeItem('mifimn_user_role');
+          setError("Access Denied: This portal is for Vendors. If you are a buyer, please use the store link provided by your vendor.");
           return;
         }
+
+        // NEW: Mark this session specifically as a Vendor session
+        localStorage.setItem('mifimn_user_role', 'vendor');
 
         // 4. ROUTING
         if (profile.is_admin) {

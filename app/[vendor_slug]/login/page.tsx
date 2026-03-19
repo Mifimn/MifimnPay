@@ -73,25 +73,30 @@ function StorefrontLoginContent() {
 
       if (verifyError) throw verifyError;
 
-      if (user && vendor) {
-        // 2. IDENTITY SYNC: Check if this user exists in this VENDOR'S specific CRM
-        const { data: existingCustomer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('auth_id', user.id)
-          .eq('vendor_id', vendor.id)
-          .single();
+      if (user) {
+        // NEW: Mark this session as a Customer session to prevent Dashboard takeover
+        localStorage.setItem('mifimn_user_role', 'customer');
 
-        // 3. AUTO-REGISTER: If they are a new customer for this specific vendor, add them
-        if (!existingCustomer) {
-          await supabase.from('customers').insert([{
-            auth_id: user.id,
-            vendor_id: vendor.id,
-            full_name: email.split('@')[0], // Default name from email prefix
-            total_spent: 0,
-            total_orders: 0,
-            created_at: new Date().toISOString()
-          }]);
+        if (vendor) {
+          // 2. IDENTITY SYNC: Check if this user exists in this VENDOR'S specific CRM
+          const { data: existingCustomer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('auth_id', user.id)
+            .eq('vendor_id', vendor.id)
+            .single();
+
+          // 3. AUTO-REGISTER: If they are a new customer for this specific vendor, add them
+          if (!existingCustomer) {
+            await supabase.from('customers').insert([{
+              auth_id: user.id,
+              vendor_id: vendor.id,
+              full_name: email.split('@')[0], 
+              total_spent: 0,
+              total_orders: 0,
+              created_at: new Date().toISOString()
+            }]);
+          }
         }
       }
 

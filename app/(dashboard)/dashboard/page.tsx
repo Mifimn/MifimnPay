@@ -43,16 +43,40 @@ export default function DashboardPage() {
   const years = Array.from({ length: Math.max(1, actualCurrentYear - 2026 + 1) }, (_, i) => 2026 + i).reverse();
 
   useEffect(() => {
-    if (!loading && !user) router.push('/login');
-    if (user) {
+    const validateIdentity = async () => {
+      if (loading) return;
+
+      // 1. If not logged in at all, go to login
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      // 2. SESSION PROTECTION LOGIC
+      // Check if the current session is marked as a 'vendor' session
+      const role = localStorage.getItem('mifimn_user_role');
+
+      if (role !== 'vendor') {
+        console.warn("Unauthorized Access: Redirecting customer session away from Dashboard.");
+        await supabase.auth.signOut();
+        localStorage.removeItem('mifimn_user_role');
+        router.push('/login');
+        return;
+      }
+
+      // 3. If valid vendor session, fetch data
       fetchProfile();
       fetchGlobalStats();
       fetchStorefrontStats();
-    }
+    };
+
+    validateIdentity();
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (user) fetchYearlyData(selectedYear);
+    if (user && localStorage.getItem('mifimn_user_role') === 'vendor') {
+       fetchYearlyData(selectedYear);
+    }
   }, [user, selectedYear]);
 
   const fetchProfile = async () => {
@@ -81,13 +105,11 @@ export default function DashboardPage() {
 
   const fetchStorefrontStats = async () => {
     try {
-      // Changed 'products' to 'menu_items' to match your actual database schema
       const { count: productCount } = await supabase
         .from('menu_items')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user?.id);
 
-      // FIXED: Switched .eq('user_id') to .eq('vendor_id') to sync with the new Orders schema!
       const { data: ordersData } = await supabase
         .from('orders')
         .select('total_amount, customer_name, created_at, status')
@@ -95,7 +117,6 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false });
 
       if (ordersData) {
-        // Any order that isn't completed or cancelled is technically still pending fulfillment
         const pending = ordersData.filter(o => ['pending', 'processing', 'shipped'].includes(o.status)).length;
         setStorefrontStats({
           products: productCount || 0,
@@ -367,8 +388,6 @@ export default function DashboardPage() {
           <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Storefront Orders</h3>
           <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] divide-y divide-slate-100 dark:divide-white/5">
             {recentStoreOrders.length > 0 ? recentStoreOrders.map((o, i) => {
-
-              // Dynamic status colors!
               let statusColor = 'text-slate-500';
               if (o.status === 'pending' || o.status === 'processing') statusColor = 'text-amber-500';
               if (o.status === 'shipped') statusColor = 'text-blue-500';
