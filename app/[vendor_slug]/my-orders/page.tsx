@@ -10,7 +10,7 @@ import {
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import dayjs from 'dayjs'; // Make sure you have dayjs installed: npm install dayjs
+import dayjs from 'dayjs';
 
 export default function CustomerOrdersPage() {
   const router = useRouter();
@@ -23,7 +23,6 @@ export default function CustomerOrdersPage() {
   const [vendor, setVendor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Fetch Vendor Details
   useEffect(() => {
     const fetchVendor = async () => {
       const { data } = await supabase.from('profiles').select('id, business_name').eq('slug', vendor_slug).single();
@@ -32,7 +31,6 @@ export default function CustomerOrdersPage() {
     if (vendor_slug) fetchVendor();
   }, [vendor_slug]);
 
-  // 2. Auth Check & Fetch Orders
   useEffect(() => {
     if (authLoading || !vendor) return;
 
@@ -62,11 +60,14 @@ export default function CustomerOrdersPage() {
     fetchMyOrders();
   }, [user, authLoading, vendor, router, vendor_slug]);
 
+  // NEW: Updated to show processing and shipped states
   const getStatusDisplay = (status: string) => {
     switch(status) {
-      case 'completed': return { icon: <CheckCircle size={14} />, text: 'Confirmed & Paid', color: 'text-green-500 bg-green-500/10 border-green-500/20' };
+      case 'completed': return { icon: <CheckCircle size={14} />, text: 'Delivered & Confirmed', color: 'text-green-500 bg-green-500/10 border-green-500/20' };
+      case 'shipped': return { icon: <Truck size={14} />, text: 'Shipped / At Park', color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' };
+      case 'processing': return { icon: <Package size={14} />, text: 'Payment Verified - Preparing', color: 'text-brand-orange bg-brand-orange/10 border-brand-orange/20' };
       case 'cancelled': return { icon: <XCircle size={14} />, text: 'Cancelled', color: 'text-red-500 bg-red-500/10 border-red-500/20' };
-      default: return { icon: <Clock size={14} />, text: 'Pending / Processing', color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' };
+      default: return { icon: <Clock size={14} />, text: 'Pending Verification', color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' };
     }
   };
 
@@ -77,7 +78,6 @@ export default function CustomerOrdersPage() {
   return (
     <div className="max-w-4xl mx-auto p-4 lg:p-10 pb-32 min-h-[80vh]">
 
-      {/* Header */}
       <div className="flex items-center gap-4 mb-10 mt-6">
         <button onClick={() => router.push(`/${vendor_slug}`)} className="p-3 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all">
           <ChevronLeft size={20} />
@@ -119,11 +119,10 @@ export default function CustomerOrdersPage() {
                 key={order.id} 
                 className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-sm"
               >
-                {/* Order Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex flex-wrap gap-4 items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order ID</span>
-                    <p className="font-mono font-bold text-sm dark:text-white uppercase tracking-wider">#{order.id.split('-')[0]}</p>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Ref</span>
+                    <p className="font-mono font-bold text-sm dark:text-white uppercase tracking-wider">#{order.short_id}</p>
                   </div>
                   <div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Placed</span>
@@ -138,14 +137,14 @@ export default function CustomerOrdersPage() {
                   </div>
                 </div>
 
-                {/* Order Content */}
                 <div className="p-6 grid md:grid-cols-2 gap-8">
-                  {/* Items */}
+                  {/* Items list */}
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Assets Ordered</h4>
                     <div className="space-y-3">
                       {order.items.map((item: any, i: number) => {
-                        const price = item.wholesale_price && item.quantity >= (item.moq || 0) ? item.wholesale_price : item.price;
+                        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
+                        const unitPrice = isWholesale ? (item.wholesale_price / (item.moq || 1)) : Number(item.price);
                         return (
                           <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-white/5 p-2 rounded-2xl border border-slate-100 dark:border-white/5">
                             <div className="w-12 h-12 bg-white rounded-xl p-1 border border-slate-200 dark:border-white/10 shrink-0">
@@ -153,7 +152,7 @@ export default function CustomerOrdersPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-black uppercase dark:text-white truncate">{item.name}</p>
-                              <p className="text-[10px] font-bold text-slate-500">Qty: {item.quantity} <span className="mx-1">•</span> ₦{(price * item.quantity).toLocaleString()}</p>
+                              <p className="text-[10px] font-bold text-slate-500">Qty: {item.quantity} <span className="mx-1">•</span> ₦{(unitPrice * item.quantity).toLocaleString()}</p>
                             </div>
                           </div>
                         );
@@ -161,7 +160,7 @@ export default function CustomerOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Logistics & Payment */}
+                  {/* Delivery & SECURE PIN */}
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Delivery Information</h4>
@@ -176,13 +175,22 @@ export default function CustomerOrdersPage() {
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Payment Method</h4>
-                      <div className="flex items-center gap-2 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
-                        <CreditCard size={14} className="text-slate-400" />
-                        <span className="text-xs font-black uppercase dark:text-white">{order.payment_method === 'manual' ? 'Bank Transfer' : 'Automated Verification'}</span>
+                    {/* NEW: THE SECURE DELIVERY PIN BLOCK */}
+                    {(order.status !== 'cancelled') && (
+                      <div className={`p-4 rounded-2xl border flex items-center justify-between ${order.status === 'completed' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-500/20' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-500/20'}`}>
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${order.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`}>
+                            {order.status === 'completed' ? 'Verification Successful' : 'Secure Delivery PIN'}
+                          </p>
+                          <p className={`text-[9px] font-bold uppercase leading-tight max-w-[150px] ${order.status === 'completed' ? 'text-green-600/70' : 'text-blue-600/70'}`}>
+                            {order.status === 'completed' ? 'Order officially received.' : 'Provide this code to the rider to confirm receipt.'}
+                          </p>
+                        </div>
+                        <div className={`px-4 py-2 rounded-xl shadow-sm text-lg font-mono font-black tracking-[0.2em] border ${order.status === 'completed' ? 'bg-green-500 text-white border-green-600' : 'bg-white dark:bg-black text-slate-900 dark:text-white border-blue-200 dark:border-blue-500/30'}`}>
+                          {order.short_id}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
