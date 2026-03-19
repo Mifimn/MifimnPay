@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, ArrowRight, Package, AlertCircle } from 'lucide-react';
+import { X, Trash2, ArrowRight, Package, Info } from 'lucide-react';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -12,7 +12,7 @@ export default function CartDrawer() {
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
 
-  // Calculates if order is eligible for checkout based on all MOQ requirements
+  // Calculates total based on dynamic pricing (wholesale vs retail)
   const subtotal = basket.reduce((acc, item) => {
     const price = (item.wholesale_price && item.quantity >= (item.moq || 0)) 
       ? item.wholesale_price 
@@ -53,7 +53,6 @@ export default function CartDrawer() {
                 basket.map((item) => {
                   const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 0);
                   const activePrice = isWholesale ? item.wholesale_price : item.price;
-                  const moqMet = item.quantity >= (item.moq || 1);
 
                   return (
                     <div key={item.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-brand-orange/20 transition-all">
@@ -65,7 +64,7 @@ export default function CartDrawer() {
                           <h4 className="text-[11px] font-black uppercase dark:text-white truncate">{item.name}</h4>
                           <div className="flex items-center gap-2 mt-1">
                             <p className="text-brand-orange font-black text-sm">₦{Number(activePrice).toLocaleString()}</p>
-                            {isWholesale && <span className="bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase">Wholesale</span>}
+                            {isWholesale && <span className="bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase">Wholesale Applied</span>}
                           </div>
 
                           {/* Emphasized Quantity Display */}
@@ -80,10 +79,13 @@ export default function CartDrawer() {
                         </button>
                       </div>
 
-                      {!moqMet && (
-                        <div className="mt-3 flex items-center gap-2 text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                           <AlertCircle size={12} className="shrink-0" />
-                           <p className="text-[8px] font-black uppercase italic tracking-widest">Below Wholesale Min ({item.moq} Units)</p>
+                      {/* Smart Green Upsell Banner (Only shows if they haven't hit wholesale yet) */}
+                      {!isWholesale && item.wholesale_price && (item.moq > 1) && (
+                        <div className="mt-3 flex items-center gap-2 text-green-600 bg-green-500/10 p-2.5 rounded-lg border border-green-500/20">
+                           <Info size={14} className="shrink-0" />
+                           <p className="text-[9px] font-black uppercase italic tracking-widest leading-tight">
+                             Upsell: Add {item.moq - item.quantity} more to unlock wholesale pricing!
+                           </p>
                         </div>
                       )}
                     </div>
