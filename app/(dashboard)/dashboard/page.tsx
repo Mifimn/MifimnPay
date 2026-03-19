@@ -16,7 +16,8 @@ import { useAuth } from '@/lib/AuthContext';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  // Use role from your updated AuthContext
+  const { user, loading, role } = useAuth();
   const { isDark } = useThemeStore();
   const router = useRouter();
   const qrRef = useRef<HTMLDivElement>(null);
@@ -43,41 +44,29 @@ export default function DashboardPage() {
   const years = Array.from({ length: Math.max(1, actualCurrentYear - 2026 + 1) }, (_, i) => 2026 + i).reverse();
 
   useEffect(() => {
-    const validateIdentity = async () => {
-      if (loading) return;
+    if (loading) return;
 
-      // 1. If not logged in at all, go to login
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+    // 1. Not logged in -> go to login
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
-      // 2. SESSION PROTECTION LOGIC
-      // Check if the current session is marked as a 'vendor' session
-      const role = localStorage.getItem('mifimn_user_role');
+    // 2. Logged in as Customer -> Redirect to Storefront (DON'T SIGN OUT)
+    if (role === 'customer') {
+      // Find where they belong or just send to homepage
+      router.push('/'); 
+      return;
+    }
 
-      if (role !== 'vendor') {
-        console.warn("Unauthorized Access: Redirecting customer session away from Dashboard.");
-        await supabase.auth.signOut();
-        localStorage.removeItem('mifimn_user_role');
-        router.push('/login');
-        return;
-      }
-
-      // 3. If valid vendor session, fetch data
+    // 3. Valid Vendor session -> Fetch data
+    if (role === 'vendor') {
       fetchProfile();
       fetchGlobalStats();
       fetchStorefrontStats();
-    };
-
-    validateIdentity();
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && localStorage.getItem('mifimn_user_role') === 'vendor') {
-       fetchYearlyData(selectedYear);
+      fetchYearlyData(selectedYear);
     }
-  }, [user, selectedYear]);
+  }, [user, loading, role, router]);
 
   const fetchProfile = async () => {
     try {
@@ -387,7 +376,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase italic tracking-tighter">Storefront Orders</h3>
           <div className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] divide-y divide-slate-100 dark:divide-white/5">
-            {recentStoreOrders.length > 0 ? recentStoreOrders.map((o, i) => {
+            {recentStoreOrders.map((o, i) => {
               let statusColor = 'text-slate-500';
               if (o.status === 'pending' || o.status === 'processing') statusColor = 'text-amber-500';
               if (o.status === 'shipped') statusColor = 'text-blue-500';
@@ -408,7 +397,8 @@ export default function DashboardPage() {
                   <span className="font-black text-brand-orange text-lg">₦{Number(o.total_amount || 0).toLocaleString()}</span>
                 </div>
               );
-            }) : (
+            })}
+            {recentStoreOrders.length === 0 && (
               <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">No recent store orders yet.</div>
             )}
           </div>
