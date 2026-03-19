@@ -118,9 +118,10 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
+      // 2. Insert Order (Trigger will handle receipt/CRM auto-sync)
       const { error: dbError } = await supabase.from('orders').insert([{
         vendor_id: vendor.id,
-        customer_id: user?.id,
+        customer_id: user?.id || null,
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone,
         customer_address: customerInfo.address,
@@ -130,13 +131,13 @@ export default function CheckoutPage() {
         shipping_fee: shipping.fee,
         total_amount: totalPrice,
         payment_method: 'manual',
+        status: 'pending', // Explicitly start at pending
         receipt_url: uploadedReceiptUrl,
         items: basket
       }]);
 
       if (dbError) throw dbError;
 
-      // Empty the cart and show the beautiful success modal!
       clearCart();
       setShowSuccessModal(true);
 
@@ -292,8 +293,6 @@ export default function CheckoutPage() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-6 lg:p-8 shadow-2xl">
-
-              {/* NEW: Vendor Contact Display */}
               <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 mb-8">
                 <div className="p-2 bg-green-500/10 text-green-500 rounded-full shrink-0">
                   <Phone size={16} />
@@ -339,7 +338,6 @@ export default function CheckoutPage() {
         </form>
       </div>
 
-      {/* NEW: Beautiful Success Modal */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div 
@@ -353,14 +351,12 @@ export default function CheckoutPage() {
               <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
                 <CheckCircle size={48} strokeWidth={2.5} />
               </div>
-
               <div>
                 <h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Order Placed!</h3>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-3 leading-relaxed">
-                  Your order has been securely sent to the vendor. You can track its status below.
+                  Your order has been securely sent to the vendor. Give your order ID to the rider upon delivery.
                 </p>
               </div>
-
               <div className="pt-2">
                 <button 
                   onClick={() => router.push(`/${vendor_slug}/my-orders`)} 

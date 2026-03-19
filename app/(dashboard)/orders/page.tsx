@@ -10,10 +10,10 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
-// 1. UPDATED TYPE DEFINITION TO INCLUDE ALL STATUSES
+// 1. TYPE DEFINITION
 type Order = {
   id: string;
-  short_id: string; // Added to act as the PIN
+  short_id: string; 
   customer_name: string;
   customer_phone: string;
   customer_address: string | null;
@@ -37,7 +37,7 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'shipped' | 'completed'>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // NEW: Delivery PIN State
+  // State for Delivery PIN input
   const [deliveryPin, setDeliveryPin] = useState('');
 
   useEffect(() => {
@@ -64,11 +64,15 @@ export default function OrdersPage() {
   const handleUpdateStatus = async (orderId: string, newStatus: string, receiptUrl?: string | null) => {
     try {
       const updates: any = { status: newStatus };
-      if (newStatus === 'processing' || newStatus === 'completed') updates.payment_status = 'paid';
+      // Auto-mark as paid if it enters processing, shipped, or completed
+      if (['processing', 'shipped', 'completed'].includes(newStatus)) {
+        updates.payment_status = 'paid';
+      }
 
       const { error } = await supabase.from('orders').update(updates).eq('id', orderId);
       if (error) throw error;
 
+      // Cleanup Storage: Remove receipt image only when order is officially completed/closed
       if (newStatus === 'completed' && receiptUrl) {
         const filePath = receiptUrl.split('/public/receipts/')[1];
         if (filePath) {
@@ -83,14 +87,13 @@ export default function OrdersPage() {
     }
   };
 
-  // NEW: Verify PIN Logic
   const handleVerifyDelivery = async (order: Order) => {
-    if (deliveryPin.trim().toUpperCase() !== order.short_id) {
+    if (deliveryPin.trim().toUpperCase() !== order.short_id.toUpperCase()) {
       return alert("Invalid Delivery PIN! Please ask the rider to confirm the code with the customer.");
     }
     await handleUpdateStatus(order.id, 'completed', order.receipt_url);
     setDeliveryPin('');
-    alert("PIN Verified! Order successfully marked as Received/Completed.");
+    alert("PIN Verified! Order successfully marked as Completed.");
   };
 
   const filteredOrders = orders.filter(o => filter === 'all' || o.status === filter);
@@ -118,6 +121,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Status Filter Tabs */}
       <div className="flex p-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm w-fit overflow-x-auto max-w-full">
         {(['all', 'pending', 'processing', 'shipped', 'completed'] as const).map((t) => (
           <button
@@ -132,6 +136,7 @@ export default function OrdersPage() {
         ))}
       </div>
 
+      {/* Main Order Table */}
       <div className="bg-white dark:bg-[#0a0a0a] rounded-[32px] border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm min-h-[450px]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-[450px]">
@@ -185,7 +190,7 @@ export default function OrdersPage() {
                         <span className="font-black text-sm text-slate-900 dark:text-white tracking-tighter">₦{(order.total_amount).toLocaleString()}</span>
                         <div className="flex items-center gap-1.5 mt-1">
                           <CreditCard size={10} className="text-slate-400" />
-                          <span className="text-[9px] font-black uppercase text-slate-500">{order.payment_method}</span>
+                          <span className="text-[9px] font-black uppercase text-slate-500">{order.payment_status}</span>
                         </div>
                       </div>
                     </td>
@@ -213,11 +218,12 @@ export default function OrdersPage() {
               <ShoppingBag size={32} />
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Empty Manifest</h3>
-            <p className="text-[10px] font-bold text-slate-500 max-w-sm mt-2 uppercase tracking-widest">No logistics requests detected on your storefront.</p>
+            <p className="text-[10px] font-bold text-slate-500 max-w-sm mt-2 uppercase tracking-widest">No orders matching this filter.</p>
           </div>
         )}
       </div>
 
+      {/* Order Detail Modal */}
       <AnimatePresence>
         {selectedOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -277,12 +283,16 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
+                {/* Items List - Using Smart Pack Math */}
                 <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 mb-8 border border-slate-100 dark:border-white/5">
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Assets Requested</h4>
                    <div className="space-y-4">
                      {selectedOrder.items.map((item: any, i: number) => {
+                       // LOGIC: Check for wholesale MOQ and divide pack price by MOQ to get unit price
                        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
                        const unitPrice = isWholesale ? (item.wholesale_price / (item.moq || 1)) : Number(item.price);
+                       const lineTotal = unitPrice * item.quantity;
+
                        return (
                          <div key={i} className="flex items-center justify-between">
                            <div className="flex items-center gap-3">
@@ -293,7 +303,7 @@ export default function OrdersPage() {
                                {item.name} <span className="text-slate-400 text-[10px]">x{item.quantity}</span>
                              </span>
                            </div>
-                           <span className="text-xs font-bold text-brand-orange">₦{(unitPrice * item.quantity).toLocaleString()}</span>
+                           <span className="text-xs font-bold text-brand-orange">₦{Math.round(lineTotal).toLocaleString()}</span>
                          </div>
                        );
                      })}
@@ -306,7 +316,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* ACTION FOOTER PIPELINE */}
+              {/* Action Pipeline Footer */}
               <div className="p-8 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex gap-4">
 
                 {selectedOrder.status === 'pending' && (
@@ -331,11 +341,10 @@ export default function OrdersPage() {
                     onClick={() => handleUpdateStatus(selectedOrder.id, 'shipped')}
                     className="w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
-                    <Truck size={16} /> Dispatch Order to Logistics
+                    <Truck size={16} /> Dispatch to Logistics
                   </button>
                 )}
 
-                {/* SECURE PIN VERIFICATION BOX */}
                 {selectedOrder.status === 'shipped' && (
                   <div className="w-full flex gap-3">
                     <input 
@@ -344,14 +353,14 @@ export default function OrdersPage() {
                       value={deliveryPin}
                       onChange={(e) => setDeliveryPin(e.target.value)}
                       maxLength={6}
-                      className="w-1/2 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl px-4 text-center font-mono font-black text-lg text-slate-900 dark:text-white outline-none focus:border-green-500 transition-colors uppercase placeholder:text-sm placeholder:font-sans placeholder:font-bold"
+                      className="w-1/2 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl px-4 text-center font-mono font-black text-lg text-slate-900 dark:text-white outline-none focus:border-green-500 transition-colors uppercase placeholder:text-[10px]"
                     />
                     <button 
                       onClick={() => handleVerifyDelivery(selectedOrder)}
                       disabled={deliveryPin.length < 6}
                       className="flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      <Key size={16} /> Verify & Clear
+                      <Key size={16} /> Verify PIN
                     </button>
                   </div>
                 )}
