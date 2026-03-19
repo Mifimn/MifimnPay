@@ -35,7 +35,8 @@ export default function CheckoutPage() {
       if (!vendor_slug) return;
       const { data } = await supabase
         .from('profiles')
-        .select('id, business_name, phone, bank_name, account_number, account_name, whatsapp_only, logistics_config')
+        // CHANGED: Fetching 'business_phone' instead of 'phone'
+        .select('id, business_name, business_phone, bank_name, account_number, account_name, whatsapp_only, logistics_config')
         .eq('slug', vendor_slug)
         .single();
       if (data) setVendor(data);
@@ -72,7 +73,6 @@ export default function CheckoutPage() {
     }
   }, [shipping.state, shipping.lga, vendor]);
 
-  // SMART PACK MATH: Divides pack price by MOQ to get true unit price
   const subtotal = basket.reduce((acc, item) => {
     const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
     const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
@@ -97,6 +97,10 @@ export default function CheckoutPage() {
     }
     if (!receiptFile && shipping.method !== 'whatsapp') {
       return alert("Please upload your payment receipt to confirm the order.");
+    }
+    // Safety check just in case the vendor hasn't set their business_phone yet
+    if (!vendor.business_phone) {
+      return alert("This store hasn't set up their WhatsApp number yet. Please contact the vendor directly.");
     }
 
     setIsSubmitting(true);
@@ -144,7 +148,6 @@ export default function CheckoutPage() {
 
       message += `%0A*ORDER DETAILS:*%0A`;
 
-      // Smart Pack Math for WhatsApp Message
       basket.forEach((item, index) => {
         const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
         const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
@@ -160,7 +163,8 @@ export default function CheckoutPage() {
         message += `%0A_Payment receipt has been uploaded and attached to your dashboard._`;
       }
 
-      const whatsappUrl = `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${message}`;
+      // CHANGED: Using vendor.business_phone here!
+      const whatsappUrl = `https://wa.me/${vendor.business_phone.replace(/\D/g, '')}?text=${message}`;
       window.open(whatsappUrl, '_blank');
 
       clearCart();
