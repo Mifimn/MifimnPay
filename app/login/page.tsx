@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Updated for App Router
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Loader2, AlertCircle, X } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient'; // Path alias update
+import { Mail, Loader2, AlertCircle, X, ShieldAlert } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 import Navbar from '@/components/landing/Navbar'; 
 
 /**
  * app/login/page.tsx
- * Unified Authentication Page (Sign In / Sign Up)
+ * Secure Vendor Authentication Page
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -53,19 +53,29 @@ export default function LoginPage() {
         setPassword('');
         setConfirmPassword('');
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        // 1. Authenticate with Supabase Auth
+        const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) throw authError;
 
-        // Check profile for redirection
-        const { data: profile } = await supabase
+        // 2. VENDOR VALIDATION: Check if a profile exists for this ID
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('business_name, is_admin')
           .eq('id', data.user.id)
           .single();
 
-        if (profile?.is_admin) {
+        // 3. LOGIC: If no profile exists, this is a Customer account (OTP user)
+        // We block them from the dashboard to keep the identities separate.
+        if (profileError || !profile) {
+          await supabase.auth.signOut(); // Terminate the session
+          setError("Access Denied: This portal is for Vendors. If you are a buyer, please use the store link provided by your vendor to login via OTP.");
+          return;
+        }
+
+        // 4. ROUTING
+        if (profile.is_admin) {
           router.push('/admin');
-        } else if (!profile?.business_name || profile.business_name === 'My Business') {
+        } else if (!profile.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
           router.push('/dashboard');
@@ -128,7 +138,7 @@ export default function LoginPage() {
         <div className="hidden md:flex flex-col justify-between bg-slate-900 p-12 text-white relative overflow-hidden">
           <div className="z-10 mt-20"> 
             <div className="w-10 h-10 bg-brand-orange text-white rounded-xl flex items-center justify-center font-black mb-6 text-xl shadow-glow-orange italic">M</div>
-            <h2 className="text-5xl font-black max-w-md leading-[1] tracking-tighter uppercase italic">Professional Receipts, Generated Instantly.</h2>
+            <h2 className="text-5xl font-black max-w-md leading-[1] tracking-tighter uppercase italic">Vendor Portal: Business Intelligence & Billing</h2>
           </div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-orange/10 rounded-full blur-[120px]" />
         </div>
@@ -137,14 +147,17 @@ export default function LoginPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-10">
             <div className="text-center md:text-left space-y-2">
               <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-                {authMode === 'signin' ? 'Welcome back' : 'Join Us'}
+                {authMode === 'signin' ? 'Welcome Back' : 'Create Vendor Store'}
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">Manage your business receipts efficiently.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                {authMode === 'signin' ? 'Access your dashboard' : 'Join thousands of Nigerian vendors'}
+              </p>
             </div>
 
             {error && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs font-black uppercase tracking-widest">
-                <AlertCircle size={18} /> <p>{error}</p>
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                <ShieldAlert size={18} className="shrink-0" /> 
+                <p>{error}</p>
               </motion.div>
             )}
 
@@ -158,7 +171,7 @@ export default function LoginPage() {
 
             <div className="relative flex items-center justify-center">
               <div className="w-full border-t border-slate-200 dark:border-white/10"></div>
-              <span className="absolute bg-white dark:bg-[#0a0a0a] px-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">or email</span>
+              <span className="absolute bg-white dark:bg-[#0a0a0a] px-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">or business email</span>
             </div>
 
             <form onSubmit={handleEmailAuth} className="space-y-6">
@@ -169,7 +182,7 @@ export default function LoginPage() {
                     type="email" 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
-                    placeholder="name@company.com" 
+                    placeholder="name@business.com" 
                     required 
                     className="w-full h-14 px-5 border-2 border-transparent bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:border-brand-orange transition-all font-bold text-slate-900 dark:text-white" 
                   />
@@ -213,7 +226,7 @@ export default function LoginPage() {
                 disabled={isLoading} 
                 className="w-full h-14 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-glow-orange active:scale-[0.98] disabled:opacity-70 flex items-center justify-center"
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
+                {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In as Vendor' : 'Create Vendor Account')}
               </button>
             </form>
 

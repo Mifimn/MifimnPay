@@ -18,7 +18,7 @@ export default function CheckoutPage() {
   const params = useParams();
   const vendor_slug = params?.vendor_slug as string;
   const { themeColor } = useThemeStore();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { basket, clearCart } = useCartStore();
 
   const [vendor, setVendor] = useState<any>(null);
@@ -31,6 +31,7 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState({ state: '', lga: '', location: '', method: 'whatsapp', fee: 0 });
   const [availableOptions, setAvailableOptions] = useState<string[]>([]);
 
+  // 1. Fetch Vendor Details
   useEffect(() => {
     const fetchVendor = async () => {
       if (!vendor_slug) return;
@@ -44,6 +45,14 @@ export default function CheckoutPage() {
     fetchVendor();
   }, [vendor_slug]);
 
+  // 2. Identity Guard: Redirect to store login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/${vendor_slug}/login?redirect=/${vendor_slug}/checkout`);
+    }
+  }, [user, authLoading, vendor_slug, router]);
+
+  // 3. Logistics Logic
   useEffect(() => {
     if (!vendor || !shipping.state || !shipping.lga) {
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
@@ -92,6 +101,8 @@ export default function CheckoutPage() {
   const handleProcessOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (basket.length === 0) return alert("Your cart is empty.");
+    if (!user) return router.push(`/${vendor_slug}/login`);
+
     if (!customerInfo.name || !customerInfo.phone || !shipping.state || !shipping.lga) {
       return alert("Please fill in all contact and shipping details.");
     }
@@ -118,10 +129,10 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
-      // 2. Insert Order (Trigger will handle receipt/CRM auto-sync)
+      // 4. Save order to DB - Trigger handles the rest (Receipt & CRM Update)
       const { error: dbError } = await supabase.from('orders').insert([{
         vendor_id: vendor.id,
-        customer_id: user?.id || null,
+        customer_id: user.id, // Linking permanently to the customer identity
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone,
         customer_address: customerInfo.address,
@@ -131,7 +142,7 @@ export default function CheckoutPage() {
         shipping_fee: shipping.fee,
         total_amount: totalPrice,
         payment_method: 'manual',
-        status: 'pending', // Explicitly start at pending
+        status: 'pending',
         receipt_url: uploadedReceiptUrl,
         items: basket
       }]);
@@ -149,7 +160,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (!vendor) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-slate-400" /></div>;
+  if (!vendor || authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-orange" /></div>;
 
   return (
     <>
@@ -166,6 +177,7 @@ export default function CheckoutPage() {
 
         <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {/* 1. CONTACT INFO */}
             <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <User size={18} style={{ color: themeColor }} /> 1. Logistics Contact Info
@@ -186,6 +198,7 @@ export default function CheckoutPage() {
               </div>
             </section>
 
+            {/* 2. DELIVERY ZONE */}
             <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <MapPin size={18} style={{ color: themeColor }} /> 2. Delivery Zone
@@ -247,6 +260,7 @@ export default function CheckoutPage() {
               )}
             </section>
 
+            {/* 3. PAYMENT */}
             <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <CreditCard size={18} style={{ color: themeColor }} /> 3. Secure Payment
@@ -291,6 +305,7 @@ export default function CheckoutPage() {
             </section>
           </div>
 
+          {/* SIDEBAR SUMMARY */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-6 lg:p-8 shadow-2xl">
               <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 mb-8">
@@ -338,6 +353,7 @@ export default function CheckoutPage() {
         </form>
       </div>
 
+      {/* SUCCESS MODAL */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div 
@@ -354,7 +370,7 @@ export default function CheckoutPage() {
               <div>
                 <h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Order Placed!</h3>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-3 leading-relaxed">
-                  Your order has been securely sent to the vendor. Give your order ID to the rider upon delivery.
+                  Your order is being processed. Access your history to view your **Secure Delivery PIN** for the rider.
                 </p>
               </div>
               <div className="pt-2">

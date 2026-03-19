@@ -11,7 +11,6 @@ function StorefrontLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Smart redirect: send them back to the exact page they were on, or default to checkout
   const redirectUrl = searchParams.get('redirect') || `/${vendor_slug}/checkout`;
 
   const [email, setEmail] = useState('');
@@ -25,7 +24,7 @@ function StorefrontLoginContent() {
     const fetchVendor = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('business_name, logo_url, theme_color')
+        .select('id, business_name, logo_url, theme_color')
         .eq('slug', vendor_slug)
         .single();
       if (data) setVendor(data);
@@ -33,7 +32,6 @@ function StorefrontLoginContent() {
     if (vendor_slug) fetchVendor();
   }, [vendor_slug]);
 
-  // 1. REAL SUPABASE OTP SENDING
   const handleSendOTP = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
@@ -41,14 +39,11 @@ function StorefrontLoginContent() {
 
     try {
       const storeName = vendor?.business_name || vendor_slug;
-
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          data: {
-            store_name: storeName // Sends the store name to your gorgeous HTML email!
-          }
+          data: { store_name: storeName }
         }
       });
 
@@ -61,22 +56,44 @@ function StorefrontLoginContent() {
     }
   };
 
-  // 2. REAL SUPABASE OTP VERIFICATION
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const token = otp.join(''); // Combine the 6 boxes into one string
+    const token = otp.join('');
 
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      // 1. Verify OTP with Supabase Auth
+      const { data: { user }, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token,
         type: 'email'
       });
 
       if (verifyError) throw verifyError;
+
+      if (user && vendor) {
+        // 2. IDENTITY SYNC: Check if this user exists in this VENDOR'S specific CRM
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('auth_id', user.id)
+          .eq('vendor_id', vendor.id)
+          .single();
+
+        // 3. AUTO-REGISTER: If they are a new customer for this specific vendor, add them
+        if (!existingCustomer) {
+          await supabase.from('customers').insert([{
+            auth_id: user.id,
+            vendor_id: vendor.id,
+            full_name: email.split('@')[0], // Default name from email prefix
+            total_spent: 0,
+            total_orders: 0,
+            created_at: new Date().toISOString()
+          }]);
+        }
+      }
 
       setShowOtpModal(false);
       router.push(redirectUrl);
@@ -92,14 +109,11 @@ function StorefrontLoginContent() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500">
-
-      {/* Dynamic Background Glow */}
       <div 
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] opacity-20 blur-[120px] rounded-full pointer-events-none"
         style={{ backgroundColor: themeColor }}
       />
 
-      {/* Main Login Card */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md bg-white/80 dark:bg-white/5 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-8 md:p-12 shadow-2xl relative z-10"
@@ -151,7 +165,6 @@ function StorefrontLoginContent() {
         </form>
       </motion.div>
 
-      {/* OTP VERIFICATION MODAL */}
       <AnimatePresence>
         {showOtpModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -198,7 +211,6 @@ function StorefrontLoginContent() {
                             const newOtp = [...otp];
                             newOtp[idx] = val;
                             setOtp(newOtp);
-                            // Auto-focus next input
                             if (val && idx < 5) {
                               const nextInput = e.target.nextElementSibling as HTMLInputElement;
                               if (nextInput) nextInput.focus();
@@ -206,7 +218,6 @@ function StorefrontLoginContent() {
                           }
                         }}
                         onKeyDown={(e) => {
-                          // Auto-focus previous input on backspace
                           if (e.key === 'Backspace' && !digit && idx > 0) {
                             const prevInput = e.currentTarget.previousElementSibling as HTMLInputElement;
                             if (prevInput) prevInput.focus();
@@ -238,7 +249,6 @@ function StorefrontLoginContent() {
   );
 }
 
-// Wrap in Suspense because we are using useSearchParams()
 export default function StorefrontLoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#050505] flex items-center justify-center"><Loader2 className="animate-spin text-white" /></div>}>

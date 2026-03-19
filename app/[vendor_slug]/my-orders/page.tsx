@@ -23,14 +23,20 @@ export default function CustomerOrdersPage() {
   const [vendor, setVendor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 1. Fetch Vendor Details to get the internal ID
   useEffect(() => {
     const fetchVendor = async () => {
-      const { data } = await supabase.from('profiles').select('id, business_name').eq('slug', vendor_slug).single();
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, business_name')
+        .eq('slug', vendor_slug)
+        .single();
       if (data) setVendor(data);
     };
     if (vendor_slug) fetchVendor();
   }, [vendor_slug]);
 
+  // 2. Fetch Orders for this specific Customer + Vendor combination
   useEffect(() => {
     if (authLoading || !vendor) return;
 
@@ -45,7 +51,7 @@ export default function CustomerOrdersPage() {
           .from('orders')
           .select('*')
           .eq('vendor_id', vendor.id)
-          .eq('customer_id', user.id)
+          .eq('customer_id', user.id) // Filters only orders belonging to THIS customer
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -60,7 +66,7 @@ export default function CustomerOrdersPage() {
     fetchMyOrders();
   }, [user, authLoading, vendor, router, vendor_slug]);
 
-  // NEW: Updated to show processing and shipped states
+  // Sync status display with Vendor Dashboard
   const getStatusDisplay = (status: string) => {
     switch(status) {
       case 'completed': return { icon: <CheckCircle size={14} />, text: 'Delivered & Confirmed', color: 'text-green-500 bg-green-500/10 border-green-500/20' };
@@ -119,6 +125,7 @@ export default function CustomerOrdersPage() {
                 key={order.id} 
                 className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-sm"
               >
+                {/* Order Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex flex-wrap gap-4 items-center justify-between">
                   <div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Ref</span>
@@ -138,13 +145,14 @@ export default function CustomerOrdersPage() {
                 </div>
 
                 <div className="p-6 grid md:grid-cols-2 gap-8">
-                  {/* Items list */}
+                  {/* Items list with Wholesale Logic */}
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Assets Ordered</h4>
                     <div className="space-y-3">
                       {order.items.map((item: any, i: number) => {
                         const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
                         const unitPrice = isWholesale ? (item.wholesale_price / (item.moq || 1)) : Number(item.price);
+
                         return (
                           <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-white/5 p-2 rounded-2xl border border-slate-100 dark:border-white/5">
                             <div className="w-12 h-12 bg-white rounded-xl p-1 border border-slate-200 dark:border-white/10 shrink-0">
@@ -175,7 +183,7 @@ export default function CustomerOrdersPage() {
                       </div>
                     </div>
 
-                    {/* NEW: THE SECURE DELIVERY PIN BLOCK */}
+                    {/* SECURE DELIVERY PIN BLOCK */}
                     {(order.status !== 'cancelled') && (
                       <div className={`p-4 rounded-2xl border flex items-center justify-between ${order.status === 'completed' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-500/20' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-500/20'}`}>
                         <div>
