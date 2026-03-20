@@ -88,9 +88,6 @@ export default function LoginPage() {
         // 4. SMART ROUTING
         if (profile.is_admin) {
           router.push('/admin');
-        } else if (!profile.is_verified) {
-          // Send unverified vendors to the ID upload page
-          router.push('/verify');
         } else if (!profile.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
