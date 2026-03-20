@@ -8,7 +8,7 @@ export interface Product {
   price: string | number;
   img?: string;
   image_url?: string;
-  quantity?: number;
+  qty?: number;              // FIXED: Changed from 'quantity' to 'qty'
   wholesale_price?: number; 
   moq?: number;             
   stock?: number;           
@@ -48,24 +48,21 @@ export const useCartStore = create<CartState>((set) => ({
   toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
 
-  // --- THE FIXED LOGIC ---
   addToBasket: (product, quantityToAdd = 1) => set((state) => {
     const existingItem = state.basket.find(item => item.id === product.id);
 
     if (existingItem) {
-      // If the item is already in the cart, update it by adding the new quantity
       return {
         basket: state.basket.map(item =>
           item.id === product.id
-            ? { ...item, quantity: (item.quantity || 0) + quantityToAdd }
+            ? { ...item, qty: (item.qty || 0) + quantityToAdd } // FIXED
             : item
         )
       };
     }
 
-    // If it's a completely new item, add it with the requested quantity
     return { 
-      basket: [...state.basket, { ...product, quantity: quantityToAdd }] 
+      basket: [...state.basket, { ...product, qty: quantityToAdd }] // FIXED
     };
   }),
 
