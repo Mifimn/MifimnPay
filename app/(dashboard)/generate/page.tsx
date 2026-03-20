@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation'; 
 import { 
   Download, Share2, Plus, Trash2, ArrowLeft, Loader2, 
-  Settings, Lock, AlertTriangle, User, Store, Edit3
+  Settings, Lock, AlertTriangle, User, Store, Edit3, ShieldAlert
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
@@ -66,7 +66,6 @@ export default function Generator() {
       const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
       if (user) {
         try {
-          // SYNC: Get the real next receipt number from DB
           const { data: nextNum } = await supabase.rpc('get_next_receipt_number', { target_user_id: user.id });
 
           const { data: profile } = await supabase
@@ -113,7 +112,6 @@ export default function Generator() {
     if (!authLoading) initializeData();
   }, [user, authLoading]);
 
-  // Handle Suggestions
   useEffect(() => {
     if (data.customerName.length > 0) {
       const matches = pastCustomers.filter(name => 
@@ -142,9 +140,18 @@ export default function Generator() {
     }));
   };
 
-  // FIXED: SaveToHistory now matches the exact schema of public.receipts
   const saveToHistory = async () => {
     if (!user) return; 
+
+    // 1. LIMIT CHECK: Run the SQL Function to check if they are allowed to save
+    const { data: canProceed } = await supabase.rpc('check_receipt_limit', { vendor_id: user.id });
+
+    if (!canProceed) {
+      alert("Verification Required: You have reached the limit of 10 receipts for unverified accounts. Please verify your NIN to get unlimited access.");
+      router.push('/verify');
+      throw new Error("Limit reached");
+    }
+
     const subtotal = data.items.reduce((acc, i) => acc + (safeFloat(i.price) * safeFloat(i.qty)), 0);
     const shipping = safeFloat(data.shipping);
     const discount = safeFloat(data.discount);
@@ -155,8 +162,8 @@ export default function Generator() {
       receipt_number: data.receiptNumber,
       customer_name: data.customerName || 'Walk-in Customer',
       total_amount: numericTotal,
-      shipping_fee: shipping,         // FIXED: Matches schema
-      discount_amount: discount,     // FIXED: Matches schema
+      shipping_fee: shipping,
+      discount_amount: discount,
       status: data.status.toLowerCase(),
       payment_method: data.paymentMethod,
       items: data.items.map(i => ({
@@ -168,6 +175,69 @@ export default function Generator() {
     }]);
 
     if (error) throw error;
+  };
+
+  const confirmAndExecute = async () => {
+    setShowConfirm(false);
+    if (pendingAction) {
+      await pendingAction();
+    }
+  };
+
+  const generateImage = async () => {
+    if (!receiptRef.current) return null;
+    setIsGenerating(true);
+    setActiveTab('preview');
+    await new Promise(r => setTimeout(r, 400)); 
+    try {
+      return await toPng(receiptRef.current, { pixelRatio: 3, cacheBust: true });
+    } catch (err) { return null; } finally { setIsGenerating(false); }
+  };
+
+  const handleDownload = async () => {
+    try {
+      await saveToHistory(); // This will trigger the limit check
+      const image = await generateImage();
+      if (!image) return;
+
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `receipt-${data.receiptNumber}.png`;
+      link.click();
+      router.push('/history');
+    } catch (err: any) { 
+       if(err.message !== "Limit reached") console.error(err); 
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await saveToHistory(); // This will trigger the limit check
+      const image = await generateImage();
+      if (!image) return;
+
+      const res = await fetch(image);
+      const blob = await res.blob();
+      const file = new File([blob], `receipt-${data.receiptNumber}.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Receipt #${data.receiptNumber}`,
+          text: `Hello ${data.customerName || 'Customer'}, attached is your receipt.`,
+        });
+        router.push('/history');
+      } else {
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `receipt-${data.receiptNumber}.png`;
+        link.click();
+        alert("Sharing not supported on this browser. Receipt downloaded instead.");
+        router.push('/history');
+      }
+    } catch (err: any) {
+        if(err.message !== "Limit reached") console.error(err);
+    }
   };
 
   const handleItemChange = (id: string, field: keyof ReceiptItem, value: any) => {
@@ -201,56 +271,6 @@ export default function Generator() {
     setShowConfirm(true);
   };
 
-  const generateImage = async () => {
-    if (!receiptRef.current) return null;
-    setIsGenerating(true);
-    setActiveTab('preview');
-    await new Promise(r => setTimeout(r, 400)); 
-    try {
-      return await toPng(receiptRef.current, { pixelRatio: 3, cacheBust: true });
-    } catch (err) { return null; } finally { setIsGenerating(false); }
-  };
-
-  const handleDownload = async () => {
-    try {
-      const image = await generateImage();
-      if (!image) return;
-      await saveToHistory(); 
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `receipt-${data.receiptNumber}.png`;
-      link.click();
-      router.push('/history');
-    } catch (err: any) { alert(err.message); }
-  };
-
-  const handleShare = async () => {
-    try {
-      const image = await generateImage();
-      if (!image) return;
-      await saveToHistory();
-      const res = await fetch(image);
-      const blob = await res.blob();
-      const file = new File([blob], `receipt-${data.receiptNumber}.png`, { type: 'image/png' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Receipt #${data.receiptNumber}`,
-          text: `Hello ${data.customerName || 'Customer'}, attached is your receipt.`,
-        });
-        router.push('/history');
-      } else {
-        const link = document.createElement('a');
-        link.href = image;
-        link.download = `receipt-${data.receiptNumber}.png`;
-        link.click();
-        alert("Sharing not supported on this browser. Receipt downloaded instead.");
-        router.push('/history');
-      }
-    } catch (err: any) { console.error(err); }
-  };
-
   const colors = ['#09090b', '#166534', '#1e40af', '#b45309', '#7e22ce', '#be123c', '#0891b2', '#854d0e'];
   if (!isClient || authLoading) return null;
 
@@ -259,13 +279,13 @@ export default function Generator() {
 
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-brand-paper rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-brand-border">
-            <div className="w-12 h-12 bg-yellow-500/10 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} /></div>
-            <h3 className="text-lg font-bold text-brand-black mb-2 uppercase italic tracking-tighter">Final Verification</h3>
-            <p className="text-xs font-bold text-brand-gray mb-6 uppercase tracking-widest leading-relaxed">Ensure customer details and amounts are accurate. This record will be synced to your CRM.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowConfirm(false)} className="py-4 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest bg-brand-bg text-brand-gray border border-brand-border">Edit More</button>
-              <button onClick={confirmAndExecute} className="py-4 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest bg-brand-black text-brand-paper">Save & Sync</button>
+          <div className="bg-brand-paper rounded-[32px] shadow-2xl max-w-sm w-full p-8 text-center border border-brand-border">
+            <div className="w-16 h-16 bg-yellow-500/10 text-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-6"><AlertTriangle size={32} /></div>
+            <h3 className="text-xl font-black text-brand-black mb-2 uppercase italic tracking-tighter">Sync Record</h3>
+            <p className="text-[10px] font-bold text-brand-gray mb-8 uppercase tracking-[0.15em] leading-relaxed">Ensure all totals and client names are accurate before final synchronization.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setShowConfirm(false)} className="py-4 px-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-brand-bg text-brand-gray border border-brand-border active:scale-95 transition-all">Go Back</button>
+              <button onClick={confirmAndExecute} className="py-4 px-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-brand-black text-brand-paper shadow-lg active:scale-95 transition-all">Confirm</button>
             </div>
           </div>
         </div>
@@ -277,10 +297,10 @@ export default function Generator() {
             <h1 className="font-black text-lg text-brand-black tracking-tighter uppercase italic">New Receipt</h1>
         </div>
         <div className="flex items-center gap-2">
-            <button onClick={() => initiateAction(handleShare)} disabled={isGenerating} className="bg-brand-bg border border-brand-border text-brand-black p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
+            <button onClick={() => initiateAction(handleShare)} disabled={isGenerating} className="bg-brand-bg border border-brand-border text-brand-black p-2.5 rounded-full shadow-sm active:scale-95 transition-all flex items-center justify-center">
                 {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : !user ? <Lock size={16} /> : <Share2 size={18} />}
             </button>
-            <button onClick={() => initiateAction(handleDownload)} disabled={isGenerating} className="bg-brand-black text-brand-paper p-2.5 rounded-full shadow-sm active:scale-95 transition-all">
+            <button onClick={() => initiateAction(handleDownload)} disabled={isGenerating} className="bg-brand-black text-brand-paper p-2.5 rounded-full shadow-sm active:scale-95 transition-all flex items-center justify-center">
                 {isGenerating ? <Loader2 className="animate-spin w-5 h-5" /> : !user ? <Lock size={16} /> : <Download size={18} />}
             </button>
         </div>
@@ -290,13 +310,11 @@ export default function Generator() {
         <div className={`flex-1 h-full overflow-y-auto bg-brand-bg p-4 md:p-6 space-y-6 ${activeTab === 'preview' ? 'hidden md:block' : 'block'}`}>
           <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-10">
 
-            {/* Mode Switcher */}
             <section className="bg-brand-paper p-2 rounded-2xl border border-brand-border shadow-sm flex items-center gap-2">
                <button onClick={() => setUseStoreMode(false)} className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${!useStoreMode ? 'bg-brand-black text-brand-paper shadow-lg' : 'text-brand-gray hover:bg-brand-bg'}`}><Edit3 size={16}/> Manual Entry</button>
                <button onClick={() => setUseStoreMode(true)} className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${useStoreMode ? 'bg-brand-black text-brand-paper shadow-lg' : 'text-brand-gray hover:bg-brand-bg'}`}><Store size={16}/> Price List Mode</button>
             </section>
 
-            {/* Basic Info */}
             <section className="bg-brand-paper p-5 rounded-3xl border border-brand-border shadow-sm space-y-4">
               <h3 className="font-black text-[10px] text-brand-gray uppercase tracking-widest flex items-center gap-2 border-b border-brand-border pb-2"><User size={16} className="text-brand-orange" /> Client Information</h3>
 
@@ -332,7 +350,6 @@ export default function Generator() {
               </div>
             </section>
 
-            {/* Items */}
             <section className="bg-brand-paper p-5 rounded-3xl border border-brand-border shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-brand-border pb-2">
                 <h3 className="font-black text-[10px] text-brand-gray uppercase tracking-widest">Assets / Items</h3>
@@ -373,7 +390,6 @@ export default function Generator() {
               </div>
             </section>
 
-            {/* Billing Logic */}
             <section className="bg-brand-paper p-5 rounded-3xl border border-brand-border shadow-sm space-y-4">
               <h3 className="font-black text-[10px] text-brand-gray uppercase tracking-widest">Fees & Payment</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -397,7 +413,7 @@ export default function Generator() {
           </div>
         </div>
 
-        {/* Live Preview Side (Desktop) */}
+        {/* Live Preview Side */}
         <div className={`flex-1 h-full bg-brand-bg flex flex-col relative ${activeTab === 'edit' ? 'hidden md:flex' : 'flex'}`}>
           <div className="bg-brand-paper/80 backdrop-blur-md border-b border-brand-border p-3 flex justify-between items-center z-10 shrink-0">
              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">

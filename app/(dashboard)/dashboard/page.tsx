@@ -16,7 +16,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
 
 export default function DashboardPage() {
-  // Use role from your updated AuthContext
   const { user, loading, role } = useAuth();
   const { isDark } = useThemeStore();
   const router = useRouter();
@@ -36,48 +35,62 @@ export default function DashboardPage() {
   const [isQrExpanded, setIsQrExpanded] = useState(false);
 
   const actualCurrentYear = new Date().getFullYear();
-  const displayYear = Math.max(actualCurrentYear, 2026);
-  const [selectedYear, setSelectedYear] = useState(displayYear);
+  const [selectedYear, setSelectedYear] = useState(actualCurrentYear);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const years = Array.from({ length: Math.max(1, actualCurrentYear - 2026 + 1) }, (_, i) => 2026 + i).reverse();
+
+  // Dynamic Year range (starts at 2025 or creation year)
+  const years = useMemo(() => {
+    const startYear = 2025;
+    const current = new Date().getFullYear();
+    return Array.from({ length: Math.max(1, current - startYear + 1) }, (_, i) => startYear + i).reverse();
+  }, []);
 
   useEffect(() => {
     if (loading) return;
 
-    // 1. Not logged in -> go to login
     if (!user) {
       router.push('/login');
       return;
     }
 
-    // 2. Logged in as Customer -> Redirect to Storefront (DON'T SIGN OUT)
     if (role === 'customer') {
-      // Find where they belong or just send to homepage
       router.push('/'); 
       return;
     }
 
-    // 3. Valid Vendor session -> Fetch data
     if (role === 'vendor') {
-      fetchProfile();
-      fetchGlobalStats();
-      fetchStorefrontStats();
-      fetchYearlyData(selectedYear);
+      const init = async () => {
+        setIsFetching(true);
+        await fetchProfile();
+        await fetchGlobalStats();
+        await fetchStorefrontStats();
+        await fetchYearlyData(selectedYear);
+        setIsFetching(false);
+      }
+      init();
     }
-  }, [user, loading, role, router]);
+  }, [user, loading, role, router, selectedYear]);
 
   const fetchProfile = async () => {
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-      if (data) setProfile(data);
+      if (data) {
+        setProfile(data);
+        // BLOCK UNVERIFIED VENDORS
+        if (!data.is_verified) {
+           router.push('/verify');
+        }
+      }
     } catch (err) { console.error(err); }
   };
 
   const fetchGlobalStats = async () => {
     try {
-      const { data: statsData } = await supabase.rpc('get_dashboard_stats', { target_user_id: user?.id });
+      // UPDATED: Server-side calculation via RPC call
+      const { data: statsData, error } = await supabase.rpc('get_dashboard_stats', { target_user_id: user?.id });
+
       const { data: recent } = await supabase
         .from('receipts')
         .select('total_amount, customer_name, created_at, receipt_number')
@@ -86,7 +99,12 @@ export default function DashboardPage() {
         .limit(5);
 
       if (statsData) {
-        setStats(prev => ({ ...prev, totalSales: statsData.total_revenue || 0, count: statsData.total_receipts || 0 }));
+        setStats(prev => ({ 
+            ...prev, 
+            totalSales: statsData.total_revenue || 0, 
+            count: statsData.total_receipts || 0,
+            customers: statsData.unique_customers || 0
+        }));
       }
       if (recent) setRecentReceipts(recent);
     } catch (err) { console.error(err); }
@@ -118,17 +136,21 @@ export default function DashboardPage() {
   };
 
   const fetchYearlyData = async (year: number) => {
-    setIsFetching(true);
     try {
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
-      const { data } = await supabase.from('receipts').select('total_amount, created_at, customer_name').eq('user_id', user?.id).gte('created_at', startDate).lte('created_at', endDate).order('created_at', { ascending: true });
+      const { data } = await supabase
+        .from('receipts')
+        .select('total_amount, created_at, customer_name')
+        .eq('user_id', user?.id)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .order('created_at', { ascending: true });
+
       if (data) {
         setYearReceipts(data);
-        const unique = new Set(data.map(r => r.customer_name)).size;
-        setStats(prev => ({ ...prev, customers: unique }));
       }
-    } catch (err) { console.error(err); } finally { setIsFetching(false); }
+    } catch (err) { console.error(err); }
   };
 
   const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';

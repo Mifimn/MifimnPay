@@ -27,11 +27,8 @@ export default function LoginPage() {
       provider: 'google',
       options: { 
         redirectTo: `${window.location.origin}/auth-callback`,
-        // Pass metadata for Google signups as well
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account'
-        }
+        // Ensures Google signups pass the vendor flag to your DB trigger
+        data: { is_vendor: true }
       },
     });
     if (error) setError(error.message);
@@ -70,10 +67,10 @@ export default function LoginPage() {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) throw authError;
 
-        // 2. VENDOR VALIDATION: Verify business profile exists
+        // 2. VENDOR VALIDATION: Verify business profile and verification status
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('business_name, is_admin')
+          .select('business_name, is_admin, is_verified')
           .eq('id', data.user.id)
           .single();
 
@@ -85,12 +82,15 @@ export default function LoginPage() {
           return;
         }
 
-        // NEW: Mark this session specifically as a Vendor session to lock identity
+        // Mark session specifically as a Vendor session
         localStorage.setItem('mifimn_user_role', 'vendor');
 
-        // 4. ROUTING
+        // 4. SMART ROUTING
         if (profile.is_admin) {
           router.push('/admin');
+        } else if (!profile.is_verified) {
+          // Send unverified vendors to the ID upload page
+          router.push('/verify');
         } else if (!profile.business_name || profile.business_name === 'My Business') {
           router.push('/onboarding');
         } else {
@@ -240,7 +240,7 @@ export default function LoginPage() {
 
               <button 
                 disabled={isLoading} 
-                className="w-full h-14 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-glow-orange active:scale-[0.98] disabled:opacity-70 flex items-center justify-center"
+                className="w-full h-14 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-glow-orange active:scale-[0.98] disabled:opacity-70 flex items-center justify-center"
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : (authMode === 'signin' ? 'Sign In as Vendor' : 'Create Vendor Account')}
               </button>

@@ -5,10 +5,12 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, ShieldCheck, ArrowRight, Loader2, X, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 
 function StorefrontLoginContent() {
   const { vendor_slug } = useParams();
   const router = useRouter();
+  const { user: authUser, role } = useAuth();
   const searchParams = useSearchParams();
 
   const redirectUrl = searchParams.get('redirect') || `/${vendor_slug}/checkout`;
@@ -20,6 +22,14 @@ function StorefrontLoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [vendor, setVendor] = useState<any>(null);
 
+  // 1. ACCESS GUARD: If a Vendor is already logged in, send them back to Dashboard
+  useEffect(() => {
+    if (authUser && role === 'vendor') {
+      router.push('/dashboard');
+    }
+  }, [authUser, role, router]);
+
+  // Fetch Store Details for Branding
   useEffect(() => {
     const fetchVendor = async () => {
       const { data } = await supabase
@@ -44,7 +54,7 @@ function StorefrontLoginContent() {
         email,
         options: {
           shouldCreateUser: true,
-          // CRITICAL: Metadata for the DB trigger to identify this as a Customer
+          // CRITICAL: Tells the DB trigger NOT to create a vendor profile
           data: { 
             store_name: storeName,
             is_vendor: false 
@@ -83,7 +93,13 @@ function StorefrontLoginContent() {
         localStorage.setItem('mifimn_user_role', 'customer');
 
         if (vendor) {
-          // 2. CRM SYNC: Ensure customer is registered under THIS specific vendor
+          // 2. CHECK ROLE: Only add to CRM if they are not the Vendor themselves
+          if (user.id === vendor.id) {
+             router.push('/dashboard');
+             return;
+          }
+
+          // 3. CRM SYNC: Ensure customer is registered under THIS specific vendor
           const { data: existingCustomer } = await supabase
             .from('customers')
             .select('id')
