@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
   QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon,
-  Package, ShoppingBag, ShoppingCart, Lock, Mail
+  Package, ShoppingBag, ShoppingCart, Lock
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -261,39 +261,7 @@ export default function DashboardPage() {
         <StatsCard title="Pending Fulfillment" value={storefrontStats.pendingOrders.toString()} icon={<ShoppingCart size={20} />} color="text-amber-500" bgGlow="bg-amber-500/10" />
       </div>
 
-      {/* Storefront Tools with Vivid Verification Lock */}
       <section className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-[32px] overflow-hidden shadow-2xl relative">
-        {!profile?.is_verified && (
-          <div className="absolute inset-0 z-[20] bg-slate-900/80 dark:bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center border-[4px] border-brand-orange/20 rounded-[32px]">
-            <div className="w-16 h-16 bg-brand-orange text-white rounded-[24px] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(249,115,22,0.4)]">
-              <Lock size={32} strokeWidth={2.5} />
-            </div>
-            <h3 className="text-white font-black uppercase italic tracking-tighter text-2xl mb-2">Storefront Locked</h3>
-
-            {verificationSent ? (
-               <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-5 rounded-2xl max-w-[300px] shadow-lg mt-4">
-                 <p className="text-xs font-black uppercase tracking-widest leading-relaxed">
-                   ✓ Verification link sent! Check your email inbox to proceed.
-                 </p>
-               </div>
-            ) : (
-               <div className="flex flex-col items-center w-full mt-2">
-                 <p className="text-slate-300 text-xs font-bold uppercase tracking-widest mb-8 max-w-[280px] leading-relaxed">
-                   Activate your professional showroom and remove all receipt limits.
-                 </p>
-                 <button 
-                   onClick={handleRequestVerification}
-                   disabled={isRequestingVerification}
-                   className="w-full max-w-[280px] py-5 bg-brand-orange hover:bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] flex items-center justify-center gap-3 disabled:opacity-70 border border-white/20"
-                 >
-                   {isRequestingVerification ? <Loader2 className="animate-spin" size={20} /> : <Mail size={20} strokeWidth={2.5} />}
-                   {isRequestingVerification ? "Sending..." : "Send Verify Link"}
-                 </button>
-               </div>
-            )}
-          </div>
-        )}
-
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
         <button 
           onClick={() => setIsQrExpanded(!isQrExpanded)}
@@ -319,41 +287,74 @@ export default function DashboardPage() {
               exit={{ height: 0, opacity: 0 }}
               className="px-8 pb-10 relative z-10"
             >
-              <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
-                <div className="flex-1 space-y-6 text-center md:text-left">
-                  <p className="text-slate-300 text-xs font-bold uppercase tracking-wide leading-relaxed">
-                    Share your automated storefront. Customers scan this QR to place orders and view your professional price list.
-                  </p>
-                  <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                    <button 
-                      onClick={downloadQR} 
-                      disabled={isDownloadingQR}
-                      className="bg-white/90 backdrop-blur-md text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all"
-                    >
-                      {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
-                      Download QR
-                    </button>
-                    <button 
-                      onClick={copyStoreLink}
-                      className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all"
-                    >
-                      <LinkIcon size={16} /> Copy Link
-                    </button>
-                    <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all">
-                      <ExternalLink size={16} /> View Store
-                    </a>
+              {!profile?.is_verified ? (
+                // UNVERIFIED STATE: Display Lock and Request Link inside dropdown
+                <div className="pt-8 border-t border-white/10 flex flex-col items-center text-center pb-6">
+                  <div className="w-14 h-14 bg-brand-orange text-white rounded-2xl flex items-center justify-center mb-4 shadow-glow-orange">
+                    <Lock size={24} />
                   </div>
+                  <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Storefront Locked</h3>
+                  
+                  {verificationSent ? (
+                     <div className="mt-6 bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-4 rounded-xl max-w-sm">
+                       <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                         Verification link sent! Please check your email inbox to proceed.
+                       </p>
+                     </div>
+                  ) : (
+                     <>
+                       <p className="text-slate-300 text-xs font-bold uppercase tracking-widest mt-2 max-w-sm leading-relaxed">
+                         A secure link must be sent to your registered email to activate your professional showroom.
+                       </p>
+                       <button 
+                         onClick={handleRequestVerification}
+                         disabled={isRequestingVerification}
+                         className="mt-6 px-8 py-4 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl flex items-center gap-2 disabled:opacity-70"
+                       >
+                         {isRequestingVerification && <Loader2 className="animate-spin" size={16} />}
+                         {isRequestingVerification ? "Sending Link..." : "Request Verification Link"}
+                       </button>
+                     </>
+                  )}
                 </div>
+              ) : (
+                // VERIFIED STATE: Display actual Storefront Tools
+                <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+                  <div className="flex-1 space-y-6 text-center md:text-left">
+                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wide leading-relaxed">
+                      Share your automated storefront. Customers scan this QR to place orders and view your professional price list.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                      <button 
+                        onClick={downloadQR} 
+                        disabled={isDownloadingQR}
+                        className="bg-white/90 backdrop-blur-md text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all"
+                      >
+                        {isDownloadingQR ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
+                        Download QR
+                      </button>
+                      <button 
+                        onClick={copyStoreLink}
+                        className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all"
+                      >
+                        <LinkIcon size={16} /> Copy Link
+                      </button>
+                      <a href={storeUrl} target="_blank" rel="noreferrer" className="bg-white/5 backdrop-blur-sm text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10 hover:bg-white/10 transition-all">
+                        <ExternalLink size={16} /> View Store
+                      </a>
+                    </div>
+                  </div>
 
-                <div className="flex flex-col items-center">
-                  <div ref={qrRef} className="bg-white/90 backdrop-blur-md p-6 rounded-[32px] flex flex-col items-center border-[8px] border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
-                    <QRCodeSVG value={storeUrl} size={140} level="H" />
-                    <div className="mt-4 text-center">
-                      <p className="text-black text-[9px] font-black uppercase tracking-[0.2em]">{profile?.business_name}</p>
+                  <div className="flex flex-col items-center">
+                    <div ref={qrRef} className="bg-white/90 backdrop-blur-md p-6 rounded-[32px] flex flex-col items-center border-[8px] border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
+                      <QRCodeSVG value={storeUrl} size={140} level="H" />
+                      <div className="mt-4 text-center">
+                        <p className="text-black text-[9px] font-black uppercase tracking-[0.2em]">{profile?.business_name}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
