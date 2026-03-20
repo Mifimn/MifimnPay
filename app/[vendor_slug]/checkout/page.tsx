@@ -31,7 +31,6 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState({ state: '', lga: '', location: '', method: 'whatsapp', fee: 0 });
   const [availableOptions, setAvailableOptions] = useState<string[]>([]);
 
-  // 1. Fetch Vendor Details
   useEffect(() => {
     const fetchVendor = async () => {
       if (!vendor_slug) return;
@@ -45,14 +44,12 @@ export default function CheckoutPage() {
     fetchVendor();
   }, [vendor_slug]);
 
-  // 2. Identity Guard: Redirect to store login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       router.push(`/${vendor_slug}/login?redirect=/${vendor_slug}/checkout`);
     }
   }, [user, authLoading, vendor_slug, router]);
 
-  // 3. Logistics Logic
   useEffect(() => {
     if (!vendor || !shipping.state || !shipping.lga) {
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
@@ -82,13 +79,15 @@ export default function CheckoutPage() {
     }
   }, [shipping.state, shipping.lga, vendor]);
 
+  // FIXED: Standardized to 'qty' and strict Number typing
   const subtotal = basket.reduce((acc, item) => {
-    const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
-    const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
-    return acc + (unitPrice * item.quantity);
+    const itemQty = Number(item.qty || 1);
+    const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
+    const unitPrice = isWholesale ? (Number(item.wholesale_price!) / (Number(item.moq) || 1)) : Number(item.price);
+    return acc + (unitPrice * itemQty);
   }, 0);
 
-  const totalPrice = subtotal + shipping.fee;
+  const totalPrice = Number(subtotal) + Number(shipping.fee);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -129,22 +128,35 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
-      // 4. Save order to DB - Trigger handles the rest (Receipt & CRM Update)
+      // FIXED: Formatting basket specifically to match the Receipt schema perfectly
+      const formattedItems = basket.map(item => {
+        const itemQty = Number(item.qty || 1);
+        const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
+        const unitPrice = isWholesale ? (Number(item.wholesale_price!) / (Number(item.moq) || 1)) : Number(item.price);
+        
+        return {
+          id: String(item.id),
+          name: item.name,
+          qty: itemQty,
+          price: unitPrice
+        };
+      });
+
       const { error: dbError } = await supabase.from('orders').insert([{
         vendor_id: vendor.id,
-        customer_id: user.id, // Linking permanently to the customer identity
+        customer_id: user.id, 
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone,
         customer_address: customerInfo.address,
         shipping_state: shipping.state,
         shipping_lga: shipping.lga,
         shipping_location: shipping.location,
-        shipping_fee: shipping.fee,
-        total_amount: totalPrice,
+        shipping_fee: Number(shipping.fee), // Strict Number
+        total_amount: Number(totalPrice),   // Strict Number
         payment_method: 'manual',
         status: 'pending',
         receipt_url: uploadedReceiptUrl,
-        items: basket
+        items: formattedItems // Clean, perfectly formatted JSON array
       }]);
 
       if (dbError) throw dbError;
