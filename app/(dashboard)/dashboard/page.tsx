@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
   QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon,
-  Package, ShoppingBag, ShoppingCart, Lock
+  Package, ShoppingBag, ShoppingCart, Lock, Mail
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -261,35 +261,35 @@ export default function DashboardPage() {
         <StatsCard title="Pending Fulfillment" value={storefrontStats.pendingOrders.toString()} icon={<ShoppingCart size={20} />} color="text-amber-500" bgGlow="bg-amber-500/10" />
       </div>
 
-      {/* Storefront Tools with Verification Lock */}
+      {/* Storefront Tools with Vivid Verification Lock */}
       <section className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-[32px] overflow-hidden shadow-2xl relative">
         {!profile?.is_verified && (
-          <div className="absolute inset-0 z-[20] bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-12 h-12 bg-brand-orange text-white rounded-2xl flex items-center justify-center mb-4 shadow-glow-orange">
-              <Lock size={24} />
+          <div className="absolute inset-0 z-[20] bg-slate-900/80 dark:bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center border-[4px] border-brand-orange/20 rounded-[32px]">
+            <div className="w-16 h-16 bg-brand-orange text-white rounded-[24px] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(249,115,22,0.4)]">
+              <Lock size={32} strokeWidth={2.5} />
             </div>
-            <h3 className="text-white font-black uppercase italic tracking-tighter text-lg">Storefront Locked</h3>
+            <h3 className="text-white font-black uppercase italic tracking-tighter text-2xl mb-2">Storefront Locked</h3>
 
             {verificationSent ? (
-               <div className="mt-4 bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-4 rounded-xl max-w-[280px]">
-                 <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
-                   Verification link sent! Please check your email inbox to proceed.
+               <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-5 rounded-2xl max-w-[300px] shadow-lg mt-4">
+                 <p className="text-xs font-black uppercase tracking-widest leading-relaxed">
+                   ✓ Verification link sent! Check your email inbox to proceed.
                  </p>
                </div>
             ) : (
-               <>
-                 <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-1 max-w-[250px]">
-                   A secure link must be sent to your registered email to activate your professional showroom.
+               <div className="flex flex-col items-center w-full mt-2">
+                 <p className="text-slate-300 text-xs font-bold uppercase tracking-widest mb-8 max-w-[280px] leading-relaxed">
+                   Activate your professional showroom and remove all receipt limits.
                  </p>
                  <button 
                    onClick={handleRequestVerification}
                    disabled={isRequestingVerification}
-                   className="mt-6 px-6 py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl flex items-center gap-2 disabled:opacity-70"
+                   className="w-full max-w-[280px] py-5 bg-brand-orange hover:bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] flex items-center justify-center gap-3 disabled:opacity-70 border border-white/20"
                  >
-                   {isRequestingVerification && <Loader2 className="animate-spin" size={16} />}
-                   {isRequestingVerification ? "Sending..." : "Request Verification Link"}
+                   {isRequestingVerification ? <Loader2 className="animate-spin" size={20} /> : <Mail size={20} strokeWidth={2.5} />}
+                   {isRequestingVerification ? "Sending..." : "Send Verify Link"}
                  </button>
-               </>
+               </div>
             )}
           </div>
         )}
