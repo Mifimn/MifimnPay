@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import AdminLayout from '@/components/admin/AdminLayout'; // Path alias update
-import { supabase } from '@/lib/supabaseClient'; // Path alias update
+import AdminLayout from '@/components/admin/AdminLayout'; 
+import { supabase } from '@/lib/supabaseClient'; 
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Eye, Zap, LogOut, Activity, Clock } from 'lucide-react';
-import { useRouter } from 'next/navigation'; // Updated for App Router
+import { useRouter } from 'next/navigation'; 
 
 export default function AdminIntelligence() {
   const router = useRouter();
@@ -31,6 +31,7 @@ export default function AdminIntelligence() {
 
   async function fetchData(frame: string) {
     try {
+      setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/login');
 
@@ -54,15 +55,18 @@ export default function AdminIntelligence() {
     </div>
   );
 
+  // FRONTEND SAFETY: Filter out any admins that might have slipped through the backend
+  const activeVendors = stats?.active_users_list?.filter((user: any) => !user.is_admin) || [];
+
   return (
     <AdminLayout>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 text-[var(--foreground)]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 text-[var(--foreground)] pb-10">
 
         {/* HEADER */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-black uppercase tracking-tighter">Site Intelligence</h1>
-            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Global Traffic & Engagement</p>
+            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Global Traffic & Vendor Engagement</p>
           </div>
           <button onClick={() => supabase.auth.signOut().then(() => router.push('/login'))} className="p-2 hover:bg-zinc-500/10 rounded-xl text-zinc-500 transition-colors">
             <LogOut size={20} />
@@ -73,13 +77,13 @@ export default function AdminIntelligence() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="admin-card border-b-2 border-green-500">
             <Users className="text-green-500 mb-2" size={18} />
-            <p className="text-[10px] font-black text-zinc-500 uppercase">Total Users</p>
+            <p className="text-[10px] font-black text-zinc-500 uppercase">Total Vendors</p>
             <h2 className="text-2xl font-black">{stats?.total_users || 0}</h2>
           </div>
           <div className="admin-card border-b-2 border-blue-500">
             <Activity className="text-blue-500 mb-2" size={18} />
             <p className="text-[10px] font-black text-zinc-500 uppercase">Active (7d)</p>
-            <h2 className="text-2xl font-black">{stats?.active_users_list?.length || 0}</h2>
+            <h2 className="text-2xl font-black">{activeVendors.length}</h2>
           </div>
           <div className="admin-card border-b-2 border-emerald-500">
             <Zap className="text-emerald-500 mb-2" size={18} />
@@ -151,17 +155,22 @@ export default function AdminIntelligence() {
           <div className="admin-card space-y-4">
             <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Active Business Users</h3>
             <div className="space-y-3">
-              {stats?.active_users_list?.map((user: any, i: number) => (
+              {activeVendors.map((user: any, i: number) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-zinc-500/5 rounded-xl">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center font-black text-xs">
-                      {user.business_name?.charAt(0) || 'U'}
+                      {user.business_name?.charAt(0) || 'V'}
                     </div>
-                    <span className="text-sm font-bold">{user.business_name || 'Anonymous User'}</span>
+                    <span className="text-sm font-bold">{user.business_name || 'Anonymous Vendor'}</span>
                   </div>
                   <span className="text-[10px] font-black text-zinc-500 uppercase">Score: {user.activity_points}</span>
                 </div>
               ))}
+              {activeVendors.length === 0 && (
+                <div className="text-center py-6 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                  No active vendors found in this timeframe.
+                </div>
+              )}
             </div>
           </div>
         </div>
