@@ -34,12 +34,17 @@ export default function DashboardPage() {
 
   const [isQrExpanded, setIsQrExpanded] = useState(false);
 
+  // Verification Request States
+  const [isRequestingVerification, setIsRequestingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
   const actualCurrentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(actualCurrentYear);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+  // Dynamic Year range (starts at 2025 or creation year)
   const years = useMemo(() => {
     const startYear = 2025;
     const current = new Date().getFullYear();
@@ -75,12 +80,15 @@ export default function DashboardPage() {
   const fetchProfile = async () => {
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-      if (data) setProfile(data);
+      if (data) {
+        setProfile(data);
+      }
     } catch (err) { console.error(err); }
   };
 
   const fetchGlobalStats = async () => {
     try {
+      // Server-side calculation via RPC call
       const { data: statsData, error } = await supabase.rpc('get_dashboard_stats', { target_user_id: user?.id });
 
       const { data: recent } = await supabase
@@ -143,6 +151,33 @@ export default function DashboardPage() {
         setYearReceipts(data);
       }
     } catch (err) { console.error(err); }
+  };
+
+  const handleRequestVerification = async () => {
+    if (!user?.email) return;
+    setIsRequestingVerification(true);
+
+    try {
+      const res = await fetch('/api/request-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: user.email, 
+          businessName: profile?.business_name 
+        })
+      });
+
+      if (res.ok) {
+        setVerificationSent(true);
+      } else {
+        alert("Failed to send verification email. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred.");
+    } finally {
+      setIsRequestingVerification(false);
+    }
   };
 
   const businessSlug = profile?.slug || profile?.business_name?.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') || '';
@@ -234,15 +269,28 @@ export default function DashboardPage() {
               <Lock size={24} />
             </div>
             <h3 className="text-white font-black uppercase italic tracking-tighter text-lg">Storefront Locked</h3>
-            <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-1 max-w-[200px]">
-              Complete NIN verification to activate your professional showroom
-            </p>
-            <button 
-              onClick={() => router.push('/verify')}
-              className="mt-4 px-6 py-2.5 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl"
-            >
-              Verify Now
-            </button>
+
+            {verificationSent ? (
+               <div className="mt-4 bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-4 rounded-xl max-w-[280px]">
+                 <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                   Verification link sent! Please check your email inbox to proceed.
+                 </p>
+               </div>
+            ) : (
+               <>
+                 <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-1 max-w-[250px]">
+                   A secure link must be sent to your registered email to activate your professional showroom.
+                 </p>
+                 <button 
+                   onClick={handleRequestVerification}
+                   disabled={isRequestingVerification}
+                   className="mt-6 px-6 py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl flex items-center gap-2 disabled:opacity-70"
+                 >
+                   {isRequestingVerification && <Loader2 className="animate-spin" size={16} />}
+                   {isRequestingVerification ? "Sending..." : "Request Verification Link"}
+                 </button>
+               </>
+            )}
           </div>
         )}
 
