@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Users, TrendingUp, FileText, Loader2, 
   QrCode, Download, ExternalLink, ChevronDown, ChevronUp, Link as LinkIcon,
-  Package, ShoppingBag, ShoppingCart
+  Package, ShoppingBag, ShoppingCart, Lock
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -40,7 +40,6 @@ export default function DashboardPage() {
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  // Dynamic Year range (starts at 2025 or creation year)
   const years = useMemo(() => {
     const startYear = 2025;
     const current = new Date().getFullYear();
@@ -76,19 +75,12 @@ export default function DashboardPage() {
   const fetchProfile = async () => {
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-      if (data) {
-        setProfile(data);
-        // BLOCK UNVERIFIED VENDORS
-        if (!data.is_verified) {
-           router.push('/verify');
-        }
-      }
+      if (data) setProfile(data);
     } catch (err) { console.error(err); }
   };
 
   const fetchGlobalStats = async () => {
     try {
-      // UPDATED: Server-side calculation via RPC call
       const { data: statsData, error } = await supabase.rpc('get_dashboard_stats', { target_user_id: user?.id });
 
       const { data: recent } = await supabase
@@ -234,7 +226,26 @@ export default function DashboardPage() {
         <StatsCard title="Pending Fulfillment" value={storefrontStats.pendingOrders.toString()} icon={<ShoppingCart size={20} />} color="text-amber-500" bgGlow="bg-amber-500/10" />
       </div>
 
+      {/* Storefront Tools with Verification Lock */}
       <section className="bg-slate-900/80 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-[32px] overflow-hidden shadow-2xl relative">
+        {!profile?.is_verified && (
+          <div className="absolute inset-0 z-[20] bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-12 h-12 bg-brand-orange text-white rounded-2xl flex items-center justify-center mb-4 shadow-glow-orange">
+              <Lock size={24} />
+            </div>
+            <h3 className="text-white font-black uppercase italic tracking-tighter text-lg">Storefront Locked</h3>
+            <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-1 max-w-[200px]">
+              Complete NIN verification to activate your professional showroom
+            </p>
+            <button 
+              onClick={() => router.push('/verify')}
+              className="mt-4 px-6 py-2.5 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl"
+            >
+              Verify Now
+            </button>
+          </div>
+        )}
+
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
         <button 
           onClick={() => setIsQrExpanded(!isQrExpanded)}
