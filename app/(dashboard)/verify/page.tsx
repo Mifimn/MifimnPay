@@ -54,7 +54,27 @@ export default function VerifyPage() {
       verification_token: null 
     }).eq('id', user?.id);
 
-    if (!error) setStatus('pending');
+    if (!error) {
+      setStatus('pending');
+
+      // TRIGGER ADMIN EMAIL NOTIFICATION
+      try {
+        await fetch('/api/notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            legalName: formData.name,
+            nin: formData.nin,
+            email: user?.email
+          })
+        });
+      } catch (err) {
+        console.error("Failed to notify admin:", err);
+      }
+    } else {
+      alert("Failed to submit verification: " + error.message);
+    }
+
     setLoading(false);
   };
 

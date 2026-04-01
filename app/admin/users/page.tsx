@@ -11,6 +11,7 @@ export default function MerchantDirectory() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null); // NEW: Error state
 
   useEffect(() => {
     fetchUsers();
@@ -18,13 +19,31 @@ export default function MerchantDirectory() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('is_vendor', true) // EXPLICITLY FETCH ONLY VENDORS
-      .order('created_at', { ascending: false });
-    setUsers(data || []);
-    setLoading(false);
+    setFetchError(null);
+    try {
+      // THE SAFEST QUERY: Fetch anyone who is NOT an admin.
+      // This catches vendors even if the 'is_vendor' column is missing or null.
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('is_admin', true) 
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setFetchError("No vendors found. If vendors exist, Supabase Row Level Security (RLS) is blocking your admin account from reading the table.");
+        alert("Database returned 0 vendors. Please check your Supabase RLS policies.");
+      }
+
+      setUsers(data || []);
+    } catch (err: any) {
+      console.error(err);
+      setFetchError(err.message || "Failed to load vendors.");
+      alert("Error fetching vendors: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerification = async (userId: string, action: 'approve' | 'reject') => {
@@ -42,7 +61,21 @@ export default function MerchantDirectory() {
 
       if (error) throw error;
 
-      // Refresh list to show updated status immediately
+      // TRIGGER VENDOR SUCCESS EMAIL
+      if (action === 'approve') {
+        const vendorToEmail = users.find(u => u.id === userId);
+        if (vendorToEmail && vendorToEmail.email) {
+          fetch('/api/notify-vendor-verified', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: vendorToEmail.email,
+              businessName: vendorToEmail.business_name
+            })
+          }).catch(err => console.error("Failed to send success email:", err));
+        }
+      }
+
       await fetchUsers();
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -51,7 +84,6 @@ export default function MerchantDirectory() {
     }
   };
 
-  // Allow admin to search by Business Name, NIN, or ID
   const filteredUsers = users.filter(u => 
     (u.business_name?.toLowerCase() || '').includes(search.toLowerCase()) || 
     (u.nin_number || '').includes(search) ||
@@ -83,6 +115,17 @@ export default function MerchantDirectory() {
             </div>
           </div>
         </div>
+
+        {/* ERROR DISPLAY */}
+        {fetchError && (
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-4">
+            <ShieldAlert className="text-red-500 shrink-0" size={24} />
+            <div>
+              <h3 className="text-red-500 font-black uppercase tracking-widest text-xs mb-1">Query Error / Empty Result</h3>
+              <p className="text-red-400 text-sm font-bold">{fetchError}</p>
+            </div>
+          </div>
+        )}
 
         {/* SEARCH BAR */}
         <div className="admin-card p-2 border border-[var(--border-color)] rounded-2xl">
@@ -135,7 +178,7 @@ export default function MerchantDirectory() {
                         </div>
                       </td>
 
-                      {/* NIN Info (Viewing the verification details) */}
+                      {/* NIN Info */}
                       <td className="px-6 py-4">
                         {u.nin_number ? (
                           <div className="bg-zinc-800/50 p-2 rounded-lg border border-zinc-700/50 inline-block">
