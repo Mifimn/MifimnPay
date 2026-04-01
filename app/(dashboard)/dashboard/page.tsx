@@ -158,12 +158,25 @@ export default function DashboardPage() {
     setIsRequestingVerification(true);
 
     try {
+      // 1. Generate a random, secure token
+      const secureToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+      // 2. Save this token to the vendor's profile in the database
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ verification_token: secureToken })
+        .eq('id', user.id);
+
+      if (dbError) throw dbError;
+
+      // 3. Send the token to the API so Resend can attach it to the link
       const res = await fetch('/api/request-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           email: user.email, 
-          businessName: profile?.business_name 
+          businessName: profile?.business_name,
+          token: secureToken 
         })
       });
 
@@ -294,7 +307,7 @@ export default function DashboardPage() {
                     <Lock size={24} />
                   </div>
                   <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Storefront Locked</h3>
-                  
+
                   {verificationSent ? (
                      <div className="mt-6 bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-4 rounded-xl max-w-sm">
                        <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">

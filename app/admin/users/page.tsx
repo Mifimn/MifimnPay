@@ -28,7 +28,7 @@ export default function MerchantDirectory() {
   };
 
   const handleVerification = async (userId: string, action: 'approve' | 'reject') => {
-    if (!confirm(`Are you sure you want to ${action} this vendor?`)) return;
+    if (!confirm(`Are you sure you want to ${action} this vendor's verification?`)) return;
 
     setProcessingId(userId);
     try {
@@ -42,7 +42,7 @@ export default function MerchantDirectory() {
 
       if (error) throw error;
 
-      // Refresh list to show updated status
+      // Refresh list to show updated status immediately
       await fetchUsers();
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -51,6 +51,7 @@ export default function MerchantDirectory() {
     }
   };
 
+  // Allow admin to search by Business Name, NIN, or ID
   const filteredUsers = users.filter(u => 
     (u.business_name?.toLowerCase() || '').includes(search.toLowerCase()) || 
     (u.nin_number || '').includes(search) ||
@@ -73,12 +74,12 @@ export default function MerchantDirectory() {
             {pendingCount > 0 && (
               <div className="flex items-center gap-2 bg-orange-500/10 px-4 py-2 rounded-xl border border-orange-500/20 text-orange-500">
                 <ShieldAlert size={16} />
-                <span className="text-xs font-black uppercase tracking-widest">{pendingCount} Pending</span>
+                <span className="text-xs font-black uppercase tracking-widest">{pendingCount} Pending Review</span>
               </div>
             )}
             <div className="flex items-center gap-2 bg-green-500/10 px-4 py-2 rounded-xl border border-green-500/20 text-green-500">
               <UsersIcon size={16} />
-              <span className="text-xs font-black uppercase tracking-widest">{users.length} Total</span>
+              <span className="text-xs font-black uppercase tracking-widest">{users.length} Total Vendors</span>
             </div>
           </div>
         </div>
@@ -104,8 +105,8 @@ export default function MerchantDirectory() {
               <thead className="bg-zinc-500/10 border-b border-[var(--border-color)] text-[10px] uppercase tracking-widest text-zinc-500 font-black">
                 <tr>
                   <th className="px-6 py-5">Business</th>
-                  <th className="px-6 py-5">NIN Details</th>
-                  <th className="px-6 py-5">Status</th>
+                  <th className="px-6 py-5">NIN Details (View)</th>
+                  <th className="px-6 py-5">Verification Status</th>
                   <th className="px-6 py-5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -120,6 +121,7 @@ export default function MerchantDirectory() {
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((u: any) => (
                     <tr key={u.id} className="hover:bg-zinc-500/5 transition-colors group">
+
                       {/* Business Info */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -133,15 +135,15 @@ export default function MerchantDirectory() {
                         </div>
                       </td>
 
-                      {/* NIN Info */}
+                      {/* NIN Info (Viewing the verification details) */}
                       <td className="px-6 py-4">
                         {u.nin_number ? (
-                          <div>
-                            <div className="font-black text-xs text-zinc-300 uppercase tracking-widest">{u.nin_number}</div>
-                            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{u.legal_full_name}</div>
+                          <div className="bg-zinc-800/50 p-2 rounded-lg border border-zinc-700/50 inline-block">
+                            <div className="font-black text-xs text-zinc-200 uppercase tracking-widest mb-1">NIN: {u.nin_number}</div>
+                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Name: {u.legal_full_name}</div>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Not Submitted</span>
+                          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-2 py-1 rounded">Not Submitted</span>
                         )}
                       </td>
 
@@ -164,34 +166,38 @@ export default function MerchantDirectory() {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+
                           {/* If status is pending, show Approve/Reject buttons */}
-                          {u.verification_status === 'pending' ? (
+                          {u.verification_status === 'pending' && (
                             <>
                               <button 
                                 onClick={() => handleVerification(u.id, 'approve')}
                                 disabled={processingId === u.id}
-                                className="p-2.5 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/20 rounded-xl transition-all"
-                                title="Approve NIN"
+                                className="p-2.5 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/20 rounded-xl transition-all shadow-sm"
+                                title="Approve NIN & Unlock Storefront"
                               >
                                 {processingId === u.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                               </button>
                               <button 
                                 onClick={() => handleVerification(u.id, 'reject')}
                                 disabled={processingId === u.id}
-                                className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all"
+                                className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all shadow-sm"
                                 title="Reject NIN"
                               >
                                 {processingId === u.id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
                               </button>
                             </>
-                          ) : (
-                            <button 
-                              className="p-2.5 bg-zinc-500/10 hover:bg-green-500 hover:text-white text-zinc-400 border border-transparent rounded-xl transition-all"
-                              title="Contact Vendor"
-                            >
-                              <Mail size={16} />
-                            </button>
                           )}
+
+                          {/* Email Contact Button (Always visible) */}
+                          <a 
+                            href={`mailto:${u.email || ''}?subject=Your MifimnPay Vendor Account`}
+                            className="p-2.5 bg-zinc-500/10 hover:bg-blue-500 hover:text-white text-zinc-400 border border-transparent rounded-xl transition-all"
+                            title="Email Vendor"
+                          >
+                            <Mail size={16} />
+                          </a>
+
                         </div>
                       </td>
 
