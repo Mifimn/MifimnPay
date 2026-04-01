@@ -17,10 +17,10 @@ export async function POST(req: Request) {
           <h2 style="color: #f97316; font-style: italic; text-transform: uppercase;">New Verification Request</h2>
           <p>A merchant has just submitted their NIN details for review.</p>
 
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f97316;">
             <p style="margin: 0 0 10px 0;"><strong>Vendor Email:</strong> ${email || 'Not provided'}</p>
-            <p style="margin: 0 0 10px 0;"><strong>Legal Name:</strong> ${legalName}</p>
-            <p style="margin: 0;"><strong>NIN Number:</strong> ${nin}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Legal Full Name:</strong> ${legalName}</p>
+            <p style="margin: 0;"><strong>NIN Number:</strong> <span style="font-family: monospace; font-size: 16px; letter-spacing: 2px;">${nin}</span></p>
           </div>
 
           <p>Please log in to your admin dashboard to approve or reject this request.</p>

@@ -3,15 +3,18 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout'; 
 import { supabase } from '@/lib/supabaseClient'; 
-import { Search, Mail, Users as UsersIcon, Loader2, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, Mail, Users as UsersIcon, Loader2, CheckCircle, XCircle, ShieldAlert, FileText, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MerchantDirectory() {
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null); // NEW: Error state
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // NEW: State to control the review modal
+  const [selectedVendor, setSelectedVendor] = useState<any | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -21,8 +24,6 @@ export default function MerchantDirectory() {
     setLoading(true);
     setFetchError(null);
     try {
-      // THE SAFEST QUERY: Fetch anyone who is NOT an admin.
-      // This catches vendors even if the 'is_vendor' column is missing or null.
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -33,24 +34,21 @@ export default function MerchantDirectory() {
 
       if (!data || data.length === 0) {
         setFetchError("No vendors found. If vendors exist, Supabase Row Level Security (RLS) is blocking your admin account from reading the table.");
-        alert("Database returned 0 vendors. Please check your Supabase RLS policies.");
       }
 
       setUsers(data || []);
     } catch (err: any) {
       console.error(err);
       setFetchError(err.message || "Failed to load vendors.");
-      alert("Error fetching vendors: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerification = async (userId: string, action: 'approve' | 'reject') => {
-    if (!confirm(`Are you sure you want to ${action} this vendor's verification?`)) return;
-
     setProcessingId(userId);
     try {
+      // 1. Update the database
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -61,7 +59,7 @@ export default function MerchantDirectory() {
 
       if (error) throw error;
 
-      // TRIGGER VENDOR SUCCESS EMAIL
+      // 2. AUTOMATIC EMAIL TRIGGER
       if (action === 'approve') {
         const vendorToEmail = users.find(u => u.id === userId);
         if (vendorToEmail && vendorToEmail.email) {
@@ -76,6 +74,8 @@ export default function MerchantDirectory() {
         }
       }
 
+      // 3. Close Modal and Refresh list
+      setSelectedVendor(null);
       await fetchUsers();
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -148,7 +148,7 @@ export default function MerchantDirectory() {
               <thead className="bg-zinc-500/10 border-b border-[var(--border-color)] text-[10px] uppercase tracking-widest text-zinc-500 font-black">
                 <tr>
                   <th className="px-6 py-5">Business</th>
-                  <th className="px-6 py-5">NIN Details (View)</th>
+                  <th className="px-6 py-5">NIN Details</th>
                   <th className="px-6 py-5">Verification Status</th>
                   <th className="px-6 py-5 text-right">Actions</th>
                 </tr>
@@ -182,8 +182,8 @@ export default function MerchantDirectory() {
                       <td className="px-6 py-4">
                         {u.nin_number ? (
                           <div className="bg-zinc-800/50 p-2 rounded-lg border border-zinc-700/50 inline-block">
-                            <div className="font-black text-xs text-zinc-200 uppercase tracking-widest mb-1">NIN: {u.nin_number}</div>
-                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Name: {u.legal_full_name}</div>
+                            <div className="font-black text-xs text-zinc-200 uppercase tracking-widest mb-1">NIN: ******{u.nin_number.slice(-4)}</div>
+                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate max-w-[120px]">{u.legal_full_name}</div>
                           </div>
                         ) : (
                           <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-2 py-1 rounded">Not Submitted</span>
@@ -210,29 +210,17 @@ export default function MerchantDirectory() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
 
-                          {/* If status is pending, show Approve/Reject buttons */}
+                          {/* Trigger Modal Button */}
                           {u.verification_status === 'pending' && (
-                            <>
-                              <button 
-                                onClick={() => handleVerification(u.id, 'approve')}
-                                disabled={processingId === u.id}
-                                className="p-2.5 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/20 rounded-xl transition-all shadow-sm"
-                                title="Approve NIN & Unlock Storefront"
-                              >
-                                {processingId === u.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                              </button>
-                              <button 
-                                onClick={() => handleVerification(u.id, 'reject')}
-                                disabled={processingId === u.id}
-                                className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all shadow-sm"
-                                title="Reject NIN"
-                              >
-                                {processingId === u.id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                              </button>
-                            </>
+                            <button 
+                              onClick={() => setSelectedVendor(u)}
+                              className="px-4 py-2.5 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white border border-orange-500/20 rounded-xl transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+                            >
+                              <FileText size={14} /> Review
+                            </button>
                           )}
 
-                          {/* Email Contact Button (Always visible) */}
+                          {/* Email Contact Button */}
                           <a 
                             href={`mailto:${u.email || ''}?subject=Your MifimnPay Vendor Account`}
                             className="p-2.5 bg-zinc-500/10 hover:bg-blue-500 hover:text-white text-zinc-400 border border-transparent rounded-xl transition-all"
@@ -258,6 +246,82 @@ export default function MerchantDirectory() {
           </div>
         </div>
       </motion.div>
+
+      {/* REVIEW MODAL */}
+      <AnimatePresence>
+        {selectedVendor && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#0a0a0a] border border-white/10 rounded-[32px] p-8 max-w-md w-full shadow-2xl relative"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => !processingId && setSelectedVendor(null)}
+                disabled={!!processingId}
+                className="absolute top-6 right-6 text-zinc-500 hover:text-white disabled:opacity-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="mb-8 text-center mt-2">
+                <div className="w-16 h-16 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <ShieldAlert size={32} />
+                </div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter italic text-white">Review Vendor</h2>
+                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1">Verify Identity Details</p>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl">
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Business Name</p>
+                  <p className="text-sm font-bold text-white uppercase">{selectedVendor.business_name || 'N/A'}</p>
+                </div>
+
+                <div className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl">
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Legal Full Name</p>
+                  <p className="text-sm font-bold text-white uppercase">{selectedVendor.legal_full_name || 'N/A'}</p>
+                </div>
+
+                <div className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl">
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">National Identity Number (NIN)</p>
+                  <p className="text-xl font-black text-orange-500 tracking-widest font-mono">
+                    {selectedVendor.nin_number || 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => handleVerification(selectedVendor.id, 'reject')}
+                  disabled={!!processingId}
+                  className="py-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {processingId === selectedVendor.id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                  Decline
+                </button>
+                <button 
+                  onClick={() => handleVerification(selectedVendor.id, 'approve')}
+                  disabled={!!processingId}
+                  className="py-4 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-glow"
+                >
+                  {processingId === selectedVendor.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Approve
+                </button>
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </AdminLayout>
   );
 }
