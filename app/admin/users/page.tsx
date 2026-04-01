@@ -21,7 +21,7 @@ export default function MerchantDirectory() {
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('is_admin', false) // ONLY FETCH VENDORS
+      .eq('is_vendor', true) // EXPLICITLY FETCH ONLY VENDORS
       .order('created_at', { ascending: false });
     setUsers(data || []);
     setLoading(false);
