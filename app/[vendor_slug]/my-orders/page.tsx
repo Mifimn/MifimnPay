@@ -60,7 +60,6 @@ export default function CustomerOrdersPage() {
         if (customer) setCustomerRecord(customer);
 
         // Fetch Orders using BOTH customer_id (Auth) and customer_crm_id (CRM link)
-        // This ensures orders appear immediately even if triggers are still processing
         const { data: ordersData, error } = await supabase
           .from('orders')
           .select('*')
@@ -182,7 +181,8 @@ export default function CustomerOrdersPage() {
                     </div>
                     <div>
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Paid</span>
-                      <p className="font-black text-sm text-brand-orange">₦{(order.total_amount).toLocaleString()}</p>
+                      {/* FIXED: Robust Number conversion for the order total */}
+                      <p className="font-black text-sm text-brand-orange">₦{Number(order.total_amount || 0).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className={`px-4 py-2 rounded-full border flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${statusConfig.color}`}>
@@ -196,19 +196,27 @@ export default function CustomerOrdersPage() {
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 dark:border-white/5 pb-2">Line Items</h4>
                     <div className="space-y-4">
                       {order.items.map((item: any, i: number) => {
-                        const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
-                        const unitPrice = isWholesale ? (item.wholesale_price / (item.moq || 1)) : Number(item.price);
+                        // FIXED: Looking for 'qty', and relying on the final 'price' saved by checkout
+                        const itemQty = Number(item.qty || item.quantity || 1);
+                        const unitPrice = Number(item.price || 0);
 
                         return (
                           <div key={i} className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white dark:bg-white/5 rounded-xl p-1 border border-slate-100 dark:border-white/10 shrink-0">
-                              <img src={item.img || item.image_url} alt={item.name} className="w-full h-full object-contain" />
+                            <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-xl p-1 border border-slate-200 dark:border-white/10 shrink-0 flex items-center justify-center">
+                              {/* FIXED: Fallback logic for missing images */}
+                              {(item.img || item.image_url) ? (
+                                <img src={item.img || item.image_url} alt={item.name} className="w-full h-full object-contain rounded-lg" />
+                              ) : (
+                                <span className="text-xl font-black text-slate-300 dark:text-slate-600 uppercase">
+                                  {item.name.charAt(0)}
+                                </span>
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-black uppercase dark:text-white truncate">{item.name}</p>
-                              <p className="text-[10px] font-bold text-slate-500">₦{Number(unitPrice).toLocaleString()} x {item.quantity}</p>
+                              <p className="text-[10px] font-bold text-slate-500">₦{unitPrice.toLocaleString()} x {itemQty}</p>
                             </div>
-                            <p className="text-xs font-black dark:text-white">₦{(unitPrice * item.quantity).toLocaleString()}</p>
+                            <p className="text-xs font-black dark:text-white">₦{(unitPrice * itemQty).toLocaleString()}</p>
                           </div>
                         );
                       })}
