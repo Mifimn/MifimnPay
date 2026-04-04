@@ -8,7 +8,8 @@ import { useCartStore } from '@/src/storefront/store/useCartStore';
 interface BasketItem {
   id: string | number;
   img: string;
-  quantity: number;
+  qty?: number;       // FIXED: Uses 'qty' to match our global store
+  quantity?: number;  // Fallback just in case
 }
 
 interface InquiryBasketProps {
@@ -17,8 +18,10 @@ interface InquiryBasketProps {
 }
 
 export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
-  const { toggleCart } = useCartStore(); // Pulling toggle function directly
-  const totalUnits = items.reduce((acc, item) => acc + Number(item.quantity || 0), 0);
+  const { toggleCart } = useCartStore(); 
+  
+  // Calculate total items using the fixed 'qty' naming
+  const totalUnits = items.reduce((acc, item) => acc + Number(item.qty || item.quantity || 1), 0);
 
   return (
     <div className="fixed right-2 sm:right-6 top-1/2 -translate-y-1/2 z-[70] pointer-events-none perspective-[1200px]">
@@ -67,33 +70,38 @@ export default function InquiryBasket({ items, onRemove }: InquiryBasketProps) {
 
         <div className="flex flex-col gap-2 max-h-[200px] sm:max-h-[350px] overflow-y-auto no-scrollbar py-1">
           <AnimatePresence mode="popLayout">
-            {items.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.5, x: 20 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.5, x: 20 }}
-                className="relative group/item"
-              >
-                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden bg-white shadow-sm flex items-center justify-center relative">
-                  <img src={item.img} alt="" className="w-full h-full object-contain p-1" />
-                  {item.quantity % 1 !== 0 && (
-                    <div className="absolute inset-0 bg-brand-orange/10 flex items-center justify-center">
-                      <div className="bg-white/90 dark:bg-black/90 px-1 rounded-[2px] border border-brand-orange/20 shadow-sm">
-                        <span className="text-[7px] sm:text-[8px] font-black text-brand-orange">.5</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <button 
-                  onClick={() => onRemove(item.id)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover/item:opacity-100 transition-opacity z-20"
+            {items.map((item) => {
+              const itemQty = Number(item.qty || item.quantity || 1);
+              
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.5, x: 20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.5, x: 20 }}
+                  className="relative group/item"
                 >
-                  <X size={10} />
-                </button>
-              </motion.div>
-            ))}
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden bg-white shadow-sm flex items-center justify-center relative">
+                    <img src={item.img} alt="" className="w-full h-full object-contain p-1" />
+                    
+                    {/* FIXED: Dynamic Quantity Badge overlay */}
+                    {itemQty > 1 && (
+                      <div className="absolute bottom-0 right-0 bg-slate-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-black px-1.5 py-0.5 rounded-tl-lg font-black text-[7px] sm:text-[9px]">
+                        x{itemQty}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button 
+                    onClick={() => onRemove(item.id)}
+                    className="absolute -top-1.5 -left-1.5 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover/item:opacity-100 transition-all z-20 hover:scale-110 hover:bg-red-600 shadow-md"
+                  >
+                    <X size={10} strokeWidth={3} />
+                  </button>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
 
