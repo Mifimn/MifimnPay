@@ -79,7 +79,7 @@ export default function CheckoutPage() {
     }
   }, [shipping.state, shipping.lga, vendor]);
 
-  // FIXED: Standardized to 'qty' and strict Number typing
+  // FIXED: Strict 'qty' math ensures the subtotal is calculated correctly before adding shipping!
   const subtotal = basket.reduce((acc, item) => {
     const itemQty = Number(item.qty || 1);
     const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
@@ -128,17 +128,18 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
-      // FIXED: Formatting basket specifically to match the Receipt schema perfectly
+      // FIXED: Added the `img` parameter so images save to the database history!
       const formattedItems = basket.map(item => {
         const itemQty = Number(item.qty || 1);
         const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
         const unitPrice = isWholesale ? (Number(item.wholesale_price!) / (Number(item.moq) || 1)) : Number(item.price);
-        
+
         return {
           id: String(item.id),
           name: item.name,
           qty: itemQty,
-          price: unitPrice
+          price: unitPrice,
+          img: item.image_url || item.img || '' // <--- THIS SAVES THE IMAGE FOR THE MY-ORDERS PAGE!
         };
       });
 
@@ -151,12 +152,12 @@ export default function CheckoutPage() {
         shipping_state: shipping.state,
         shipping_lga: shipping.lga,
         shipping_location: shipping.location,
-        shipping_fee: Number(shipping.fee), // Strict Number
-        total_amount: Number(totalPrice),   // Strict Number
+        shipping_fee: Number(shipping.fee), 
+        total_amount: Number(totalPrice),   
         payment_method: 'manual',
         status: 'pending',
         receipt_url: uploadedReceiptUrl,
-        items: formattedItems // Clean, perfectly formatted JSON array
+        items: formattedItems 
       }]);
 
       if (dbError) throw dbError;
