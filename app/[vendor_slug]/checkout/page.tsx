@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ChevronLeft, Send, ShieldCheck, MapPin, Phone, 
-  User, CreditCard, Loader2, ChevronDown, Image as ImageIcon, CheckCircle, MessageCircle
+  User, CreditCard, Loader2, ChevronDown, Image as ImageIcon, CheckCircle, MessageCircle, XCircle
 } from 'lucide-react';
 import { useCartStore } from '@/src/storefront/store/useCartStore';
 import { useThemeStore } from '@/src/storefront/store/useThemeStore';
@@ -52,16 +52,19 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!vendor || !shipping.state || !shipping.lga) {
+      // Default reset state
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
       setAvailableOptions([]);
       return;
     }
 
+    // 1. If Vendor explicitly wants all orders negotiated via WhatsApp
     if (vendor.whatsapp_only) {
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
       return;
     }
 
+    // 2. Strict Mapping Logic (Not Negotiable)
     const config = vendor.logistics_config || [];
     const matchedZone = config.find((z: any) => z.state === shipping.state && z.lga === shipping.lga);
 
@@ -74,12 +77,12 @@ export default function CheckoutPage() {
       }));
       setAvailableOptions(matchedZone.options ? matchedZone.options.split(',').map((o:string) => o.trim()) : []);
     } else {
-      setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
+      // FIXED: If the zone is NOT in the vendor's settings, it is UNAVAILABLE, not negotiable.
+      setShipping(prev => ({ ...prev, method: 'unavailable', fee: 0, location: '' }));
       setAvailableOptions([]);
     }
   }, [shipping.state, shipping.lga, vendor]);
 
-  // FIXED: Strict 'qty' math ensures the subtotal is calculated correctly before adding shipping!
   const subtotal = basket.reduce((acc, item) => {
     const itemQty = Number(item.qty || 1);
     const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
@@ -102,9 +105,14 @@ export default function CheckoutPage() {
     if (basket.length === 0) return alert("Your cart is empty.");
     if (!user) return router.push(`/${vendor_slug}/login`);
 
+    if (shipping.method === 'unavailable') {
+      return alert("Delivery is not available to the selected region. Please choose a supported LGA.");
+    }
+
     if (!customerInfo.name || !customerInfo.phone || !shipping.state || !shipping.lga) {
       return alert("Please fill in all contact and shipping details.");
     }
+
     if (!receiptFile && shipping.method !== 'whatsapp') {
       return alert("Please upload your payment receipt to confirm the order.");
     }
@@ -128,7 +136,6 @@ export default function CheckoutPage() {
         uploadedReceiptUrl = publicUrlData.publicUrl;
       }
 
-      // FIXED: Added the `img` parameter so images save to the database history!
       const formattedItems = basket.map(item => {
         const itemQty = Number(item.qty || 1);
         const isWholesale = item.wholesale_price && itemQty >= (Number(item.moq) || 1);
@@ -139,7 +146,7 @@ export default function CheckoutPage() {
           name: item.name,
           qty: itemQty,
           price: unitPrice,
-          img: item.image_url || item.img || '' // <--- THIS SAVES THE IMAGE FOR THE MY-ORDERS PAGE!
+          img: item.image_url || item.img || '' 
         };
       });
 
@@ -177,8 +184,9 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <div className="max-w-[1200px] mx-auto p-4 lg:p-10 pb-32 relative">
-        <div className="flex items-center gap-4 mb-10">
+      <div className="max-w-[1200px] mx-auto pb-32 relative">
+        {/* Header - added padding for mobile */}
+        <div className="flex items-center gap-4 mb-6 md:mb-10 px-4 pt-4 md:pt-10">
           <button onClick={() => router.back()} className="p-3 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all">
             <ChevronLeft size={20} />
           </button>
@@ -188,10 +196,12 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        {/* Form Container - full width on mobile (px-0), normal on desktop (md:px-4) */}
+        <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-4 md:gap-8 px-0 md:px-4">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+
             {/* 1. CONTACT INFO */}
-            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
+            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-y md:border border-slate-200 dark:border-white/10 md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <User size={18} style={{ color: themeColor }} /> 1. Logistics Contact Info
               </h3>
@@ -212,7 +222,7 @@ export default function CheckoutPage() {
             </section>
 
             {/* 2. DELIVERY ZONE */}
-            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
+            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-y md:border border-slate-200 dark:border-white/10 md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <MapPin size={18} style={{ color: themeColor }} /> 2. Delivery Zone
               </h3>
@@ -247,7 +257,13 @@ export default function CheckoutPage() {
 
               {shipping.lga && (
                 <AnimatePresence mode="wait">
-                  {shipping.method === 'whatsapp' ? (
+                  {shipping.method === 'unavailable' ? (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl">
+                      <p className="text-[10px] font-black text-red-500 uppercase tracking-widest leading-relaxed">
+                        Delivery to this area is unavailable. The vendor has not configured shipping for this region.
+                      </p>
+                    </motion.div>
+                  ) : shipping.method === 'whatsapp' ? (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-4 bg-orange-50 dark:bg-brand-orange/10 border border-orange-200 dark:border-brand-orange/20 rounded-xl">
                       <p className="text-[10px] font-black text-brand-orange uppercase tracking-widest leading-relaxed">
                         Delivery to this area requires manual calculation. The vendor will negotiate the delivery fee with you on WhatsApp.
@@ -274,12 +290,20 @@ export default function CheckoutPage() {
             </section>
 
             {/* 3. PAYMENT */}
-            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 shadow-sm">
+            <section className="bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-y md:border border-slate-200 dark:border-white/10 md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-sm">
               <h3 className="font-black uppercase italic text-sm dark:text-white flex items-center gap-2">
                 <CreditCard size={18} style={{ color: themeColor }} /> 3. Secure Payment
               </h3>
 
-              {shipping.method === 'whatsapp' ? (
+              {shipping.method === 'unavailable' ? (
+                <div className="p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-500/10 text-center space-y-2">
+                  <XCircle size={32} className="mx-auto text-red-300 dark:text-red-500/50 mb-4" />
+                  <h4 className="text-sm font-black uppercase italic dark:text-white text-red-500">Checkout Disabled</h4>
+                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">
+                    Please select a valid delivery zone to proceed with payment.
+                  </p>
+                </div>
+              ) : shipping.method === 'whatsapp' ? (
                 <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 text-center space-y-2">
                   <MessageCircle size={32} className="mx-auto text-slate-300 dark:text-white/20 mb-4" />
                   <h4 className="text-sm font-black uppercase italic dark:text-white">Payment Deferred</h4>
@@ -319,8 +343,8 @@ export default function CheckoutPage() {
           </div>
 
           {/* SIDEBAR SUMMARY */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[40px] p-6 lg:p-8 shadow-2xl">
+          <div className="lg:col-span-1 px-4 md:px-0">
+            <div className="sticky top-24 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-[32px] md:rounded-[40px] p-6 lg:p-8 shadow-2xl">
               <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 mb-8">
                 <div className="p-2 bg-green-500/10 text-green-500 rounded-full shrink-0">
                   <Phone size={16} />
@@ -338,7 +362,11 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 pb-4 border-b border-slate-200 dark:border-white/5">
                   <span>Shipping Fee</span>
-                  <span className="text-slate-900 dark:text-white">{shipping.fee > 0 ? `₦${shipping.fee.toLocaleString()}` : 'Negotiable'}</span>
+                  <span className="text-slate-900 dark:text-white">
+                    {shipping.method === 'unavailable' ? 'N/A' : 
+                     shipping.method === 'whatsapp' ? 'Negotiable' : 
+                     shipping.fee > 0 ? `₦${shipping.fee.toLocaleString()}` : 'Free'}
+                  </span>
                 </div>
                 <div className="pt-2 flex justify-between items-end">
                   <span className="font-black uppercase italic text-xs text-slate-900 dark:text-white">Total</span>
@@ -348,7 +376,7 @@ export default function CheckoutPage() {
 
               <button 
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || shipping.method === 'unavailable'}
                 className="w-full py-6 text-white rounded-[24px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
                 style={{ backgroundColor: themeColor }}
               >
