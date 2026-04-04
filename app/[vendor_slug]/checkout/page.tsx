@@ -52,19 +52,17 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!vendor || !shipping.state || !shipping.lga) {
-      // Default reset state
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
       setAvailableOptions([]);
       return;
     }
 
-    // 1. If Vendor explicitly wants all orders negotiated via WhatsApp
     if (vendor.whatsapp_only) {
       setShipping(prev => ({ ...prev, method: 'whatsapp', fee: 0, location: '' }));
       return;
     }
 
-    // 2. Strict Mapping Logic (Not Negotiable)
+    // STRICT LOGISTICS MAPPING (NOT NEGOTIABLE)
     const config = vendor.logistics_config || [];
     const matchedZone = config.find((z: any) => z.state === shipping.state && z.lga === shipping.lga);
 
@@ -72,12 +70,12 @@ export default function CheckoutPage() {
       setShipping(prev => ({ 
         ...prev, 
         method: matchedZone.method, 
-        fee: Number(matchedZone.price) || 0,
+        fee: Number(matchedZone.price) || 0, // Automatically grabs the exact fee
         location: '' 
       }));
       setAvailableOptions(matchedZone.options ? matchedZone.options.split(',').map((o:string) => o.trim()) : []);
     } else {
-      // FIXED: If the zone is NOT in the vendor's settings, it is UNAVAILABLE, not negotiable.
+      // If the zone is NOT in the vendor's settings, block checkout entirely.
       setShipping(prev => ({ ...prev, method: 'unavailable', fee: 0, location: '' }));
       setAvailableOptions([]);
     }
@@ -185,7 +183,6 @@ export default function CheckoutPage() {
   return (
     <>
       <div className="max-w-[1200px] mx-auto pb-32 relative">
-        {/* Header - added padding for mobile */}
         <div className="flex items-center gap-4 mb-6 md:mb-10 px-4 pt-4 md:pt-10">
           <button onClick={() => router.back()} className="p-3 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all">
             <ChevronLeft size={20} />
@@ -196,7 +193,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Form Container - full width on mobile (px-0), normal on desktop (md:px-4) */}
         <form onSubmit={handleProcessOrder} className="grid lg:grid-cols-3 gap-4 md:gap-8 px-0 md:px-4">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
 

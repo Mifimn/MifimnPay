@@ -70,7 +70,6 @@ export default function OrdersPage() {
         updates.payment_status = 'paid';
       }
 
-      // Perform the update with debug selection
       const { data, error } = await supabase
         .from('orders')
         .update(updates)
@@ -97,7 +96,7 @@ export default function OrdersPage() {
 
     } catch (err: any) {
       console.error("Update failed logic:", err);
-      alert(`Update failed: ${err.message || "Unknown Error"}. Please check if the 'payment_status' column exists in your database.`);
+      alert(`Update failed: ${err.message || "Unknown Error"}`);
     }
   };
 
@@ -122,8 +121,10 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-4">
+    // FIXED: Changed main wrapper padding to `px-2` on mobile so it takes up almost the full width!
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 px-2 sm:px-6 lg:px-8">
+
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-4 px-2 md:px-0">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase italic mb-1">
             Orders <span className="text-brand-orange">&</span> Logistics
@@ -135,7 +136,7 @@ export default function OrdersPage() {
       </div>
 
       {/* FILTER BUTTONS */}
-      <div className="flex p-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm w-fit overflow-x-auto max-w-full no-scrollbar">
+      <div className="flex p-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm w-fit overflow-x-auto max-w-full no-scrollbar mx-2 md:mx-0">
         {(['all', 'pending', 'processing', 'shipped', 'completed'] as const).map((t) => (
           <button
             key={t}
@@ -149,22 +150,23 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white dark:bg-[#0a0a0a] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm min-h-[450px]">
+      {/* TABLE CONTAINER - Edge-to-edge on mobile with tiny rounded corners */}
+      <div className="bg-white dark:bg-[#0a0a0a] rounded-[20px] md:rounded-[32px] border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm min-h-[450px]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-[450px]">
             <Loader2 size={40} className="animate-spin text-brand-orange mb-4" />
           </div>
         ) : filteredOrders.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
-                  <th className="px-4 sm:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Order Information</th>
-                  <th className="px-4 sm:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Logistics</th>
-                  <th className="px-4 sm:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Payment</th>
-                  <th className="px-4 sm:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
-                  <th className="px-4 sm:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Action</th>
+                  {/* Reduced mobile padding in table headers (px-3) */}
+                  <th className="px-4 md:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Order Information</th>
+                  <th className="px-4 md:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Logistics</th>
+                  <th className="px-4 md:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Payment</th>
+                  <th className="px-4 md:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
+                  <th className="px-4 md:px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -173,14 +175,14 @@ export default function OrdersPage() {
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}
                     key={order.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
                   >
-                    <td className="px-4 sm:px-8 py-6">
+                    <td className="px-4 md:px-8 py-6">
                       <div className="flex flex-col">
                         <span className="font-mono text-[10px] font-bold text-brand-orange mb-1">#{order.short_id}</span>
                         <p className="font-black text-sm text-slate-900 dark:text-white uppercase italic truncate max-w-[180px]">{order.customer_name}</p>
                         <p className="text-[10px] text-slate-400 font-bold">{order.items?.length || 0} items • {order.customer_phone}</p>
                       </div>
                     </td>
-                    <td className="px-4 sm:px-8 py-6">
+                    <td className="px-4 md:px-8 py-6">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                           {order.shipping_location ? (
@@ -192,7 +194,7 @@ export default function OrdersPage() {
                         <span className="text-[9px] font-bold text-slate-400 uppercase italic truncate max-w-[180px]">{order.shipping_lga}, {order.shipping_state}</span>
                       </div>
                     </td>
-                    <td className="px-4 sm:px-8 py-6">
+                    <td className="px-4 md:px-8 py-6">
                       <div className="flex flex-col">
                         <span className="font-black text-sm text-slate-900 dark:text-white tracking-tighter">₦{(order.total_amount).toLocaleString()}</span>
                         <div className="flex items-center gap-1.5 mt-1">
@@ -201,12 +203,12 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 sm:px-8 py-6">
+                    <td className="px-4 md:px-8 py-6">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusStyle(order.status)}`}>
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-4 sm:px-8 py-6 text-right">
+                    <td className="px-4 md:px-8 py-6 text-right">
                       <button 
                         onClick={() => { setSelectedOrder(order); setDeliveryPin(''); }}
                         className="p-3 bg-slate-100 dark:bg-white/10 rounded-xl text-slate-500 hover:text-brand-orange transition-all"
@@ -285,7 +287,6 @@ export default function OrdersPage() {
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Items Manifest</h4>
                    <div className="space-y-4">
                      {selectedOrder.items.map((item: any, i: number) => {
-                       // FIXED: 'qty' fallback logic and Math.
                        const itemQty = Number(item.qty || item.quantity || 1);
                        const isWholesale = item.wholesale_price && itemQty >= (item.moq || 1);
                        const unitPrice = isWholesale ? (item.wholesale_price / (item.moq || 1)) : Number(item.price);
@@ -295,7 +296,6 @@ export default function OrdersPage() {
                          <div key={i} className="flex items-center justify-between">
                            <div className="flex items-center gap-3">
                              <div className="w-10 h-10 bg-white rounded-xl p-1 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden">
-                                {/* FIXED: Image Fallback */}
                                 {(item.img || item.image_url) ? (
                                   <img src={item.img || item.image_url} className="w-full h-full object-contain" alt="" />
                                 ) : (
