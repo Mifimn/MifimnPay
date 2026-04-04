@@ -50,7 +50,8 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     : (product?.img ? [product.img] : ["https://picsum.photos/seed/mifimn/600"]);
 
   const existingItem = basket.find(item => item.id === product?.id);
-  const currentQtyInCart = existingItem ? Number(existingItem.quantity) : 0;
+  // FIXED: Changed from existingItem.quantity to existingItem.qty to fix the limit bug
+  const currentQtyInCart = existingItem ? Number(existingItem.qty || 0) : 0;
   const maxStock = product?.stock || 500;
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     if (safeQtyToAdd > 0) {
       addToBasket({ ...product }, safeQtyToAdd); 
       setRetailQty(1); 
-      toggleCart(); 
+      // FIXED: Removed toggleCart() so users can click add multiple times without the drawer interrupting them
     }
   };
 
@@ -86,7 +87,7 @@ export default function ProductDetails({ isLoading, productData, relatedProducts
     if (safeQtyToAdd > 0) {
       addToBasket({ ...product }, safeQtyToAdd); 
       setWholesalePacks(1); 
-      toggleCart(); 
+      // FIXED: Removed toggleCart() so users can click add multiple times
     }
   };
 

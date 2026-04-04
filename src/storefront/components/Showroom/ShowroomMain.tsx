@@ -98,9 +98,10 @@ export default function ShowroomMain({
                   <button 
                     onClick={(e) => { 
                       e.stopPropagation(); 
+                      // FIXED: Always defaults to adding 1 (Retail) instead of the MOQ amount
                       addToBasket(
                         { ...prod, img: prod.image_url || prod.img }, 
-                        prod.moq > 0 ? prod.moq : 1
+                        1
                       ); 
                     }}
                     className="w-full mt-3 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-900 dark:text-white transition-all duration-300"
