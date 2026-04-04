@@ -14,9 +14,15 @@ export default function CartDrawer() {
 
   // SMART PACK MATH: Divides the pack price by MOQ to get true unit price
   const subtotal = basket.reduce((acc, item) => {
-    const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
-    const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
-    return acc + (unitPrice * item.quantity);
+    const itemQty = Number(item.qty || 1); // FIXED: Using qty
+    const itemMoq = Number(item.moq || 1);
+    const isWholesale = item.wholesale_price && itemQty >= itemMoq;
+    
+    const unitPrice = isWholesale 
+      ? (Number(item.wholesale_price!) / itemMoq) 
+      : Number(item.price);
+      
+    return acc + (unitPrice * itemQty);
   }, 0);
 
   const handleCheckout = () => {
@@ -50,9 +56,15 @@ export default function CartDrawer() {
                 </div>
               ) : (
                 basket.map((item) => {
-                  const isWholesale = item.wholesale_price && item.quantity >= (item.moq || 1);
-                  const unitPrice = isWholesale ? (item.wholesale_price! / (item.moq || 1)) : Number(item.price);
-                  const itemTotal = unitPrice * item.quantity;
+                  const itemQty = Number(item.qty || 1); // FIXED: Using qty
+                  const itemMoq = Number(item.moq || 1);
+                  const isWholesale = item.wholesale_price && itemQty >= itemMoq;
+                  
+                  const unitPrice = isWholesale 
+                    ? (Number(item.wholesale_price!) / itemMoq) 
+                    : Number(item.price);
+                    
+                  const itemTotal = unitPrice * itemQty;
 
                   return (
                     <div key={item.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-brand-orange/20 transition-all">
@@ -69,7 +81,7 @@ export default function CartDrawer() {
 
                           <div className="mt-2 inline-flex items-center gap-2 bg-slate-100 dark:bg-black/40 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/5">
                             <span className="text-[9px] font-bold text-slate-400 uppercase">Quantity:</span>
-                            <span className="text-xs font-black dark:text-white">{item.quantity}</span>
+                            <span className="text-xs font-black dark:text-white">{itemQty}</span>
                           </div>
                         </div>
                         <button onClick={() => removeFromBasket(item.id)} className="text-slate-300 hover:text-red-500 p-2 h-fit transition-colors">
@@ -77,11 +89,12 @@ export default function CartDrawer() {
                         </button>
                       </div>
 
-                      {!isWholesale && item.wholesale_price && ((item.moq || 1) > 1) && (
+                      {/* UPSELL LOGIC FIX */}
+                      {!isWholesale && item.wholesale_price && (itemMoq > 1) && (itemMoq - itemQty > 0) && (
                         <div className="mt-3 flex items-center gap-2 text-green-600 bg-green-500/10 p-2.5 rounded-lg border border-green-500/20">
                            <Info size={14} className="shrink-0" />
                            <p className="text-[9px] font-black uppercase italic tracking-widest leading-tight">
-                             Upsell: Add {(item.moq || 1) - item.quantity} more to unlock wholesale pricing!
+                             Upsell: Add {itemMoq - itemQty} more to unlock wholesale pricing!
                            </p>
                         </div>
                       )}
