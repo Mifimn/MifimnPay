@@ -47,14 +47,12 @@ export default function MerchantDirectory() {
   const handleVerification = async (userId: string, action: 'approve' | 'reject') => {
     setProcessingId(userId);
     try {
-      // 1. Update the database
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_verified: action === 'approve',
-          verification_status: action === 'approve' ? 'verified' : 'rejected'
-        })
-        .eq('id', userId);
+      // 1. FIXED: Update the database USING THE SECURE VIP FUNCTION (Bypasses RLS block!)
+      const { error } = await supabase.rpc('verify_vendor', {
+        target_id: userId,
+        v_status: action === 'approve' ? 'verified' : 'rejected',
+        is_ver: action === 'approve'
+      });
 
       if (error) throw error;
 
