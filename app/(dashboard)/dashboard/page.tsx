@@ -327,9 +327,9 @@ export default function DashboardPage() {
 
                       {verificationSent ? (
                          <div className="mt-6 bg-green-500/20 border border-green-500/50 text-green-400 px-6 py-4 rounded-xl max-w-sm">
-                           <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
-                             Verification link sent! Please check your email inbox to proceed.
-                           </p>
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                              Verification link sent! Check your Inbox and <span className="text-white bg-green-500/30 px-1 rounded">SPAM/Junk folder</span>.
+                            </p>
                          </div>
                       ) : (
                          <>

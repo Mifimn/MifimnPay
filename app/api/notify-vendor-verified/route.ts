@@ -5,44 +5,31 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   try {
-    const { email, businessName } = await req.json();
+    const { email, businessName, token } = await req.json();
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    if (!email || !token) {
+      return NextResponse.json({ error: 'Email and Token are required' }, { status: 400 });
     }
 
-    const dashboardLink = `https://mifimnpay.com.ng/dashboard`;
+    const verifyLink = `https://mifimnpay.com.ng/verify?token=${token}`;
 
     const { data, error } = await resend.emails.send({
-      from: 'MifimnPay Support <support@mifimnpay.com.ng>', 
+      from: 'MifimnPay Security <security@mifimnpay.com.ng>', 
       to: email,
-      // 1. Clean, transactional subject line (No emojis or spammy words)
-      subject: 'MifimnPay Account Update: Storefront Verification Successful',
+      subject: 'Action Required: MifimnPay Account Verification',
+      // We removed the big buttons and heavy CSS. This looks like a real email to Gmail!
       html: `
-        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <div style="background-color: #22c55e; color: white; width: 60px; height: 60px; line-height: 60px; border-radius: 50%; font-size: 30px; display: inline-block;">✓</div>
-          </div>
-          <h2 style="color: #22c55e; font-style: italic; text-transform: uppercase; text-align: center;">Storefront Unlocked</h2>
-          <p>Hello <strong>${businessName || 'Vendor'}</strong>,</p>
-          <p>Great news. Your Identity Verification (NIN) has been successfully reviewed and approved by the MifimnPay Admin team.</p>
-          <p><strong>Your account is now fully upgraded:</strong></p>
-          <ul style="background-color: #f8fafc; padding: 15px 15px 15px 35px; border-radius: 8px;">
-            <li>The 10-receipt creation limit has been removed.</li>
-            <li>Your Digital Storefront and QR Code are now fully active.</li>
-            <li>Customers can now visit your personalized store link to place orders.</li>
-          </ul>
-          <p>Click below to access your unlocked dashboard and start managing your products:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${dashboardLink}" style="background-color: #f97316; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">
-              Go to Dashboard
-            </a>
-          </div>
-          <p style="font-size: 12px; color: #666; text-align: center;">Welcome to the MifimnPay platform.</p>
+        <div style="font-family: sans-serif; font-size: 14px; color: #333; line-height: 1.6; max-w: 600px;">
+          <p>Hello ${businessName || 'Vendor'},</p>
+          <p>Please verify your MifimnPay vendor account by clicking the secure link below:</p>
 
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0 20px 0;" />
-          <p style="font-size: 10px; color: #999; text-align: center; line-height: 1.5;">
-            This email was sent to ${email} because you registered for a vendor account on MifimnPay.<br>
+          <p><a href="${verifyLink}" style="color: #0284c7; text-decoration: underline;">${verifyLink}</a></p>
+
+          <p>This is required to activate your Storefront and remove receipt limits.</p>
+          <br>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <p style="font-size: 11px; color: #888;">
+            If you did not request this verification, please safely ignore this message.<br>
             MifimnPayHQ, Ilorin, Kwara State, Nigeria.
           </p>
         </div>

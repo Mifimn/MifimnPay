@@ -58,18 +58,25 @@ export default function MerchantDirectory() {
 
       if (error) throw error;
 
-      // 2. AUTOMATIC EMAIL TRIGGER
+      // 2. AUTOMATIC EMAIL TRIGGER (FETCHING FROM AUTH.USERS)
       if (action === 'approve') {
         const vendorToEmail = users.find(u => u.id === userId);
-        if (vendorToEmail && vendorToEmail.email) {
+
+        // Use our secure Database Function to grab the auth email
+        const { data: authEmail, error: emailError } = await supabase.rpc('get_auth_email', { target_user_id: userId });
+
+        if (authEmail && vendorToEmail) {
           fetch('/api/notify-vendor-verified', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email: vendorToEmail.email,
+              email: authEmail,
               businessName: vendorToEmail.business_name
             })
           }).catch(err => console.error("Failed to send success email:", err));
+        } else {
+          console.error("Auth Email Fetch Error:", emailError);
+          alert("Approval successful, but could not fetch the vendor's Auth email to notify them.");
         }
       }
 
@@ -80,6 +87,16 @@ export default function MerchantDirectory() {
       alert(`Error: ${err.message}`);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  // Securely fetches auth email for the MailTo link
+  const handleMailTo = async (userId: string) => {
+    const { data: authEmail } = await supabase.rpc('get_auth_email', { target_user_id: userId });
+    if (authEmail) {
+      window.location.href = `mailto:${authEmail}?subject=Your MifimnPay Vendor Account`;
+    } else {
+      alert("Could not retrieve email for this user from the Auth table.");
     }
   };
 
@@ -219,14 +236,14 @@ export default function MerchantDirectory() {
                             </button>
                           )}
 
-                          {/* Email Contact Button */}
-                          <a 
-                            href={`mailto:${u.email || ''}?subject=Your MifimnPay Vendor Account`}
+                          {/* Email Contact Button (Updated to fetch from Auth) */}
+                          <button 
+                            onClick={() => handleMailTo(u.id)}
                             className="p-2.5 bg-zinc-500/10 hover:bg-blue-500 hover:text-white text-zinc-400 border border-transparent rounded-xl transition-all"
                             title="Email Vendor"
                           >
                             <Mail size={16} />
-                          </a>
+                          </button>
 
                         </div>
                       </td>
