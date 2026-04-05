@@ -71,11 +71,16 @@ export default function VerifyPage() {
       } catch (err) {
         console.error("Failed to notify admin:", err);
       }
+
+      // REDIRECT TO DASHBOARD AFTER 2 SECONDS
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+
     } else {
       alert("Failed to submit verification: " + error.message);
+      setLoading(false); // Only turn off loading if it fails, otherwise let it smoothly redirect
     }
-
-    setLoading(false);
   };
 
   if (isTokenValid === null) {
@@ -85,18 +90,18 @@ export default function VerifyPage() {
   // INVALID LINK SCREEN
   if (isTokenValid === false && status !== 'pending' && status !== 'verified') {
     return (
-      <div className="max-w-md mx-auto pt-10">
-        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] p-8 text-center">
+      <div className="max-w-md mx-auto pt-10 px-4">
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] p-8 text-center shadow-lg">
           <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <ShieldAlert size={32} />
           </div>
-          <h1 className="text-2xl font-black uppercase italic tracking-tighter mb-2">Access Denied</h1>
+          <h1 className="text-2xl font-black uppercase italic tracking-tighter mb-2 dark:text-white">Access Denied</h1>
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed mb-8">
             This verification link is invalid, expired, or was not requested. Please request a new link from your dashboard.
           </p>
           <button 
             onClick={() => router.push('/dashboard')}
-            className="w-full py-4 bg-brand-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+            className="w-full py-4 bg-brand-black dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
             <ArrowLeft size={16} /> Return to Dashboard
           </button>
@@ -107,20 +112,20 @@ export default function VerifyPage() {
 
   // VALID LINK OR ALREADY SUBMITTED
   return (
-    <div className="max-w-md mx-auto pt-10">
-      <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] p-8">
+    <div className="max-w-md mx-auto pt-10 px-4">
+      <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[32px] p-8 shadow-lg">
         <div className="text-center mb-8">
           <ShieldCheck className="mx-auto text-brand-orange mb-4" size={48} />
-          <h1 className="text-2xl font-black uppercase italic tracking-tighter">Identity Verification</h1>
+          <h1 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Identity Verification</h1>
         </div>
 
         {status === 'verified' ? (
-          <div className="text-center py-6 text-green-500 font-black uppercase text-sm">
-            <CheckCircle2 className="mx-auto mb-2" /> Verified & Unlimited
+          <div className="text-center py-6 text-green-500 font-black uppercase text-sm flex flex-col items-center">
+            <CheckCircle2 className="mb-2" size={32}/> Verified & Unlimited
           </div>
         ) : status === 'pending' ? (
-          <div className="text-center py-6 text-slate-500 font-black uppercase text-[10px] tracking-widest">
-            <Loader2 className="animate-spin mx-auto mb-4" /> Reviewing your NIN...
+          <div className="text-center py-6 text-slate-500 dark:text-slate-400 font-black uppercase text-[10px] tracking-widest flex flex-col items-center">
+            <Loader2 className="animate-spin mb-4" size={32}/> Reviewing your NIN...
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -134,8 +139,11 @@ export default function VerifyPage() {
               className="w-full h-14 px-5 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 focus:border-brand-orange outline-none font-bold text-brand-black dark:text-white"
               value={formData.nin} onChange={e => setFormData({...formData, nin: e.target.value})}
             />
-            <button className="w-full py-5 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:opacity-90 active:scale-95 transition-all">
-              {loading ? "Processing..." : "Submit for Review"}
+            <button 
+              disabled={loading}
+              className="w-full py-5 bg-brand-orange text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 flex justify-center"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : "Submit for Review"}
             </button>
           </form>
         )}

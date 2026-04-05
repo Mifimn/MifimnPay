@@ -13,7 +13,6 @@ export default function MerchantDirectory() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // NEW: State to control the review modal
   const [selectedVendor, setSelectedVendor] = useState<any | null>(null);
 
   useEffect(() => {

@@ -1,4 +1,3 @@
-// app/api/notify-vendor-verified/route.ts
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
@@ -15,17 +14,18 @@ export async function POST(req: Request) {
     const dashboardLink = `https://mifimnpay.com.ng/dashboard`;
 
     const { data, error } = await resend.emails.send({
-      from: 'MifimnPay Support <support@mifimnpay.com.ng>', // Ensure this matches your verified Resend domain
+      from: 'MifimnPay Support <support@mifimnpay.com.ng>', 
       to: email,
-      subject: '🎉 Congratulations! Your MifimnPay Storefront is Verified',
+      // 1. Clean, transactional subject line (No emojis or spammy words)
+      subject: 'MifimnPay Account Update: Storefront Verification Successful',
       html: `
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <div style="text-align: center; margin-bottom: 20px;">
             <div style="background-color: #22c55e; color: white; width: 60px; height: 60px; line-height: 60px; border-radius: 50%; font-size: 30px; display: inline-block;">✓</div>
           </div>
-          <h2 style="color: #22c55e; font-style: italic; text-transform: uppercase; text-align: center;">Storefront Unlocked!</h2>
+          <h2 style="color: #22c55e; font-style: italic; text-transform: uppercase; text-align: center;">Storefront Unlocked</h2>
           <p>Hello <strong>${businessName || 'Vendor'}</strong>,</p>
-          <p>Great news! Your Identity Verification (NIN) has been successfully reviewed and approved by the MifimnPay Admin team.</p>
+          <p>Great news. Your Identity Verification (NIN) has been successfully reviewed and approved by the MifimnPay Admin team.</p>
           <p><strong>Your account is now fully upgraded:</strong></p>
           <ul style="background-color: #f8fafc; padding: 15px 15px 15px 35px; border-radius: 8px;">
             <li>The 10-receipt creation limit has been removed.</li>
@@ -38,7 +38,13 @@ export async function POST(req: Request) {
               Go to Dashboard
             </a>
           </div>
-          <p style="font-size: 12px; color: #666; text-align: center;">Welcome to the MifimnPay family!</p>
+          <p style="font-size: 12px; color: #666; text-align: center;">Welcome to the MifimnPay platform.</p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0 20px 0;" />
+          <p style="font-size: 10px; color: #999; text-align: center; line-height: 1.5;">
+            This email was sent to ${email} because you registered for a vendor account on MifimnPay.<br>
+            MifimnPayHQ, Ilorin, Kwara State, Nigeria.
+          </p>
         </div>
       `,
     });
